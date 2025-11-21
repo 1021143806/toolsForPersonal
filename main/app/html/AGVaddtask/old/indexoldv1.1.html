@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV任务下发系统</title>
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --primary-dark: #3a5bd9;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        .dark-mode {
+            --primary-color: #5d7df9;
+            --primary-dark: #4a6cf7;
+            --secondary-color: #8a93a2;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-color) 0%, #e9ecef 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+            transition: var(--transition);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), #6c5ce7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(15deg);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.2);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: var(--secondary-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .response-box {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .debug-toggle {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+            text-decoration: underline;
+        }
+
+        .debug-info {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--secondary-color);
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .modal p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .shelf-lock {
+            color: var(--warning-color);
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="page-title">AGV任务下发系统</h1>
+            <div class="theme-toggle" id="theme-toggle">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 20V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.93 4.93L6.34 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M17.66 17.66L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6.34 17.66L4.93 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M19.07 4.93L17.66 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </header>
+
+        <div class="card">
+            <div class="form-group">
+                <label for="area-select">选择区域</label>
+                <select id="area-select">
+                    <option value="">请选择区域</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="task-select">任务模板</label>
+                <select id="task-select">
+                    <option value="">请先选择区域</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="shelf-group">
+                <label for="shelf-input">货架号</label>
+                <input type="text" id="shelf-input" placeholder="请输入货架号">
+                <div class="error" id="shelf-error">请输入货架号</div>
+                <div class="shelf-lock" id="shelf-lock">此货架在5分钟内已下发过任务，请勿重复下发</div>
+            </div>
+
+            <div class="form-group" id="task-path-group">
+                <label for="task-path-select">任务路径</label>
+                <select id="task-path-select">
+                    <option value="">请选择任务路径</option>
+                </select>
+                <div class="error" id="task-path-error">请选择任务路径</div>
+            </div>
+
+            <button class="btn" id="submit-btn">下发任务</button>
+            <button class="debug-toggle" id="debug-toggle">查看发送的报文</button>
+            <div class="debug-info" id="debug-info"></div>
+        </div>
+
+        <div class="card">
+            <h3>响应信息</h3>
+            <div class="response-box" id="response-box"></div>
+        </div>
+
+        <footer id="footer-text">
+            任务下发系统 © 2025 | 运营 AGV 组提供技术支持
+        </footer>
+    </div>
+
+    <div class="modal" id="success-modal">
+        <div class="modal-content">
+            <h2>下发成功</h2>
+            <p>任务已成功下发，请勿重复下发。</p>
+            <button class="btn" id="modal-close">确定</button>
+        </div>
+    </div>
+
+    <div class="modal" id="task-exists-modal">
+        <div class="modal-content">
+            <h2>任务已存在</h2>
+            <p id="task-exists-message"></p>
+            <button class="btn" id="task-exists-close">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // 配置数据（实际应用中从config.json加载）
+        const config =  {
+    "general": {
+        "title": "AGV任务下发系统",
+        "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+    },
+    "areas": {
+//-------------------------------------------------
+        "A1-1 PCBA": {
+            "tasks": {
+                "送满A1pcba1F去A2华昱欣3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空A1pcba1F去A2华昱欣3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_back",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A1pcba1F去A2华昱欣3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_31A1DZ1F_to_19A2HYX3F_go",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A1pcba1F去A2华昱欣3F回": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_31A1DZ1F_to_19A2HYX3F_leave",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                }
+            }
+        },
+//-------------------------------------------------
+        "A2-2 PCBA 货架区": {
+            "tasks": {
+                "空车A1pcba1F去A2存储备料2F_293": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_31A1DZ1F_to_17A2CC2F_go",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A1pcba1F去A2存储备料2F回_294": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_31A1DZ1F_to_17A2CC2F_leave",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "送满A1pcba1F去A2存储备料2F_295": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_31A1DZ1F_to_17A2CC2F_go",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空A1pcba1F去A2存储备料2F_296": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_31A1DZ1F_to_17A2CC2F_back",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A2存储备料2F去A2华昱欣3F_297": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_17A2CC2F_to_19A2HYX3F_go",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A2存储备料2F去A2华昱欣3F回_298": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_17A2CC2F_to_19A2HYX3F_leave",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                }
+            }
+        },
+//-------------------------------------------------
+        "A2-2 存储备料": {
+            "tasks": {
+                "老座舱_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-LZC",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "放大器_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-FDQ",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "屏装线_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-PZX",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "NFC线_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-NFCline",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "右域控制器_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-YYKZQ",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "TBOX_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-TBOX",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "整车座椅_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-ZCZY",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "B10座舱_送满A2存储备料去A2存储一部3F": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "xialiaoDA02-B10ZC",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空A2备料2F去A2华消3FDT01": {
+                "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                "code": "HJBY_17A2BL2F_to_19A2HXZS1F_back",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "上架任务": {
+                "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                "code": "shangjiafangxia",
+                "requires_shelf": true,
+                "requires_task_path": true,
+                "task_path_options": ["33254836", "33254835"]
+                },
+                "上架回库任务": {
+                "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                "code": "shangjiafangxiahk",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                }
+            }
+        },
+//-------------------------------------------------
+//-------------------------------------------------
+        "A2-3华昱欣←→A2-2原华橙车间": {
+            "tasks": {
+                 "去空车<-_17华昱欣备料2F_to_19华昱欣3F_372": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "kctoHYX",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "回空车->_17华昱欣备料2F_to_19华昱欣3F_373": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "kctoHYX-back",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "去空车<-_17原华橙车间2F_to_19华昱欣3F_417": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_go_17YHCCJ2F_to_19HYX3F",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "回空车->_17原华橙车间2F_to_19华昱欣3F_418": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_back_17YHCCJ2F_to_19HYX3F",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "送满<-_17原华橙车间2F_to_19华昱欣3F_419": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "HJBY_go_17YHCCJ2F_to_19HYX3F",
+                    "requires_shelf": true,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "回空->_17原华橙车间2F_to_19华昱欣3F_420": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "HJBY_back17YHCCJ2F_to_19HYX3F",
+                    "requires_shelf": true,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+            }
+        },
+//-------------------------------------------------
+        // "A3-2 点胶": {
+        //     "tasks": {
+        //         "货架搬运DJXB1到一部收料区_139": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "moveShelfToDJXB1ToDJXB2Q",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "货架搬运DJXB1到二部收料区_140": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "moveShelfToDJXB1ToDJEBQ",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "货架搬运DJXB1到三部收料区_319": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "moveShelfToDJXB1ToDJthree",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "货架搬运DJXB1到四部收料区_141": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "moveShelfToDJXB1ToDJQBQ",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "A3一楼包材送货到A3二楼点胶_225": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "A3BC_1_to_A4DJ_2_SL",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "A3一楼包材送货到A3二楼点胶回库_226": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "A3BC_1_to_A4DJ_2_HK",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "空车A3包材去A3点胶回_234": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "K_A3BC_to_A3DJ_leave",
+        //         "requires_shelf": false,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "送满A3点胶2F去A3前端四部3F_322": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "HJBY_go_32A3DJ2F_to_31A3QD4B3F",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "回空A3点胶2F去A3前端四部3F_323": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "HJBY_back_32A3DJ2F_to_31A3QD4B3F",
+        //         "requires_shelf": true,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         },
+        //         "回空车A3点胶2F去A3前端四部3F_321": {
+        //         "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+        //         "code": "K_back_32A3DJ2F_to_31A3QD4B3F",
+        //         "requires_shelf": false,
+        //         "requires_task_path": false,
+        //         "task_path_options": []
+        //         }
+        //     }
+        // },
+//-------------------------------------------------
+        "A3-2 点胶 & 行业货架区2": {
+            "tasks": {
+                "上架搬运_行业货架区2去点胶回_407": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "SJBY_HY2DJ2F_to_DJ2F",
+                "requires_shelf": true,
+                "requires_task_path": true,
+                "task_path_options": [66000358]
+                },
+                "送满A3货架区二2F去A3前端四部3F_408": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_go_27HY2DJ2F_to_31A3QD4B3F",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空A3货架区二2F去A3前端四部3F_409": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_back_27HY2DJ2F_to_31A3QD4B3F",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空车A3货架区二2F去A3点胶指定DJ_410": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_back_27HY2DJ2F_to_31DJ",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "去空车A3点胶2F去A3前端四部3F_320": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_go_32A3DJ2F_to_31A3QD4B3F",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空车A3点胶2F去A3前端四部3F_321": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_back_32A3DJ2F_to_31A3QD4B3F",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+            }
+        },
+//-------------------------------------------------
+        "A4-1 A4物流&A4包材": {
+            "tasks": {
+                "送满A4物流1F去A4包材1F_412": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "HJBY_go_1A4WL2F_to_40A4BC1F",
+                    "requires_shelf": true,
+                    "requires_task_path": true,
+                    "task_path_options": [60000374,60000373,60000372]
+                },
+                "回空A4物流1F去A4包材1F_413": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "HJBY_back_1A4WL2F_to_40A4BC1F",
+                    "requires_shelf": true,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "去空车A4物流1F去A4包材1F_414": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_go_1A4WL2F_to_40A4BC1F",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "回空车A4物流1F去A4包材1F_415": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_back_1A4WL2F_to_40A4BC1F",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+            }
+        }
+//-------------------------------------------------
+    }
+};
+
+        // 存储已下发任务的货架和时间
+        const shelfHistory = {};
+
+        // DOM元素
+        const areaSelect = document.getElementById('area-select');
+        const taskSelect = document.getElementById('task-select');
+        const shelfGroup = document.getElementById('shelf-group');
+        const shelfInput = document.getElementById('shelf-input');
+        const shelfError = document.getElementById('shelf-error');
+        const shelfLock = document.getElementById('shelf-lock');
+        const taskPathGroup = document.getElementById('task-path-group');
+        const taskPathSelect = document.getElementById('task-path-select');
+        const taskPathError = document.getElementById('task-path-error');
+        const submitBtn = document.getElementById('submit-btn');
+        const responseBox = document.getElementById('response-box');
+        const debugToggle = document.getElementById('debug-toggle');
+        const debugInfo = document.getElementById('debug-info');
+        const successModal = document.getElementById('success-modal');
+        const modalClose = document.getElementById('modal-close');
+        const taskExistsModal = document.getElementById('task-exists-modal');
+        const taskExistsMessage = document.getElementById('task-exists-message');
+        const taskExistsClose = document.getElementById('task-exists-close');
+        const themeToggle = document.getElementById('theme-toggle');
+        const pageTitle = document.getElementById('page-title');
+        const footerText = document.getElementById('footer-text');
+
+        // 初始化页面
+        function initPage() {
+            // 设置页面标题和页脚
+            pageTitle.textContent = config.general.title;
+            footerText.textContent = config.general.footer_text;
+            
+            // 填充区域选择
+            for (const area in config.areas) {
+                const option = document.createElement('option');
+                option.value = area;
+                option.textContent = area;
+                areaSelect.appendChild(option);
+            }
+            
+            // 事件监听
+            areaSelect.addEventListener('change', updateTaskOptions);
+            taskSelect.addEventListener('change', updateFormFields);
+            submitBtn.addEventListener('click', submitTask);
+            debugToggle.addEventListener('click', toggleDebugInfo);
+            modalClose.addEventListener('click', closeModal);
+            taskExistsClose.addEventListener('click', closeTaskExistsModal);
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // 检查本地存储的主题偏好
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+            
+            // 初始隐藏货架号和任务路径组
+            shelfGroup.style.display = 'none';
+            taskPathGroup.style.display = 'none';
+        }
+
+        // 更新任务选项
+        function updateTaskOptions() {
+            const area = areaSelect.value;
+            taskSelect.innerHTML = '<option value="">请选择任务模板</option>';
+            
+            if (area && config.areas[area]) {
+                const tasks = config.areas[area].tasks;
+                for (const taskName in tasks) {
+                    const option = document.createElement('option');
+                    option.value = taskName;
+                    option.textContent = taskName;
+                    taskSelect.appendChild(option);
+                }
+            }
+            
+            // 重置表单字段
+            updateFormFields();
+        }
+
+        // 更新表单字段显示
+        function updateFormFields() {
+            const area = areaSelect.value;
+            const taskName = taskSelect.value;
+            
+            // 隐藏错误信息
+            shelfError.style.display = 'none';
+            taskPathError.style.display = 'none';
+            shelfLock.style.display = 'none';
+            
+            if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
+                const task = config.areas[area].tasks[taskName];
+                
+                // 显示或隐藏货架号输入
+                if (task.requires_shelf) {
+                    shelfGroup.style.display = 'block';
+                    
+                    // 检查货架是否在5分钟内已下发过任务
+                    const shelf = shelfInput.value.trim();
+                    if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
+                        shelfLock.style.display = 'block';
+                        submitBtn.disabled = true;
+                    } else {
+                        shelfLock.style.display = 'none';
+                        submitBtn.disabled = false;
+                    }
+                } else {
+                    shelfGroup.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+                
+                // 显示或隐藏任务路径选择
+                if (task.requires_task_path) {
+                    taskPathGroup.style.display = 'block';
+                    
+                    // 填充任务路径选项
+                    taskPathSelect.innerHTML = '<option value="">请选择任务路径</option>';
+                    task.task_path_options.forEach(path => {
+                        const option = document.createElement('option');
+                        option.value = path;
+                        option.textContent = path;
+                        taskPathSelect.appendChild(option);
+                    });
+                } else {
+                    taskPathGroup.style.display = 'none';
+                }
+            } else {
+                shelfGroup.style.display = 'none';
+                taskPathGroup.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        // 检查货架任务状态
+        async function checkShelfTaskStatus(shelf) {
+            // 需要检查的状态：4(正在发送), 6(执行中), 9(已下发)
+            const statusList = [4, 6, 9];
+            
+            for (const status of statusList) {
+                try {
+                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            taskStatus: status.toString(),
+                            shelfNum: shelf,
+                            pageSize: 20,
+                            pageNo: 1
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.code === 1000 && data.data.list && data.data.list.length > 0) {
+                        // 找到对应状态的任务
+                        let statusText = '';
+                        switch (status) {
+                            case 4:
+                                statusText = '正在发送';
+                                break;
+                            case 6:
+                                statusText = '执行中';
+                                break;
+                            case 9:
+                                statusText = '已下发';
+                                break;
+                            default:
+                                statusText = `状态${status}`;
+                        }
+                        return {
+                            exists: true,
+                            status: statusText
+                        };
+                    }
+                } catch (error) {
+                    console.error(`查询状态${status}的任务时出错:`, error);
+                    // 如果查询失败，继续查询其他状态
+                }
+            }
+            
+            return { exists: false };
+        }
+
+        // 提交任务
+        async function submitTask() {
+            const area = areaSelect.value;
+            const taskName = taskSelect.value;
+            
+            if (!area) {
+                alert('请选择区域');
+                return;
+            }
+            
+            if (!taskName) {
+                alert('请选择任务模板');
+                return;
+            }
+            
+            const task = config.areas[area].tasks[taskName];
+            const shelf = shelfInput.value.trim();
+            
+            // 验证货架号
+            if (task.requires_shelf && !shelf) {
+                shelfError.style.display = 'block';
+                return;
+            }
+            
+            // 验证任务路径
+            if (task.requires_task_path && !taskPathSelect.value) {
+                taskPathError.style.display = 'block';
+                return;
+            }
+            
+            // 检查货架是否在5分钟内已下发过任务
+            if (task.requires_shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
+                shelfLock.style.display = 'block';
+                return;
+            }
+            
+            // 如果任务需要货架号，检查货架任务状态
+            if (task.requires_shelf && shelf) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '检查任务状态中...';
+                
+                try {
+                    const checkResult = await checkShelfTaskStatus(shelf);
+                    
+                    if (checkResult.exists) {
+                        // 显示任务存在提示
+                        taskExistsMessage.textContent = `当前货架 ${shelf} 有任务正在${checkResult.status}，请勿重复下发！`;
+                        taskExistsModal.style.display = 'flex';
+                        
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '下发任务';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('检查货架任务状态时出错:', error);
+                    // 如果检查失败，继续下发任务
+                }
+                
+                submitBtn.textContent = '下发中...';
+            }
+            
+            // 准备请求数据
+            const getBeijingTime = () => {
+                const now = new Date();
+                // 北京时间 = UTC时间 + 8小时
+                const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+                return beijingTime.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+            };
+
+            const requestData = [{
+                modelProcessCode: task.code,
+                priority: 6,
+                orderId: `pad_html${getBeijingTime()}`,
+                fromSystem: "pad-html",
+                taskOrderDetail: {
+                    taskPath: task.requires_task_path ? taskPathSelect.value : "",
+                    shelfNumber: task.requires_shelf ? shelf : ""
+                }
+            }];
+            
+            // 显示调试信息
+            debugInfo.textContent = JSON.stringify(requestData, null, 2);
+            
+            try {
+                // 发送请求
+                const response = await fetch(task.base_url || config.areas[area].base_url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                // 显示响应信息
+                responseBox.style.display = 'block';
+                responseBox.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.code === 1000) {
+                    // 成功处理
+                    successModal.style.display = 'flex';
+                    
+                    // 记录货架下发时间
+                    if (task.requires_shelf && shelf) {
+                        shelfHistory[shelf] = Date.now();
+                    }
+                }
+            } catch (error) {
+                responseBox.style.display = 'block';
+                responseBox.textContent = `请求失败: ${error.message}`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '下发任务';
+            }
+        }
+
+        // 切换调试信息显示
+        function toggleDebugInfo() {
+            if (debugInfo.style.display === 'block') {
+                debugInfo.style.display = 'none';
+                debugToggle.textContent = '查看发送的报文';
+            } else {
+                debugInfo.style.display = 'block';
+                debugToggle.textContent = '隐藏发送的报文';
+            }
+        }
+
+        // 关闭成功模态框
+        function closeModal() {
+            successModal.style.display = 'none';
+        }
+
+        // 关闭任务存在模态框
+        function closeTaskExistsModal() {
+            taskExistsModal.style.display = 'none';
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        // 货架输入变化时检查锁定状态
+        shelfInput.addEventListener('input', function() {
+            const area = areaSelect.value;
+            const taskName = taskSelect.value;
+            
+            if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
+                const task = config.areas[area].tasks[taskName];
+                
+                if (task.requires_shelf) {
+                    const shelf = shelfInput.value.trim();
+                    
+                    if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
+                        shelfLock.style.display = 'block';
+                        submitBtn.disabled = true;
+                    } else {
+                        shelfLock.style.display = 'none';
+                        submitBtn.disabled = false;
+                    }
+                }
+            }
+        });
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+{
+    "code": 200,
+    "data": {
+        "blocks": {
+            "a737d507-64d4-4a2e-a7a6-2b97bdb61105": {
+                "uuid": "a737d507-64d4-4a2e-a7a6-2b97bdb61105",
+                "parentId": "08669942-b4c8-4a97-9702-e112fcb079bc",
+                "spaceId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "type": 27,
+                "title": "",
+                "backgroundColor": "",
+                "textColor": "",
+                "data": {
+                    "format": {
+                        "tableBlockRowHeader": true,
+                        "tableBlockColumnOrder": [
+                            "6a910ac2-52b4-4ecf-adee-f1021dc58f05",
+                            "03b4ae5a-33e1-4dba-8992-b4faac263002"
+                        ]
+                    },
+                    "segments": [],
+                    "directoryMenu": true,
+                    "pageFixedWidth": false
+                },
+                "version": 3,
+                "status": 1,
+                "subNodes": [
+                    "23551155-db93-4d7f-93f6-6973865e40cd",
+                    "990f41e1-2767-47fe-b24b-bb5c909e27f8",
+                    "bc595253-e356-41d7-b3e7-84ef7bbc4a3a"
+                ],
+                "views": null,
+                "isTemplate": null,
+                "templatePages": null,
+                "moved": null,
+                "permissions": [],
+                "discussions": [],
+                "createdAt": 1713178858100,
+                "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785",
+                "updatedAt": 1713179923765,
+                "updatedBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+            },
+            "23551155-db93-4d7f-93f6-6973865e40cd": {
+                "uuid": "23551155-db93-4d7f-93f6-6973865e40cd",
+                "parentId": "a737d507-64d4-4a2e-a7a6-2b97bdb61105",
+                "spaceId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "type": 28,
+                "title": "",
+                "backgroundColor": "",
+                "textColor": "",
+                "data": {
+                    "format": {},
+                    "directoryMenu": true,
+                    "pageFixedWidth": false,
+                    "collectionProperties": {
+                        "03b4ae5a-33e1-4dba-8992-b4faac263002": [
+                            {
+                                "text": "标题2",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ],
+                        "6a910ac2-52b4-4ecf-adee-f1021dc58f05": [
+                            {
+                                "text": "标题1",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ]
+                    }
+                },
+                "version": 7,
+                "status": 1,
+                "subNodes": [],
+                "views": null,
+                "isTemplate": null,
+                "templatePages": null,
+                "moved": null,
+                "permissions": [],
+                "discussions": [],
+                "createdAt": 1713179923759,
+                "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785",
+                "updatedAt": 1713181150922,
+                "updatedBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+            },
+            "990f41e1-2767-47fe-b24b-bb5c909e27f8": {
+                "uuid": "990f41e1-2767-47fe-b24b-bb5c909e27f8",
+                "parentId": "a737d507-64d4-4a2e-a7a6-2b97bdb61105",
+                "spaceId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "type": 28,
+                "title": "",
+                "backgroundColor": "",
+                "textColor": "",
+                "data": {
+                    "format": {},
+                    "directoryMenu": true,
+                    "pageFixedWidth": false,
+                    "collectionProperties": {
+                        "03b4ae5a-33e1-4dba-8992-b4faac263002": [
+                            {
+                                "text": "内容2",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ],
+                        "6a910ac2-52b4-4ecf-adee-f1021dc58f05": [
+                            {
+                                "text": "内容1",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ]
+                    }
+                },
+                "version": 10,
+                "status": 1,
+                "subNodes": [],
+                "views": null,
+                "isTemplate": null,
+                "templatePages": null,
+                "moved": null,
+                "permissions": [],
+                "discussions": [],
+                "createdAt": 1713179923759,
+                "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785",
+                "updatedAt": 1713181165434,
+                "updatedBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+            },
+            "bc595253-e356-41d7-b3e7-84ef7bbc4a3a": {
+                "uuid": "bc595253-e356-41d7-b3e7-84ef7bbc4a3a",
+                "parentId": "a737d507-64d4-4a2e-a7a6-2b97bdb61105",
+                "spaceId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "type": 28,
+                "title": "",
+                "backgroundColor": "",
+                "textColor": "",
+                "data": {
+                    "format": {},
+                    "directoryMenu": true,
+                    "pageFixedWidth": false,
+                    "collectionProperties": {
+                        "03b4ae5a-33e1-4dba-8992-b4faac263002": [
+                            {
+                                "text": "内容22",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ],
+                        "6a910ac2-52b4-4ecf-adee-f1021dc58f05": [
+                            {
+                                "text": "内容11",
+                                "type": 0,
+                                "enhancer": {}
+                            }
+                        ]
+                    }
+                },
+                "version": 8,
+                "status": 1,
+                "subNodes": [],
+                "views": null,
+                "isTemplate": null,
+                "templatePages": null,
+                "moved": null,
+                "permissions": [],
+                "discussions": [],
+                "createdAt": 1713179923759,
+                "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785",
+                "updatedAt": 1713181167820,
+                "updatedBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+            },
+            "08669942-b4c8-4a97-9702-e112fcb079bc": {
+                "uuid": "08669942-b4c8-4a97-9702-e112fcb079bc",
+                "parentId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "spaceId": "d84d009d-9262-41d6-93e1-69c950dca00d",
+                "type": 0,
+                "title": "",
+                "backgroundColor": "",
+                "textColor": "",
+                "data": {
+                    "segments": []
+                },
+                "version": 32,
+                "status": 1,
+                "subNodes": [
+                    "a737d507-64d4-4a2e-a7a6-2b97bdb61105",
+                    "14781750-5c17-4183-8221-097c63cd90f3"
+                ],
+                "views": null,
+                "isTemplate": null,
+                "templatePages": null,
+                "moved": null,
+                "permissions": [
+                    {
+                        "role": "editor",
+                        "type": "user",
+                        "userId": "c8ce478c-568d-4444-9129-ad81c18cf785"
+                    },
+                    {
+                        "role": "reader",
+                        "type": "public",
+                        "createdAt": 1713178860991,
+                        "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+                    }
+                ],
+                "discussions": [],
+                "createdAt": 1705915777097,
+                "createdBy": "c8ce478c-568d-4444-9129-ad81c18cf785",
+                "updatedAt": 1713181167820,
+                "updatedBy": "c8ce478c-568d-4444-9129-ad81c18cf785"
+            }
+        },
+        "collectionViews": {},
+        "discussions": {},
+        "comments": {},
+        "roles": {
+            "a737d507-64d4-4a2e-a7a6-2b97bdb61105": "reader",
+            "23551155-db93-4d7f-93f6-6973865e40cd": "reader",
+            "990f41e1-2767-47fe-b24b-bb5c909e27f8": "reader",
+            "bc595253-e356-41d7-b3e7-84ef7bbc4a3a": "reader",
+            "d84d009d-9262-41d6-93e1-69c950dca00d": "none",
+            "08669942-b4c8-4a97-9702-e112fcb079bc": "reader"
+        }
+    }
+}

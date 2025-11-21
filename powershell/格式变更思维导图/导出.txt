@@ -1,0 +1,26 @@
+linux实用指令
+	ssh
+		安装并设置自动启动
+			sudo apt-get install openssh-server
+				安装
+			sudo service ssh start
+				启动
+			sudo systemctl enable ssh设置开机自启
+			sudo systemctl status ssh
+				查看状态
+	修复依赖关系
+		apt --fix-broken install
+			mv /var/lib/dpkg/info /var/lib/dpkg/info.bak
+mkdir /var/lib/dpkg/info
+	安装显卡驱动amdgpu-install
+		E: Sub-process /usr/bin/dpkg returned an error code (1) 出错解决方案
+			cd /var/lib/dpkg
+			sudo mv info info.bak
+			sudo mkdir info
+	网卡QCA6174
+		安装
+			shell
+				chmod +x 文件名
+	安装
+		apt update
+		apt upgrade

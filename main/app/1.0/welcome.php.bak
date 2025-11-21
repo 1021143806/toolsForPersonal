@@ -1,0 +1,129 @@
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+
+<?php
+include '../A1head/connect.php';
+?>
+
+<body>
+
+
+<h1>输入对应第三方任务订单以查询相关信息</h1>
+
+<?php
+//读取输入的任务id
+$orderid=$_GET["idd"];
+echo "输入的任务ID为:".$orderid;
+?></br>
+
+<?php
+echo"Hello php!";
+?></br>
+
+
+
+<?php
+$dbhost = '10.68.2.32';  // mysql服务器主机地址
+$dbuser = 'wms';            // mysql用户名
+$dbpass = 'CCshenda889';          // mysql用户名密码
+$conn = mysqli_connect($dbhost, $dbuser, $dbpass);
+if(! $conn )
+{
+    die('Could not connect: ' . mysqli_error());
+}
+echo '数据库连接成功！<br>';
+
+//创建数据库
+
+// $sql = 'CREATE DATABASE RUNOOB';
+// $retval = mysqli_query($conn,$sql );
+// if(! $retval )
+// {
+//     die('创建数据库失败: ' . mysqli_error($conn));
+// }
+// echo "数据库 RUNOOB 创建成功\n";
+
+
+
+
+
+
+//创建数据表
+// CREATE TABLE IF NOT EXISTS `runoob_tbl`(
+//     `runoob_id` INT UNSIGNED AUTO_INCREMENT,
+//     `runoob_title` VARCHAR(100) NOT NULL,
+//     `runoob_author` VARCHAR(40) NOT NULL,
+//     `submission_date` DATE,
+//     PRIMARY KEY ( `runoob_id` )
+//  )ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+//读取
+
+$sql='SELECT * FROM `agv_robot`';
+$sql2="SELECT * FROM task_order WHERE third_order_id = '$orderid'";
+$sql3="SELECT * FROM task_order WHERE third_order_id = 'ChargeBackGo16976460351938923_2_8596'";
+echo "____调试用1____<br>";
+echo $sql2."<br>";
+echo "____调试用2____<br>";
+echo $sql3."<br>";
+echo "<br>"."<br>"."<br>";
+
+mysqli_select_db($conn, 'wms' );//选择数据库
+$retval = mysqli_query( $conn, $sql2 );
+if(! $retval )
+{
+    die('无法读取数据: ' . mysqli_error($conn));
+}
+
+// 设置编码，防止中文乱码
+mysqli_query($conn , "set names utf8");
+
+// echo '<h2> MySQL WHERE 子句测试<h2>';
+// echo '<table border="1"><tr><td>ID</td><td>设备序列号</td><td>设备IP</td><td>设备型号</td></tr>';
+// while($row = mysqli_fetch_array($retval, MYSQLI_ASSOC))
+// {
+//     echo "<tr><td> {$row['ID']}</td> ".
+//          "<td>{$row['DEVICE_CODE']} </td> ".
+//          "<td>{$row['DEVICE_IP']} </td> ".
+//          "<td>{$row['DEVICETYPE']} </td> ".
+//          "</tr>";
+// }
+
+//echo '<h2> MySQL WHERE 子句测试<h2>';
+//echo '<table border="1"><tr><td>id</td></tr>';
+while($row = mysqli_fetch_array($retval, MYSQLI_ASSOC))
+{
+    $out_order_id=$row['id'];
+    echo "该任务out_order_id值为：".$out_order_id."<br>";
+}
+
+//查询对应设备
+$sql4="SELECT * FROM task_group WHERE out_order_id = '$out_order_id'";
+$retval = mysqli_query( $conn, $sql4 );
+if(! $retval )
+{
+    die('无法读取数据: ' . mysqli_error($conn));
+}
+while($row = mysqli_fetch_array($retval, MYSQLI_ASSOC))
+{
+    $a1="template_code";$a1=$row[$a1];echo "任务模板为：".$a1."<br>";
+    $a1="robot_num";$a1=$row[$a1];echo "分派的AGV为：".$a1."<br>";
+    $a1="robot_id";$a1=$row[$a1];echo "设备序列号为：".$a1."<br>";
+    $a1="robot_type";$a1=$row[$a1];echo "分派的AGV设备类型为：".$a1."<br>";
+    $a1="shelf_model";$a1=$row[$a1];echo "下发的货架模型为：".$a1."<br>";
+    $a1="carrier_code";$a1=$row[$a1];echo "任务货架为：".$a1."<br>";
+    $a1="error_desc";$a1=$row[$a1];echo "错误描述".":".$a1."<br>";
+}
+
+
+//释放内存
+mysqli_free_result($retval);
+mysqli_close($conn);
+?>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>拉取信息</title>
+</head>
+<body>
+
+<h1>
+    按照任务单号查询
+</h1>
+<form action="Command/FindTheTask.php" method="get">
+任务单号: <input type="text" name="idd">
+服务器IP: <input type="text" name="RCSip">
+<input type="submit" value="提交">
+</form>
+
+
+<h1>
+    跨环境按照任务模版查询当前执行中或占用容量的任务
+</h1>
+<form action="Command/Kua.php" method="get">
+    跨环境任务模版: <input type="text" name="idd">
+    
+    <input type="submit" value="提交">
+    </form>
+
+
+<h1>
+    输入跨环境任务模版查看子任务模板信息
+</h1>
+<form action="Command/Chech_Kua_model_process.php" method="get">
+    跨环境任务模版: <input type="text" name="idd">
+    
+    <input type="submit" value="提交">
+    </form>
+
+<h1>
+    输入跨环境任务编号查询所有子任务及当前执行中或占用容量的任务
+</h1>
+<form action="Command/FindTheTaskKua.php" method="get">
+    跨环境任务单号: <input type="text" name="idd">
+    <input type="submit" value="提交">
+</form>

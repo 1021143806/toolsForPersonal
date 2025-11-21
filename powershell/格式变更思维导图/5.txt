@@ -1,0 +1,12 @@
+linux实用指令
+	ssh
+		安装并设置自动启动
+				安装
+				启动
+				查看状态
+	修复依赖关系
+	安装显卡驱动amdgpu-install
+		E: Sub-process /usr/bin/dpkg returned an error code (1) 出错解决方案
+	网卡QCA6174
+		安装
+	安装

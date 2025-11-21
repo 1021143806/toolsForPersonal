@@ -1,0 +1,87 @@
+# FlowUs API 配置
+[flowus]
+# FlowUs API Token
+token = "Bearer r7npMvCZqFOcMzm9Nuyj1LnuDPeEoh9s4WVmPBph"
+# 要读取的FlowUs页面URL
+url = "https://flowus.cn/jieiyu_painting/6a1c1dc2-3f18-4f03-a2dc-118d7ab59746?code=undefined"
+# 新页面创建的父页面ID
+parent_page_id = "9d6623d1-25ef-436f-915a-5d37f5cf13db"
+
+# 硅基流动API配置
+[siliconflow]
+# 硅基流动API Token
+token = "Bearer sk-dgbgacivptlzpdfasmoxuetjrpoxfaarszpnbwyqkpjhidyl"
+# 使用的AI模型
+model = "deepseek-ai/DeepSeek-V3.2-Exp"
+
+# 输出配置
+[output]
+# 输出目录
+output_dir = "outputs"
+# 本地保存的Markdown文件名
+filename = "local.md"
+# 原始数据日志文件名
+log_file = "data.log"
+
+# API请求设置
+[api_settings]
+# 最大token数
+max_tokens = 8000
+# 温度参数，控制生成文本的随机性
+temperature = 0.7
+# Top-p采样参数
+top_p = 0.7
+# Top-k采样参数
+top_k = 50
+# 频率惩罚参数
+frequency_penalty = 0.5
+
+# 新页面配置
+[new_page]
+# 新页面标题
+title = "AI生成内容"
+# 新页面图标
+icon_emoji = "🤖"
+
+# 块内容设置
+[block_settings]
+# 是否在FlowUs页面中包含原始输入内容
+include_source = false
+# 是否包含元数据信息
+include_metadata = true
+# 文本颜色
+text_color = "default"
+# 背景颜色
+background_color = "default"
+
+# FlowUs数据库配置
+[database]
+# 是否启用数据库功能
+enabled = true
+# 分页配置
+page_size = 100  # 每页记录数
+# 时间范围配置（单位：天）
+recent_days = 30  # 获取最近N天的数据
+# 是否包含属性信息
+include_properties = true
+# 是否包含提及的数据库
+include_mentioned = true
+# 是否获取关联关系内容
+fetch_relations = true
+# 最大关联深度
+max_relation_depth = 3
+
+# MySQL数据库配置
+[mysql]
+# 数据库主机地址
+host = "47.98.244.173"
+# 数据库端口
+port = 53306
+# 数据库用户名
+username = "root"
+# 数据库密码
+password = "mariadb_cPfKcH"
+# 数据库名称
+database = "flowus"
+# 字符集
+charset = "utf8mb4"

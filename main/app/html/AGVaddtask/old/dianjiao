@@ -1,0 +1,75 @@
+"A3-2 点胶": {
+            "tasks": {
+                "货架搬运DJXB1到一部收料区_139": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "moveShelfToDJXB1ToDJXB2Q",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "货架搬运DJXB1到二部收料区_140": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "moveShelfToDJXB1ToDJEBQ",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "货架搬运DJXB1到三部收料区_319": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "moveShelfToDJXB1ToDJthree",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "货架搬运DJXB1到四部收料区_141": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "moveShelfToDJXB1ToDJQBQ",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "A3一楼包材送货到A3二楼点胶_225": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "A3BC_1_to_A4DJ_2_SL",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "A3一楼包材送货到A3二楼点胶回库_226": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "A3BC_1_to_A4DJ_2_HK",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "空车A3包材去A3点胶回_234": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_A3BC_to_A3DJ_leave",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "送满A3点胶2F去A3前端四部3F_322": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_go_32A3DJ2F_to_31A3QD4B3F",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空A3点胶2F去A3前端四部3F_323": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "HJBY_back_32A3DJ2F_to_31A3QD4B3F",
+                "requires_shelf": true,
+                "requires_task_path": false,
+                "task_path_options": []
+                },
+                "回空车A3点胶2F去A3前端四部3F_321": {
+                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                "code": "K_back_32A3DJ2F_to_31A3QD4B3F",
+                "requires_shelf": false,
+                "requires_task_path": false,
+                "task_path_options": []
+                }
+            }
+        },
+    

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨环境任务下发</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            margin-top: 40px;
+        }
+        
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .content {
+            padding: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: background 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .response-area {
+            margin-top: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 5px solid #2c3e50;
+        }
+        
+        .response-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-height: 300px;
+            font-size: 14px;
+        }
+        
+        .status {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .request-info {
+            background: #f1f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .info-content {
+            color: #555;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: white;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                border-radius: 10px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>跨环境任务下发</h1>
+            <div class="subtitle">向目标服务器发送任务请求</div>
+        </header>
+        
+        <div class="content">
+            <div class="form-group">
+                <label for="modelProcessCode">模型流程代码 (modelProcessCode)</label>
+                <input type="text" id="modelProcessCode" placeholder="例如: Kmove" value="Kmove">
+            </div>
+            
+            <div class="form-group">
+                <label for="taskPath">任务路径 (taskPath)</label>
+                <input type="text" id="taskPath" placeholder="例如: 60000096" value="60000096">
+            </div>
+            
+            <div class="form-group">
+                <label for="shelfNumber">货架编号 (shelfNumber)</label>
+                <input type="text" id="shelfNumber" placeholder="输入货架编号">
+            </div>
+            
+            <button id="sendButton" class="btn">
+                <i class="fas fa-paper-plane"></i> 发送任务请求
+            </button>
+            
+            <div class="request-info">
+                <div class="info-title">请求信息</div>
+                <div class="info-content">
+                    <p>目标地址: 10.68.2.40:7000/ics/taskOrder/addTask</p>
+                    <p>请求方式: POST</p>
+                    <p>orderId将自动使用当前时间戳生成</p>
+                </div>
+            </div>
+            
+            <div class="response-area">
+                <div class="response-title">
+                    <i class="fas fa-server"></i> 服务器响应
+                </div>
+                <pre id="responseContent">等待请求发送...</pre>
+                
+                <div class="status">
+                    <span>状态: <span id="statusText">就绪</span></span>
+                    <span>时间: <span id="timeText">-</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2023 跨环境任务下发系统 | 设计用于内部使用</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sendButton = document.getElementById('sendButton');
+            const responseContent = document.getElementById('responseContent');
+            const statusText = document.getElementById('statusText');
+            const timeText = document.getElementById('timeText');
+            
+            sendButton.addEventListener('click', function() {
+                // 获取输入值
+                const modelProcessCode = document.getElementById('modelProcessCode').value;
+                const taskPath = document.getElementById('taskPath').value;
+                const shelfNumber = document.getElementById('shelfNumber').value;
+                
+                // 验证输入
+                if (!modelProcessCode || !taskPath) {
+                    responseContent.textContent = '错误：模型流程代码和任务路径为必填项！';
+                    statusText.textContent = '错误';
+                    statusText.className = 'error';
+                    timeText.textContent = new Date().toLocaleTimeString();
+                    return;
+                }
+                
+                // 更新UI状态
+                statusText.textContent = '发送中...';
+                statusText.className = '';
+                responseContent.textContent = '请求发送中，请等待...';
+                sendButton.disabled = true;
+                sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+                
+                // 构建请求数据
+                const requestData = {
+                    modelProcessCode: modelProcessCode,
+                    priority: 6,
+                    orderId: Date.now().toString(),
+                    fromSystem: "pc",
+                    taskOrderDetail: {
+                        taskPath: taskPath,
+                        deviceNum: "",
+                        shelfNumber: shelfNumber
+                    }
+                };
+                
+                // 记录请求时间
+                const startTime = new Date();
+                
+                // 发送Fetch请求
+                fetch('http://10.68.2.40:7000/ics/taskOrder/addTask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`网络响应异常: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 显示响应
+                    responseContent.textContent = JSON.stringify(data, null, 2);
+                    statusText.textContent = '成功';
+                    statusText.className = 'success';
+                    
+                    // 计算请求耗时
+                    const endTime = new Date();
+                    const duration = endTime - startTime;
+                    timeText.textContent = `${endTime.toLocaleTimeString()} (耗时: ${duration}ms)`;
+                })
+                .catch(error => {
+                    // 显示错误
+                    responseContent.textContent = `错误: ${error.message}`;
+                    statusText.textContent = '错误';
+                    statusText.className = 'error';
+                    timeText.textContent = new Date().toLocaleTimeString();
+                })
+                .finally(() => {
+                    // 恢复按钮状态
+                    sendButton.disabled = false;
+                    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送任务请求';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

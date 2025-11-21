@@ -1,0 +1,184 @@
+ {
+  "general": {
+    "title": "AGV任务下发系统",
+    "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+  },
+  "areas": {
+    "A2-2存储备料": {
+      "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+      "tasks": {
+        "老座舱_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-LZC",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "放大器_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-FDQ",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "屏装线_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-PZX",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "NFC线_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-NFCline",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "右域控制器_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-YYKZQ",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "TBOX_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-TBOX",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "整车座椅_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-ZCZY",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "B10座舱_送满A2存储备料去A2存储一部3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "xialiaoDA02-B10ZC",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "回空A2备料2F去A2华消3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_17A2BL2F_to_19A2HX3F_back",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "上架任务": {
+          "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+          "code": "shangjiafangxia",
+          "requires_shelf": true,
+          "requires_task_path": true,
+          "task_path_options": ["33254836", "33254835"]
+        },
+        "上架回库任务": {
+          "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+          "code": "shangjiafangxiahk",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        }
+      }
+
+    },
+    "A1-1PCBA": {
+      "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+      "tasks": {
+        "送满A1pcba1F去A2华昱欣3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "回空A1pcba1F去A2华昱欣3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_31A1DZ1F_to_19A2HYX3F_back",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "空车A1pcba1F去A2华昱欣3F": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_31A1DZ1F_to_19A2HYX3F_go",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "空车A1pcba1F去A2华昱欣3F回": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_31A1DZ1F_to_19A2HYX3F_leave",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        }
+      }
+    },
+    "PCBA A2-2 货架区": {
+      "tasks": {
+        "空车A1pcba1F去A2存储备料2F_293": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_31A1DZ1F_to_17A2CC2F_go",
+          "requires_shelf": false,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "空车A1pcba1F去A2存储备料2F回_294": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_31A1DZ1F_to_17A2CC2F_leave",
+          "requires_shelf": false,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "送满A1pcba1F去A2存储备料2F_295": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_31A1DZ1F_to_17A2CC2F_go",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "回空A1pcba1F去A2存储备料2F_296": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_31A1DZ1F_to_17A2CC2F_back",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "空车A2存储备料2F去A2华昱欣3F_297": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_17A2CC2F_to_19A2HYX3F_go",
+          "requires_shelf": false,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "空车A2存储备料2F去A2华昱欣3F回_298": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "K_17A2CC2F_to_19A2HYX3F_leave",
+          "requires_shelf": false,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "送满A2存储备料2F去A2华昱欣3F_299": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_17A2CC2F_to_19A2HYX3F_go",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        },
+        "回空A2存储备料2F去A2华昱欣3F回_300": {
+          "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+          "code": "HJBY_17A2CC2F_to_19A2HYX3F_back",
+          "requires_shelf": true,
+          "requires_task_path": false,
+          "task_path_options": []
+        }
+      }
+    }
+  }
+}
