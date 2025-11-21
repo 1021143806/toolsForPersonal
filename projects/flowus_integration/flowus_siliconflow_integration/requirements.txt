@@ -1,0 +1,35 @@
+# FlowUs AI内容生成器依赖包
+
+# 数据库连接
+pymysql>=1.0.2
+
+# TOML配置文件解析
+toml>=0.10.2
+# 或者使用 tomlkit (推荐，更好的TOML支持)
+tomlkit>=0.11.4
+
+# HTTP请求 (如果需要替换http.client)
+requests>=2.28.0
+
+# 日期时间处理 (Python标准库，但某些功能可能需要增强)
+python-dateutil>=2.8.2
+
+# 类型检查支持
+typing-extensions>=4.0.0
+
+# 日志增强 (可选)
+colorlog>=6.7.0
+
+# 开发和测试依赖 (可选)
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# 代码格式化 (开发依赖)
+black>=22.0.0
+flake8>=5.0.0
+
+# 注意事项：
+# 1. pymysql 是必需的，用于MySQL数据库连接
+# 2. toml 或 tomlkit 至少需要一个，用于解析config.toml文件
+# 3. 其他依赖是可选的，根据实际需要安装
+# 4. 项目主要使用Python标准库，如 logging, json, os, sys, datetime 等
