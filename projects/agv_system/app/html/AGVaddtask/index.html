@@ -563,6 +563,7 @@
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
+            //------------------------------------------------------
                 "A1-1 PCBA": {
                     "tasks": {
                         "送满A1pcba1F去A2华昱欣3F": {
@@ -595,6 +596,41 @@
                         }
                     }
                 },
+            //------------------------------------------------------
+            //------------------------------------------------------
+                "A1-2 电装工厂": {
+                    "tasks": {
+                        "314空车A1电装2F去A2华消1F": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_31A1DZ1F_to_19A2HX1F_go",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "315空车A1pcba1F去A2华消2F回": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_31A1DZ1F_to_19A2HX1F_leave",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "316送满A1电装2F去A2华消1F": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "HJBY_31A1DZ2F_to_19A2HX1F_go",
+                            "requires_shelf": true,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "317回空A1电装2F去A2华消1F": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "HJBY_31A1DZ2F_to_19A2HX1F_back",
+                            "requires_shelf": true,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+            //------------------------------------------------------
                 "A2-2 PCBA 货架区": {
                     "tasks": {
                         "空车A1pcba1F去A2存储备料2F_293": {
