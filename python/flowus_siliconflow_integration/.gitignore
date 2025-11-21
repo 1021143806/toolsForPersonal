@@ -33,4 +33,4 @@ process.log
 *.log
 .DS*
 local.md
-outputs/
+#outputs/
