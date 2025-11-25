@@ -28,8 +28,15 @@ pytest-cov>=4.0.0
 black>=22.0.0
 flake8>=5.0.0
 
+# 定时任务调度
+schedule>=1.2.0
+
+# 时区支持
+pytz>=2025.1
+
 # 注意事项：
 # 1. pymysql 是必需的，用于MySQL数据库连接
 # 2. toml 或 tomlkit 至少需要一个，用于解析config.toml文件
-# 3. 其他依赖是可选的，根据实际需要安装
-# 4. 项目主要使用Python标准库，如 logging, json, os, sys, datetime 等
+# 3. schedule 用于定时任务调度
+# 4. 其他依赖是可选的，根据实际需要安装
+# 5. 项目主要使用Python标准库，如 logging, json, os, sys, datetime 等
