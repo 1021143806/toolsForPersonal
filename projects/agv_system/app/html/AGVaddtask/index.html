@@ -677,6 +677,7 @@
                         }
                     }
                 },
+            //------------------------------------------------------
                 "A2-2 存储备料": {
                     "tasks": {
                         "老座舱_送满A2存储备料去A2存储一部3F": {
@@ -761,6 +762,51 @@
                         }
                     }
                 },
+            //------------------------------------------------------
+                "A2-2 存储备料(NOC 跨环境上架调试)": {
+                    "tasks": {
+                        "去空车_19新华消3F_to_172F_424": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_go_19XHX3F_to_17XHX2F_424",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "回空车_19新华消3F_to_172F_425": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_back_19XHX3F_to_17XHX2F_425",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "上架搬运_19新华消3F_to_172F_426": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "SHJBY_19XHX3F_to_17XHX2F_426",
+                            "requires_shelf": true,
+                            "requires_task_path": true,
+                            "task_path_options": [
+                                {"value": "60001260", "label": "60001260"}
+                            ]
+                        },
+                        "上架搬运放下_19新华消3F_to_172F_427": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "SJBYFX_19XHX3F_to_17XHX2F_427",
+                            "requires_shelf": true,
+                            "requires_task_path": true,
+                            "task_path_options": [
+                                {"value": "60001260", "label": "60001260"}
+                           ]
+                        },
+                        "下架搬运回库_19新华消3F_to_172F_428": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "XJBYHK_19XHX3F_to_17XHX2F_428",
+                            "requires_shelf": true,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+            //------------------------------------------------------
                 "A2-3华昱欣←→A2-2原华橙车间": {
                     "tasks": {
                         "去空车<-_17华昱欣备料2F_to_19华昱欣3F_372": {
@@ -1000,6 +1046,40 @@
             });
             queryBtn.addEventListener('click', queryTasks);
             
+            // 任务路径选择框变化时隐藏错误提示
+            taskPathSelect.addEventListener('change', function() {
+                if (this.value && this.value.trim() !== '' && this.value !== '请选择任务路径') {
+                    taskPathError.style.display = 'none';
+                }
+            });
+            
+            // 货架号输入时隐藏错误提示
+            shelfInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    shelfError.style.display = 'none';
+                }
+                
+                // 同时检查货架锁定状态
+                const area = areaSelect.value;
+                const taskName = taskSelect.value;
+                
+                if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
+                    const task = config.areas[area].tasks[taskName];
+                    
+                    if (task.requires_shelf) {
+                        const shelf = shelfInput.value.trim();
+                        
+                        if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
+                            shelfLock.style.display = 'block';
+                            submitBtn.disabled = true;
+                        } else {
+                            shelfLock.style.display = 'none';
+                            submitBtn.disabled = false;
+                        }
+                    }
+                }
+            });
+            
             // 检查本地存储的主题偏好
             if (localStorage.getItem('darkMode') === 'true') {
                 document.body.classList.add('dark-mode');
@@ -1179,17 +1259,32 @@
             const task = config.areas[area].tasks[taskName];
             const shelf = shelfInput.value.trim();
             
-            // 验证货架号
-            if (task.requires_shelf && !shelf) {
-                shelfError.style.display = 'block';
-                return;
-            }
+        // 验证货架号 - 加强版
+        if (task.requires_shelf) {
+            const shelf = shelfInput.value.trim(); // 在块级作用域内声明
             
-            // 验证任务路径
-            if (task.requires_task_path && !taskPathSelect.value) {
-                taskPathError.style.display = 'block';
+            if (!shelf) {
+                console.error('货架号验证失败: 货架号为空或只有空格');
+                shelfError.style.display = 'block';
+                alert('错误：请输入有效的货架号！');
                 return;
             }
+        
+        // 注意：这里的shelf只在当前if块内有效
+        // 后续使用shelf时需要在外部重新获取或声明
+        }
+
+        // 验证任务路径 - 加强版
+        if (task.requires_task_path) {
+            const taskPathValue = taskPathSelect.value;
+            
+            if (!taskPathValue || taskPathValue.trim() === '' || taskPathValue === '请选择任务路径') {
+                console.error('任务路径验证失败:', taskPathValue);
+                taskPathError.style.display = 'block';
+                alert('错误：请选择有效的任务路径！');
+                return;
+            }
+        }
             
             // 检查货架是否在5分钟内已下发过任务
             if (task.requires_shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
