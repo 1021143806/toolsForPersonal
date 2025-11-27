@@ -85,3 +85,20 @@ password = "mariadb_cPfKcH"
 database = "flowus"
 # 字符集
 charset = "utf8mb4"
+
+# 定时任务配置
+[scheduler]
+# 是否启用定时任务
+enabled = true
+# 每日执行时间（24小时制）
+time = "22:00"
+# 时区设置
+timezone = "Asia/Shanghai"
+# 重试次数（失败时）
+max_retries = 3
+# 重试间隔（秒）
+retry_interval = 300
+# 是否启用周末执行
+run_on_weekends = true
+# 任务超时时间（秒）
+timeout = 3600
