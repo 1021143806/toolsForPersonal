@@ -1047,9 +1047,13 @@
             queryBtn.addEventListener('click', queryTasks);
             
             // 任务路径选择框变化时隐藏错误提示
+            // 在事件监听中添加视觉反馈
             taskPathSelect.addEventListener('change', function() {
                 if (this.value && this.value.trim() !== '' && this.value !== '请选择任务路径') {
                     taskPathError.style.display = 'none';
+                    this.style.borderColor = 'green'; // 绿色边框表示有效
+                } else {
+                    this.style.borderColor = 'red'; // 红色边框表示无效
                 }
             });
             
@@ -1057,6 +1061,9 @@
             shelfInput.addEventListener('input', function() {
                 if (this.value.trim()) {
                     shelfError.style.display = 'none';
+                    this.style.borderColor = 'green'; // 绿色边框表示有效
+                } else {
+                    this.style.borderColor = 'red'; // 红色边框表示无效
                 }
                 
                 // 同时检查货架锁定状态
