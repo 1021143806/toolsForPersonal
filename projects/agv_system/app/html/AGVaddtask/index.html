@@ -806,7 +806,50 @@
                         }
                     }
                 },
-            //------------------------------------------------------
+                //__________________________________________________________________________
+                "A2-3 华昱欣线体上架 ←→ A1-1月台": {
+                    "tasks": {
+                        "249空车A2备料2F去A2华消注塑工厂1F": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_17A2BL2F_to_19A2HXZS1F_go",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "250空车A2备料2F去A2华消注塑工厂1F回": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_17A2BL2F_to_19A2HXZS1F_back",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "去空车_零跑物料配送跨环境A1-1上料华昱欣线体_429": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_go_19XHX3F_to_36QCDZ1F_429",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "回空车_零跑物料配送跨环境A1-1上料华昱欣线体_430": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_back_19XHX3F_to_36QCDZ1F_430",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "上架搬运_零跑物料配送跨环境A1-1上料华昱欣线体_431": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "SHJBY_19XHX3F_to_36QCDZ1F_431",
+                            "requires_shelf": true,
+                            "requires_task_path": true,
+                            "task_path_options": [
+                                {"value": "43000688", "label": "43000688点一"},
+                                {"value": "43000687", "label": "43000687点二"},
+                            ]
+                        }
+                    }
+                },
+                //__________________________________________________________________________
                 "A2-3华昱欣←→A2-2原华橙车间": {
                     "tasks": {
                         "去空车<-_17华昱欣备料2F_to_19华昱欣3F_372": {
@@ -899,6 +942,25 @@
                             "requires_task_path": false,
                             "task_path_options": []
                         },
+                    }
+                },
+                //__________________________________________________________________________
+                "A3-2 行业备料 & 行业货架区2": {
+                    "tasks": {
+                        "空车跨环境去货架区2_159": {
+                            "base_url": "http://10.68.2.27:7000/ics/taskOrder/addTask",
+                            "code": "HJQ2go",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "空车跨环境离货架区2_160": {
+                            "base_url": "http://10.68.2.27:7000/ics/taskOrder/addTask",
+                            "code": "HJQ2leave",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
                     }
                 },
                 //__________________________________________________________________________
@@ -1589,11 +1651,11 @@
                         ${index === 0 ? `
                             <button class="btn priority-btn" 
                                     onclick="updateTaskPriority('${task.subOrderId}', '${task.serviceUrl}', ${task.status})"
-                                    ${task.status !== 9 ? 'disabled' : ''}>
+                                    ${[4, 9].includes(task.status) ? '' : 'disabled'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
-                                ${task.status === 9 ? '优先执行' : '无法优先'}
+                                ${[4,9].includes(task.status) ? '优先执行' : '无法优先'}
                             </button>
                         ` : ''}
                     </div>
@@ -1623,19 +1685,26 @@
             }
             priorityLastClickTime = now;
             
-            // 检查任务状态
-            if (status === 6) {
+            // 检查任务状态 - 允许状态4、6、9调整优先级
+            if (![4, 9].includes(status)) {
                 priorityModalTitle.textContent = '无法调整优先级';
-                priorityModalMessage.textContent = '任务已经开始执行，无法调整优先级';
+                priorityModalMessage.textContent = '只有正在发送或已下发的任务才能调整优先级';
                 priorityModal.style.display = 'flex';
                 return;
             }
             
-            if (status !== 9) {
-                priorityModalTitle.textContent = '无法调整优先级';
-                priorityModalMessage.textContent = '只有已下发但未开始的任务才能调整优先级';
-                priorityModal.style.display = 'flex';
-                return;
+            // 根据状态获取状态文本
+            let statusText = '';
+            switch (status) {
+                case 4:
+                    statusText = '正在发送';
+                    break;
+                case 6:
+                    statusText = '执行中';
+                    break;
+                case 9:
+                    statusText = '已下发';
+                    break;
             }
             
             try {
@@ -1658,17 +1727,17 @@
                 
                 if (data.code === 1000) {
                     priorityModalTitle.textContent = '优先级调整成功';
-                    priorityModalMessage.textContent = '任务优先级已成功提高，任务将优先执行';
+                    priorityModalMessage.textContent = `${statusText}任务的优先级已成功提高，任务将优先执行`;
                     priorityModal.style.display = 'flex';
                 } else {
                     priorityModalTitle.textContent = '优先级调整失败';
-                    priorityModalMessage.textContent = `调整优先级失败: ${data.desc || '未知错误'}`;
+                    priorityModalMessage.textContent = `${statusText}任务调整优先级失败: ${data.desc || '未知错误'}`;
                     priorityModal.style.display = 'flex';
                 }
             } catch (error) {
                 console.error('调整任务优先级时出错:', error);
                 priorityModalTitle.textContent = '优先级调整失败';
-                priorityModalMessage.textContent = `调整优先级失败: ${error.message}`;
+                priorityModalMessage.textContent = `${statusText}任务调整优先级失败: ${error.message}`;
                 priorityModal.style.display = 'flex';
             }
         }
