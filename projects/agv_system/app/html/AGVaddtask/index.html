@@ -806,7 +806,27 @@
                         }
                     }
                 },
-                //__________________________________________________________________________
+
+            //------------------------------------------------------
+                "A2-3 存储备料&存储一部（调空车）": {
+                    "tasks": {
+                        "269空车A2备料去A2存储一部3F": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_17CCBL2F_to_31A2CC1B3F_go",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "270空车A2备料去A2存储一部3F回": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_17CCBL2F_to_31A2CC1B3F_back",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+            //------------------------------------------------------
                 "A2-3 华昱欣线体上架 ←→ A1-1月台": {
                     "tasks": {
                         "249空车A2备料2F去A2华消注塑工厂1F": {
@@ -849,7 +869,7 @@
                         }
                     }
                 },
-                //__________________________________________________________________________
+            //------------------------------------------------------
                 "A2-3华昱欣←→A2-2原华橙车间": {
                     "tasks": {
                         "去空车<-_17华昱欣备料2F_to_19华昱欣3F_372": {
@@ -896,6 +916,47 @@
                         },
                     }
                 },
+            //------------------------------------------------------
+            //------------------------------------------------------
+                "A2-3华昱欣-CZ01-LH001": {
+                    "tasks": {
+                        "去空车<-_17华昱欣备料2F_to_19华昱欣3F_372": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "kctoHYX",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "回空车->_17华昱欣备料2F_to_19华昱欣3F_373": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "kctoHYX-back",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "大型下料任务流程370": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "xialiaoCZ01-Large",
+                            "requires_shelf": true,
+                            "requires_task_path": true,
+                            "task_path_options": [
+                                {"value": "60001299", "label": "行1列1"},
+                                {"value": "60001298", "label": "行2列1"},
+                                {"value": "60001297", "label": "行3列1"},
+                                {"value": "60001249", "label": "行2列2"},
+                                {"value": "60001248", "label": "行3列2"}
+                            ]
+                        },
+                        "大型下料回库流程371": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "xialiaoCZ01Back-Large",
+                            "requires_shelf": true,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+            //------------------------------------------------------
                 "A3-2 点胶 & 行业货架区2": {
                     "tasks": {
                         "上架搬运_行业货架区2去点胶回_407": {
