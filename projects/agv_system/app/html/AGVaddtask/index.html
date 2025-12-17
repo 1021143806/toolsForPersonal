@@ -583,14 +583,14 @@
                         "空车A1pcba1F去A2华昱欣3F": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code": "K_31A1DZ1F_to_19A2HYX3F_go",
-                            "requires_shelf": true,
+                            "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
                         "空车A1pcba1F去A2华昱欣3F回": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code": "K_31A1DZ1F_to_19A2HYX3F_leave",
-                            "requires_shelf": true,
+                            "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
                         }
@@ -1397,34 +1397,40 @@
             }
             
             const task = config.areas[area].tasks[taskName];
-            const shelf = shelfInput.value.trim();
-            
-        // 验证货架号 - 加强版
-        if (task.requires_shelf) {
-            const shelf = shelfInput.value.trim(); // 在块级作用域内声明
-            
-            if (!shelf) {
-                console.error('货架号验证失败: 货架号为空或只有空格');
-                shelfError.style.display = 'block';
-                alert('错误：请输入有效的货架号！');
+            if (!task) {
+                console.error('任务配置查找失败:', { area, taskName });
+                alert('错误：找不到对应的任务配置，请重新选择');
                 return;
             }
-        
-        // 注意：这里的shelf只在当前if块内有效
-        // 后续使用shelf时需要在外部重新获取或声明
-        }
+            let shelf = shelfInput.value.trim(); // 改为let，允许重新赋值
+            
+            // 验证货架号 - 修复版
+            if (task.requires_shelf) {
+                // 使用不同的变量名，避免作用域冲突
+                const shelfValue = shelfInput.value.trim();
+                
+                if (!shelfValue) {
+                    console.error('货架号验证失败: 货架号为空或只有空格');
+                    shelfError.style.display = 'block';
+                    alert('错误：请输入有效的货架号！');
+                    return;
+                }
+                
+                // 更新外部shelf变量
+                shelf = shelfValue;
+            }
 
-        // 验证任务路径 - 加强版
-        if (task.requires_task_path) {
-            const taskPathValue = taskPathSelect.value;
-            
-            if (!taskPathValue || taskPathValue.trim() === '' || taskPathValue === '请选择任务路径') {
-                console.error('任务路径验证失败:', taskPathValue);
-                taskPathError.style.display = 'block';
-                alert('错误：请选择有效的任务路径！');
-                return;
+            // 验证任务路径 - 加强版
+            if (task.requires_task_path) {
+                const taskPathValue = taskPathSelect.value;
+                
+                if (!taskPathValue || taskPathValue.trim() === '' || taskPathValue === '请选择任务路径') {
+                    console.error('任务路径验证失败:', taskPathValue);
+                    taskPathError.style.display = 'block';
+                    alert('错误：请选择有效的任务路径！');
+                    return;
+                }
             }
-        }
             
             // 检查货架是否在5分钟内已下发过任务
             if (task.requires_shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
@@ -1460,9 +1466,8 @@
             // 准备请求数据
             const getBeijingTime = () => {
                 const now = new Date();
-                // 北京时间 = UTC时间 + 8小时
-                const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-                return beijingTime.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+                // 修复：直接使用本地时间格式，避免重复加时区
+                return now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
             };
 
             const requestData = [{
@@ -1479,15 +1484,31 @@
             // 显示调试信息
             debugInfo.textContent = JSON.stringify(requestData, null, 2);
             
+            // 添加调试日志
+            console.log('=== 任务下发调试信息 ===');
+            console.log('区域:', area);
+            console.log('任务模板:', taskName);
+            console.log('任务配置:', task);
+            console.log('货架号:', shelf);
+            console.log('任务路径:', task.requires_task_path ? taskPathSelect.value : '无');
+            console.log('准备发送的报文:', requestData);
+            console.log('目标URL:', task.base_url);
+            console.log('========================');
+            
             try {
-                // 发送请求
-                const response = await fetch(task.base_url || config.areas[area].base_url, {
+                // 发送请求 - 修复URL选择逻辑
+                const targetUrl = task.base_url; // 移除不存在的config.areas[area].base_url
+                console.log('实际发送到URL:', targetUrl);
+                
+                const response = await fetch(targetUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 });
+                
+                console.log('请求已发送，响应状态:', response.status);
                 
                 const data = await response.json();
                 
