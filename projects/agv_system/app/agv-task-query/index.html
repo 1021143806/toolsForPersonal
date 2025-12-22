@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV任务查询系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            font-size: 1.2em;
+            margin-top: 0;
+        }
+        form {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            min-width: 120px;
+            margin-right: 10px;
+        }
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>AGV任务查询系统</h1>
+
+    <div class="container">
+        <h2>按照任务单号查询</h2>
+        <form action="handlers/task/find-task.php" method="get">
+            <label>任务单号:</label>
+            <input type="text" name="idd" placeholder="请输入任务单号">
+            <label>服务器IP:</label>
+            <input type="text" name="RCSip" placeholder="如: 31">
+            <input type="submit" value="提交">
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>跨环境按照任务模版查询当前执行中或占用容量的任务</h2>
+        <form action="handlers/task/cross-task-query.php" method="get">
+            <label>跨环境任务模版:</label>
+            <input type="text" name="idd" placeholder="请输入任务模版">
+            <input type="submit" value="提交">
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>输入跨环境任务模版查看子任务模板信息</h2>
+        <form action="handlers/task/check-cross-model.php" method="get">
+            <label>跨环境任务模版:</label>
+            <input type="text" name="idd" placeholder="请输入任务模版">
+            <input type="submit" value="提交">
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>输入跨环境任务编号查询所有子任务及当前执行中或占用容量的任务</h2>
+        <form action="handlers/task/find-cross-task.php" method="get">
+            <label>跨环境任务单号:</label>
+            <input type="text" name="idd" placeholder="请输入任务单号">
+            <input type="submit" value="提交">
+        </form>
+    </div>
+</body>
+</html>
