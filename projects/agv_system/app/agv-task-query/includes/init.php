@@ -27,4 +27,7 @@ require_once $includesDir . '/form-helper.php';
 
 // 引入JSON处理帮助模块
 require_once $includesDir . '/json-helper.php';
+
+// 引入任务配置验证器模块
+require_once $includesDir . '/task-validator.php';
 ?>

@@ -19,7 +19,13 @@
 - **多服务器支持**: 支持单服务器、多服务器或自定义服务器列表导出
 - **UTF-8编码**: 完美支持中文Excel显示
 
-### 4. 文档管理
+### 4. 任务配置验证
+- **跨环境配置检查**: 验证AGV任务在多个环境（开发、测试、生产）中的配置完整性
+- **完整性检查**: 检查任务参数、依赖关系、权限设置、环境变量和资源分配
+- **验证报告**: 生成JSON格式的详细报告，包括通过/失败项和建议修复措施
+- **安全控制**: API密钥验证和敏感信息脱敏
+
+### 5. 文档管理
 - 系统说明文档
 - 界面截图
 - 使用指南
@@ -41,7 +47,8 @@ agv-task-query/
 │   ├── find-task.php              # 单任务查询
 │   ├── cross-task-query.php       # 跨环境任务查询
 │   ├── check-cross-model.php      # 检查跨环境任务模板
-│   └── find-cross-task.php        # 跨环境任务详细查询
+│   ├── find-cross-task.php        # 跨环境任务详细查询
+│   └── validate-config.php        # 任务配置验证API
 ├── exports/                # 数据导出
 │   └── export-robot-data.php      # CSV导出功能
 ├── docs/                   # 文档
@@ -100,6 +107,43 @@ Content-Type: application/json
 - 单服务器: `exports/export-robot-data.php?mode=single&ip=31`
 - 所有服务器: `exports/export-robot-data.php?mode=all`
 - 自定义服务器: `exports/export-robot-data.php?mode=custom&servers=19,31,33`
+
+### 4. 任务配置验证
+通过API验证任务配置完整性：
+
+**API端点**: `handlers/task/validate-config.php`
+
+**请求参数** (GET或POST):
+- `taskId` (可选): 任务ID
+- `taskName` (可选): 任务名称
+- `taskCode` (可选): 任务代码（默认）
+- `environments` (可选): 环境IP列表，逗号分隔（如 `10.68.2.31,10.68.2.32`）
+- `strict` (可选): 严格模式，`true` 或 `false`（默认 `true`）
+- `api_key` (可选): API密钥（或使用Authorization头）
+
+**示例请求**:
+```
+GET /agv-task-query/handlers/task/validate-config.php?taskCode=XJBYHK_19XHX3F_to_17XHX2F_428&environments=10.68.2.31,10.68.2.32&strict=false&api_key=agv_validation_2025_key
+```
+
+**响应示例** (JSON):
+```json
+{
+  "code": 200,
+  "message": "Validation completed",
+  "data": {
+    "task_identifier": "XJBYHK_19XHX3F_to_17XHX2F_428",
+    "overall_status": "complete",
+    "environments": {
+      "10.68.2.31": {
+        "status": "complete",
+        "checks": [...]
+      }
+    },
+    "suggestions": []
+  }
+}
+```
 
 ## 安装部署
 
