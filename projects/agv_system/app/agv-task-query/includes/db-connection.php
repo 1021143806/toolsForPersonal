@@ -37,7 +37,7 @@ function connectMsqlAgvWms($ip)
     
     $conn = mysqli_connect($dbhost . $ip, $dbuser, $dbpass);
     if (!$conn) {
-        die('Could not connect: ' . mysqli_error($conn));
+        die('Could not connect: ' . mysqli_connect_error());
     }
     
     echo "数据库 $ip1 连接成功！<br>";
@@ -69,7 +69,7 @@ function connectMsqlAgvWmsNoINFO($ip)
     
     $conn = mysqli_connect($dbhost . $ip, $dbuser, $dbpass);
     if (!$conn) {
-        die('Could not connect: ' . mysqli_error($conn));
+        die('Could not connect: ' . mysqli_connect_error());
     }
     
     mysqli_select_db($conn, 'wms');
@@ -100,7 +100,7 @@ function connectMySQLAll($ip, $dbuser, $dbpass, $MySQL)
     
     $conn = mysqli_connect($dbhost . $ip, $dbuser, $dbpass);
     if (!$conn) {
-        die('Could not connect: ' . mysqli_error());
+        die('Could not connect: ' . mysqli_connect_error());
     }
     
     mysqli_select_db($conn, $MySQL);

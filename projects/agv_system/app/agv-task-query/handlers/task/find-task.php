@@ -37,7 +37,7 @@ $dbpass = 'CCshenda889';
 $conn = mysqli_connect($dbhost, $dbuser, $dbpass);
 
 if (!$conn) {
-    die('<div class="error">数据库连接失败: ' . mysqli_error() . '</div>');
+    die('<div class="error">数据库连接失败: ' . mysqli_connect_error() . '</div>');
 }
 
 echo "<div class='info-item success'>数据库连接成功：" . htmlspecialchars($RCSip) . "</div>";
