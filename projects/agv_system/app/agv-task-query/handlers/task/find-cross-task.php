@@ -112,7 +112,7 @@ function FindTheTaskphp($ip, $out_order_id)
 
 <?php
 // 1.读取输入的任务id
-$order_id = $_GET["idd"];
+$order_id = trim($_GET["idd"]);
 echo "<div class='info'>输入的任务ID：<strong>" . htmlspecialchars($order_id) . "</strong></div>";
 
 // 2.连接跨环境数据库

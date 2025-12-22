@@ -24,7 +24,7 @@ require_once '../../includes/init.php';
 
 <?php
 // 读取输入的任务id
-$out_order_id = $_GET["idd"];
+$out_order_id = trim($_GET["idd"]);
 echo "<div class='info-item'><span class='info-label'>输入的任务ID：</span><span class='info-value'>" . htmlspecialchars($out_order_id) . "</span></div>";
 
 // 读取输入的服务器

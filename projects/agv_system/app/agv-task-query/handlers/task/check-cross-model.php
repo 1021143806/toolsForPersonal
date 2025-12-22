@@ -24,7 +24,7 @@ require_once '../../includes/init.php';
 
 <?php
 // 读取输入的跨环境任务模版
-$in_model_process_code = $_GET["idd"];
+$in_model_process_code = trim($_GET["idd"]);
 ?>
 
 <h2>
