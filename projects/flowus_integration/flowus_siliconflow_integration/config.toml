@@ -12,7 +12,9 @@ parent_page_id = "9d6623d1-25ef-436f-915a-5d37f5cf13db"
 # 硅基流动API Token
 token = "Bearer sk-dgbgacivptlzpdfasmoxuetjrpoxfaarszpnbwyqkpjhidyl"
 # 使用的AI模型
-model = "deepseek-ai/DeepSeek-V3.2-Exp"
+model = "deepseek-ai/DeepSeek-V3.2"
+#model = "deepseek-ai/DeepSeek-R1"
+#model = "deepseek-ai/DeepSeek-V3.2"
 
 # 输出配置
 [output]
