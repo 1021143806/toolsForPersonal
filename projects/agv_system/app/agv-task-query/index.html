@@ -308,16 +308,6 @@
             </form>
         </div>
 
-        <div class="container">
-            <h2><i class="fas fa-exchange-alt"></i> 跨环境任务模板查询</h2>
-            <form action="handlers/task/cross-task-query.php" method="get" target="resultFrame">
-                <div class="form-group">
-                    <label for="crossTemplate">跨环境任务模板</label>
-                    <input type="text" id="crossTemplate" name="idd" placeholder="例如: XJBYHK_..." required>
-                </div>
-                <input type="submit" value="查询模板">
-            </form>
-        </div>
 
         <div class="container">
             <h2><i class="fas fa-sitemap"></i> 查看子任务模板信息</h2>
@@ -341,44 +331,6 @@
             </form>
         </div>
 
-        <div class="container">
-            <h2><i class="fas fa-check-circle"></i> 任务配置验证 <span class="badge">NEW</span></h2>
-            <p class="note">验证跨环境任务配置的完整性，包括参数、依赖、权限、环境变量和资源分配。</p>
-            <form action="handlers/task/validate-config.php" method="get" target="resultFrame">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="taskCode">任务标识符</label>
-                        <input type="text" id="taskCode" name="taskCode" placeholder="任务代码 (如 XJBYHK_...)" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="identifierType">标识符类型</label>
-                        <select id="identifierType" name="identifierType">
-                            <option value="code">任务代码</option>
-                            <option value="id">任务ID</option>
-                            <option value="name">任务名称</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="environments">环境IP列表 (逗号分隔)</label>
-                    <input type="text" id="environments" name="environments" placeholder="例如: 10.68.2.31,10.68.2.32">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="strict">验证模式</label>
-                        <select id="strict" name="strict">
-                            <option value="true">严格模式</option>
-                            <option value="false">宽松模式</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="api_key">API密钥</label>
-                        <input type="text" id="api_key" name="api_key" placeholder="输入API密钥" value="agv_validation_2025_key">
-                    </div>
-                </div>
-                <input type="submit" value="开始验证配置">
-            </form>
-        </div>
 
         <div class="container">
             <h2><i class="fas fa-robot"></i> 设备序列号验证 <span class="badge">NEW</span></h2>
@@ -483,23 +435,22 @@
 
         <div class="container">
             <h2><i class="fas fa-tasks"></i> 跨环境任务模板配置验证 <span class="badge">NEW</span></h2>
-            <p class="note">查询跨环境大任务模板的配置信息（fy_cross_model_process 和 fy_cross_model_process_detail 表）。</p>
+            <p class="note">查询跨环境大任务模板的配置信息（fy_cross_model_process 和 fy_cross_model_process_detail 表）以及当前正在执行的任务（fy_cross_task 表）。</p>
             <form action="handlers/task/query-cross-model.php" method="get" target="resultFrame">
                 <div class="form-group">
                     <label for="cross_model_identifier">大任务模板标识符 (三选一)</label>
-                    <input type="text" id="cross_model_identifier" name="identifier" placeholder="例如: 428 或 XJBYHK_19XHX3F_to_17XHX2F_428 或 下架搬运回库_19新华消3F_to_172F_428">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="cross_model_id">或 模板ID (可选)</label>
+                        <label for="cross_model_id">模板ID (可选)</label>
                         <input type="text" id="cross_model_id" name="id" placeholder="例如: 428">
                     </div>
                     <div class="form-group">
-                        <label for="cross_model_code">或 模板编号 (可选)</label>
+                        <label for="cross_model_code">模板编号 (可选)</label>
                         <input type="text" id="cross_model_code" name="code" placeholder="例如: XJBYHK_19XHX3F_to_17XHX2F_428">
                     </div>
                     <div class="form-group">
-                        <label for="cross_model_name">或 模板名称 (可选)</label>
+                        <label for="cross_model_name">模板名称 (可选)</label>
                         <input type="text" id="cross_model_name" name="name" placeholder="例如: 下架搬运回库_19新华消3F_to_172F_428">
                     </div>
                 </div>
@@ -649,6 +600,103 @@
                 </html>
             `;
         };
+
+        // 可视化JSON结果
+        function tryParseJson(text) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function jsonToTable(json) {
+            if (!json || typeof json !== 'object') return '<p>无法解析数据</p>';
+            let html = '<div style="padding: 20px; font-family: Inter, sans-serif;">';
+            // 如果是数组
+            if (Array.isArray(json)) {
+                if (json.length === 0) {
+                    html += '<p>查询结果为空</p>';
+                } else {
+                    html += '<table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">';
+                    // 表头
+                    const headers = Object.keys(json[0]);
+                    html += '<thead><tr>';
+                    headers.forEach(h => html += `<th style="background-color: #3b82f6; color: white;">${h}</th>`);
+                    html += '</tr></thead><tbody>';
+                    // 行
+                    json.forEach(row => {
+                        html += '<tr>';
+                        headers.forEach(h => {
+                            let val = row[h];
+                            if (val === null || val === undefined) val = '';
+                            if (typeof val === 'object') val = JSON.stringify(val);
+                            html += `<td style="border: 1px solid #ddd;">${val}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+            } else {
+                // 对象
+                html += '<table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">';
+                html += '<thead><tr><th style="background-color: #3b82f6; color: white;">字段</th><th style="background-color: #3b82f6; color: white;">值</th></tr></thead><tbody>';
+                for (const key in json) {
+                    let val = json[key];
+                    if (val === null || val === undefined) val = '';
+                    if (typeof val === 'object') val = JSON.stringify(val);
+                    html += `<tr><td style="border: 1px solid #ddd; font-weight: bold;">${key}</td><td style="border: 1px solid #ddd;">${val}</td></tr>`;
+                }
+                html += '</tbody></table>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // 监听iframe加载事件
+        const resultFrame = document.getElementById('resultFrame');
+        resultFrame.addEventListener('load', function() {
+            try {
+                const iframeDoc = resultFrame.contentDocument || resultFrame.contentWindow.document;
+                const body = iframeDoc.body;
+                if (!body) return;
+                // 检查是否包含pre标签（JSON可能被包裹在pre中）
+                const pre = body.querySelector('pre');
+                let text = pre ? pre.textContent : body.textContent;
+                // 尝试解析JSON
+                const json = tryParseJson(text);
+                if (json) {
+                    // 替换iframe内容为表格
+                    const html = jsonToTable(json);
+                    iframeDoc.open();
+                    iframeDoc.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: Inter, sans-serif; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+                                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                th { background-color: #3b82f6; color: white; }
+                                .toggle-view { margin-bottom: 15px; }
+                                button { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                                button:hover { background: #2563eb; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="toggle-view">
+                                <button onclick="window.location.reload()">查看原始JSON</button>
+                            </div>
+                            ${html}
+                        </body>
+                        </html>
+                    `);
+                    iframeDoc.close();
+                }
+            } catch (e) {
+                console.log('可视化处理失败:', e);
+            }
+        });
     </script>
 </body>
 </html>

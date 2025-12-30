@@ -1,8 +1,9 @@
 <?php
 /**
- * 跨环境设备序列号相关配置验证
+ * 跨环境设备序列号相关配置查询
  * 输入：设备序列号（逗号分隔），可选跨环境大任务模板或指定服务器IP地址
- * 输出：校验是否通过，列出检查的内容、过程、结果以及缺少的地方
+ * 输出：查询到的设备配置详情，包括各环境中的存在情况、缺失项，可视化展示
+ * 不需要校验，不需要API密钥
  */
 
 require_once '../../includes/init.php';
@@ -13,7 +14,7 @@ header('Content-Type: application/json; charset=utf-8');
 $deviceCodesStr = $_GET['device_codes'] ?? '';
 $crossModel = $_GET['cross_model'] ?? '';
 $serverIpsStr = $_GET['server_ips'] ?? '';
-$strict = ($_GET['strict'] ?? 'true') === 'true';
+$strict = ($_GET['strict'] ?? 'false') === 'true'; // 严格模式：检查所有表
 
 // 验证必要参数
 if (empty($deviceCodesStr)) {
@@ -49,13 +50,13 @@ if (!empty($serverIpsStr)) {
     $serverIps = ['31', '32', '17'];
 }
 
-// 验证报告
+// 查询报告
 $report = [
     'device_codes' => $deviceCodes,
     'cross_model' => $crossModel,
     'server_ips' => $serverIps,
     'strict_mode' => $strict,
-    'overall_status' => 'pass',
+    'overall_status' => 'complete', // 改为 complete/incomplete 而非 pass/fail
     'environment_checks' => [],
     'missing_configs' => [],
     'suggestions' => []
@@ -63,16 +64,16 @@ $report = [
 
 // 对每个服务器IP进行检查
 foreach ($serverIps as $ip) {
-    $envReport = checkDevicesInEnvironment($ip, $deviceCodes, $strict);
+    $envReport = queryDevicesInEnvironment($ip, $deviceCodes, $strict);
     $report['environment_checks'][$ip] = $envReport;
-    if ($envReport['status'] !== 'pass') {
-        $report['overall_status'] = 'fail';
+    if ($envReport['status'] === 'incomplete') {
+        $report['overall_status'] = 'incomplete';
         $report['missing_configs'] = array_merge($report['missing_configs'], $envReport['missing']);
     }
 }
 
 // 生成建议
-if ($report['overall_status'] === 'fail') {
+if ($report['overall_status'] === 'incomplete') {
     $report['suggestions'][] = '部分设备配置缺失，请根据缺失项补充相应配置。';
 } else {
     $report['suggestions'][] = '所有设备配置完整，跨环境一致性良好。';
@@ -117,26 +118,28 @@ function getServerIpsFromCrossModel($crossModel) {
 }
 
 /**
- * 在特定环境中检查设备配置
+ * 在特定环境中查询设备配置详情
  */
-function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
+function queryDevicesInEnvironment($ip, $deviceCodes, $strict) {
     $conn = connectMsqlAgvWmsNoINFO($ip);
     if (!$conn) {
         return [
-            'status' => 'fail',
+            'status' => 'incomplete',
             'message' => '无法连接数据库',
             'missing' => ['数据库连接失败'],
-            'details' => []
+            'details' => [],
+            'tables' => []
         ];
     }
 
     $details = [];
     $missing = [];
-    $status = 'pass';
+    $status = 'complete';
+    $tables = [];
 
-    // 检查 agv_robot 表
+    // 1. 查询 agv_robot 表
     $placeholders = "'" . implode("','", array_map('mysqli_real_escape_string', array_fill(0, count($deviceCodes), $conn), $deviceCodes)) . "'";
-    $sql = "SELECT device_code, devicetype, device_ip FROM agv_robot WHERE device_code IN ($placeholders)";
+    $sql = "SELECT * FROM agv_robot WHERE device_code IN ($placeholders)";
     $result = mysqli_query($conn, $sql);
     $foundInRobot = [];
     if ($result) {
@@ -146,13 +149,14 @@ function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
                 'device' => $row['device_code'],
                 'table' => 'agv_robot',
                 'status' => 'found',
-                'devicetype' => $row['devicetype'],
-                'ip' => $row['device_ip']
+                'data' => $row
             ];
         }
+        $tables['agv_robot'] = count($foundInRobot) . ' 条记录';
     } else {
         $missing[] = "agv_robot 表查询失败";
-        $status = 'fail';
+        $status = 'incomplete';
+        $tables['agv_robot'] = '查询失败';
     }
 
     // 检查缺失的设备
@@ -162,14 +166,15 @@ function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
             $details[] = [
                 'device' => $code,
                 'table' => 'agv_robot',
-                'status' => 'missing'
+                'status' => 'missing',
+                'data' => null
             ];
-            $status = 'fail';
+            $status = 'incomplete';
         }
     }
 
-    // 检查 agv_robot_ext 表
-    $sql = "SELECT device_code, shelf_id, area_id FROM agv_robot_ext WHERE device_code IN ($placeholders)";
+    // 2. 查询 agv_robot_ext 表
+    $sql = "SELECT * FROM agv_robot_ext WHERE device_code IN ($placeholders)";
     $result = mysqli_query($conn, $sql);
     $foundInExt = [];
     if ($result) {
@@ -179,13 +184,14 @@ function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
                 'device' => $row['device_code'],
                 'table' => 'agv_robot_ext',
                 'status' => 'found',
-                'shelf_id' => $row['shelf_id'],
-                'area_id' => $row['area_id']
+                'data' => $row
             ];
         }
+        $tables['agv_robot_ext'] = count($foundInExt) . ' 条记录';
     } else {
         $missing[] = "agv_robot_ext 表查询失败";
-        $status = 'fail';
+        $status = 'incomplete';
+        $tables['agv_robot_ext'] = '查询失败';
     }
 
     // 检查缺失的设备（在ext中）
@@ -196,27 +202,95 @@ function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
                 $details[] = [
                     'device' => $code,
                     'table' => 'agv_robot_ext',
-                    'status' => 'missing'
+                    'status' => 'missing',
+                    'data' => null
                 ];
-                $status = 'fail';
+                $status = 'incomplete';
             }
         }
     }
 
-    // 检查设备型号表（agv_model）是否存在对应型号
+    // 3. 查询 agv_model 表（根据设备型号）
     if (!empty($foundInRobot)) {
-        $sql = "SELECT SERIES_MODEL_NAME FROM agv_model WHERE SERIES_MODEL_NAME IN (SELECT DISTINCT devicetype FROM agv_robot WHERE device_code IN ($placeholders))";
+        // 获取设备型号列表
+        $sql = "SELECT DISTINCT devicetype FROM agv_robot WHERE device_code IN ($placeholders)";
+        $result = mysqli_query($conn, $sql);
+        $deviceTypes = [];
+        if ($result) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $deviceTypes[] = $row['devicetype'];
+            }
+        }
+        if (!empty($deviceTypes)) {
+            $typePlaceholders = "'" . implode("','", array_map('mysqli_real_escape_string', array_fill(0, count($deviceTypes), $conn), $deviceTypes)) . "'";
+            $sql = "SELECT * FROM agv_model WHERE SERIES_MODEL_NAME IN ($typePlaceholders)";
+            $result = mysqli_query($conn, $sql);
+            if ($result) {
+                $foundModels = [];
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $foundModels[] = $row['SERIES_MODEL_NAME'];
+                    $details[] = [
+                        'device' => '型号 ' . $row['SERIES_MODEL_NAME'],
+                        'table' => 'agv_model',
+                        'status' => 'found',
+                        'data' => $row
+                    ];
+                }
+                $tables['agv_model'] = count($foundModels) . ' 条记录';
+                // 检查缺失的型号
+                foreach ($deviceTypes as $type) {
+                    if (!in_array($type, $foundModels)) {
+                        $missing[] = "设备型号 $type 在 agv_model 表中不存在";
+                        $details[] = [
+                            'device' => $type,
+                            'table' => 'agv_model',
+                            'status' => 'missing',
+                            'data' => null
+                        ];
+                        $status = 'incomplete';
+                    }
+                }
+            } else {
+                $missing[] = "agv_model 表查询失败";
+                $status = 'incomplete';
+                $tables['agv_model'] = '查询失败';
+            }
+        }
+    }
+
+    // 4. 查询 agv_model_init 表（根据设备型号）
+    if (!empty($foundInRobot) && isset($deviceTypes) && !empty($deviceTypes)) {
+        $typePlaceholders = "'" . implode("','", array_map('mysqli_real_escape_string', array_fill(0, count($deviceTypes), $conn), $deviceTypes)) . "'";
+        $sql = "SELECT * FROM agv_model_init WHERE SERIES_MODEL_NAME IN ($typePlaceholders)";
         $result = mysqli_query($conn, $sql);
         if ($result) {
-            $foundModels = [];
+            $foundModelInits = [];
             while ($row = mysqli_fetch_assoc($result)) {
-                $foundModels[] = $row['SERIES_MODEL_NAME'];
+                $foundModelInits[] = $row['SERIES_MODEL_NAME'];
+                $details[] = [
+                    'device' => '型号 ' . $row['SERIES_MODEL_NAME'],
+                    'table' => 'agv_model_init',
+                    'status' => 'found',
+                    'data' => $row
+                ];
             }
-            // 如果某个设备型号在agv_model中不存在，记录缺失
-            // 这里简化处理，仅记录
+            $tables['agv_model_init'] = count($foundModelInits) . ' 条记录';
+            // 检查缺失的型号
+            foreach ($deviceTypes as $type) {
+                if (!in_array($type, $foundModelInits)) {
+                    $missing[] = "设备型号 $type 在 agv_model_init 表中不存在";
+                    $details[] = [
+                        'device' => $type,
+                        'table' => 'agv_model_init',
+                        'status' => 'missing',
+                        'data' => null
+                    ];
+                    $status = 'incomplete';
+                }
+            }
         } else {
-            $missing[] = "agv_model 表查询失败";
-            $status = 'fail';
+            // 表可能不存在，忽略
+            $tables['agv_model_init'] = '表不存在或查询失败';
         }
     }
 
@@ -224,9 +298,10 @@ function checkDevicesInEnvironment($ip, $deviceCodes, $strict) {
 
     return [
         'status' => $status,
-        'message' => $status === 'pass' ? '设备配置完整' : '设备配置缺失',
+        'message' => $status === 'complete' ? '设备配置查询完成' : '设备配置存在缺失',
         'missing' => $missing,
-        'details' => $details
+        'details' => $details,
+        'tables_summary' => $tables
     ];
 }
 ?>
