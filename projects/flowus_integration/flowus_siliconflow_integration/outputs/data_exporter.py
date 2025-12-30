@@ -112,6 +112,7 @@ class DataExporter:
                 
                 content_parts.append(f"- {title}")
                 content_parts.append(f"  分类: {category}")
+                content_parts.append(f"  ID: {record.get('id')}")
                 content_parts.append(f"  时间: {created_time}")
                 content_parts.append(f"  状态: {completed}")
                 
@@ -138,7 +139,11 @@ class DataExporter:
                                         elif 'relation' in field_data:
                                             relation = field_data['relation']
                                             if relation:
-                                                content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目")
+                                                ids = [r.get('id') for r in relation if 'id' in r]
+                                                if ids:
+                                                    content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目 (ID: {', '.join(ids)})")
+                                                else:
+                                                    content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目")
                         
                     except json.JSONDecodeError:
                         logger.warning(f"无法解析记录 {record.get('id')} 的raw_response")
@@ -153,6 +158,7 @@ class DataExporter:
                 created_time = record.get('created_time', '')
                 
                 content_parts.append(f"- {title}")
+                content_parts.append(f"  ID: {record.get('id')}")
                 content_parts.append(f"  时间: {created_time}")
                 
                 # 添加详细信息
@@ -231,7 +237,11 @@ class DataExporter:
                                         elif 'relation' in field_data:
                                             relation = field_data['relation']
                                             if relation:
-                                                content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目")
+                                                ids = [r.get('id') for r in relation if 'id' in r]
+                                                if ids:
+                                                    content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目 (ID: {', '.join(ids)})")
+                                                else:
+                                                    content_parts.append(f"  {field}: 关联了 {len(relation)} 个项目")
                     
                     except json.JSONDecodeError:
                         logger.warning(f"无法解析项目记录 {record.get('id')} 的raw_response")
