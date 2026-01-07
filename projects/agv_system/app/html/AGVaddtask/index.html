@@ -1471,7 +1471,8 @@
             }
             
             // 如果任务需要货架号，检查货架任务状态
-            if (task.requires_shelf && shelf) {
+            if (task.requires_shelf) {
+                console.log(`开始检查货架任务状态，货架号: "${shelf}"`);
                 submitBtn.disabled = true;
                 submitBtn.textContent = '检查任务状态中...';
                 
