@@ -559,7 +559,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.1",
+                "title": "AGV 跨环境任务下发系统 v1.2",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1010,37 +1010,41 @@
                                 {"value": "66000358", "label": "点胶区域"}
                             ]
                         },
-                        "送满_A3点胶2F去A3前端四部3F_445": {
+                        "送满_A3点胶2F去A3前端四部3F_445（临时408）": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "HJBY_go_32A3DJ2F_to_31A3QD4B3F_445",
+                            //"code": "HJBY_go_32A3DJ2F_to_31A3QD4B3F_445",
+                            "code":"HJBY_go_27HY2DJ2F_to_31A3QD4B3F",
                             "requires_shelf": true,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        "回空_A3点胶2F去A3前端四部3F_446": {
+                        "回空_A3点胶2F去A3前端四部3F_446（临时409）": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code":"HJBY_back_32A3DJ2F_to_31A3QD4B3F_446",
+                            //"code":"HJBY_back_32A3DJ2F_to_31A3QD4B3F_446",
+                            "code":"HJBY_back_27HY2DJ2F_to_31A3QD4B3F",
                             "requires_shelf": true,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        "回空车A3货架区二2F去A3点胶指定DJ_410": {
+                        // "回空车A3货架区二2F去A3点胶指定DJ_410": {
+                        //     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                        //     "code": "K_back_27HY2DJ2F_to_31DJ",
+                        //     "requires_shelf": false,
+                        //     "requires_task_path": false,
+                        //     "task_path_options": []
+                        // },
+                        "去空车_A3点胶2F去A3前端四部3F_443（临时320）": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "K_back_27HY2DJ2F_to_31DJ",
+                            "code": "K_go_32A3DJ2F_to_31A3QD4B3F",
+                            // "code": "K_go_32A3DJ2F_to_31A3QD4B3F_443",
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        "去空车_A3点胶2F去A3前端四部3F_443": {
+                        "回空车_A3点胶2F去A3前端四部3F_444（临时321）": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "K_go_32A3DJ2F_to_31A3QD4B3F_443",
-                            "requires_shelf": false,
-                            "requires_task_path": false,
-                            "task_path_options": []
-                        },
-                        "回空车_A3点胶2F去A3前端四部3F_444": {
-                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "K_back_32A3DJ2F_to_31A3QD4B3F_444",
+                            "code": "K_back_32A3DJ2F_to_31A3QD4B3F",
+                            // "code": "K_back_32A3DJ2F_to_31A3QD4B3F_444",
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
