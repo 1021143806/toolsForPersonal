@@ -559,7 +559,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.2",
+                "title": "AGV 跨环境任务下发系统 v1.3",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1367,8 +1367,8 @@
 
         // 检查货架任务状态
         async function checkShelfTaskStatus(shelf) {
-            // 需要检查的状态：4(正在发送), 6(执行中), 9(已下发)
-            const statusList = [4, 6, 9];
+            // 需要检查的状态：4(正在发送), 6(执行中), 9(已下发), -1(容量管控)
+            const statusList = [4, 6, 9, -1];
             
             for (const status of statusList) {
                 try {
@@ -1399,6 +1399,9 @@
                                 break;
                             case 9:
                                 statusText = '已下发';
+                                break;
+                            case -1:
+                                statusText = '容量管控';
                                 break;
                             default:
                                 statusText = `状态${status}`;
@@ -1487,6 +1490,16 @@
                         // 显示任务存在提示
                         taskExistsMessage.textContent = `当前货架 ${shelf} 有任务正在${checkResult.status}，请勿重复下发！`;
                         taskExistsModal.style.display = 'flex';
+                        
+                        // 自动在右侧查询界面显示该货架的任务信息
+                        shelfQueryInput.value = shelf;
+                        // 确保查询类型为货架查询
+                        document.querySelector('.toggle-option[data-type="shelf"]').classList.add('active');
+                        document.querySelector('.toggle-option[data-type="order"]').classList.remove('active');
+                        shelfQueryGroup.style.display = 'block';
+                        orderQueryGroup.style.display = 'none';
+                        // 触发查询
+                        setTimeout(() => queryTasks(), 100);
                         
                         submitBtn.disabled = false;
                         submitBtn.textContent = '下发任务';
@@ -1815,6 +1828,7 @@
                 case 6: return '执行中';
                 case 4: return '正在发送';
                 case 9: return '已下发';
+                case -1: return '容量管控';
                 default: return `状态${status}`;
             }
         }
