@@ -308,6 +308,120 @@
             flex-direction: column;
         }
 
+        /* 帮助模态框内Markdown内容样式 */
+        .help-content h1,
+        .help-content h2,
+        .help-content h3 {
+            color: var(--primary-color);
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+        .help-content h1 {
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.3em;
+        }
+        .help-content h2 {
+            font-size: 1.5em;
+        }
+        .help-content h3 {
+            font-size: 1.2em;
+        }
+        .help-content p {
+            margin-bottom: 1em;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+        .help-content code {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--danger-color);
+        }
+        .help-content pre {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        .help-content pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        .help-content ul,
+        .help-content ol {
+            margin-left: 1.5em;
+            margin-bottom: 1em;
+            color: var(--text-color);
+        }
+        .help-content li {
+            margin-bottom: 0.5em;
+        }
+        .help-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1em;
+            margin-left: 0;
+            color: var(--secondary-color);
+            font-style: italic;
+        }
+        .help-content a {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+        .help-content a:hover {
+            color: var(--primary-dark);
+        }
+
+        /* 表格样式 */
+        .help-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+            border: 1px solid var(--border-color);
+        }
+        .help-content th,
+        .help-content td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .help-content th {
+            background-color: rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .help-content tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        /* 粗体/斜体样式 */
+        .help-content strong,
+        .help-content b {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        .help-content em,
+        .help-content i {
+            font-style: italic;
+        }
+        /* 水平线 */
+        .help-content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 1.5em 0;
+        }
+        /* 图片样式 */
+        .help-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+
         .modal h2 {
             margin-bottom: 15px;
             color: var(--primary-color);
@@ -429,6 +543,8 @@
             margin-left: 10px;
         }
     </style>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -608,7 +724,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.4",
+                "title": "AGV 跨环境任务下发系统 v1.4.2",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1687,6 +1803,73 @@
             priorityModal.style.display = 'none';
         }
 
+        // 简单的Markdown解析函数（降级方案）
+        function simpleMarkdown(markdown) {
+            // 替换标题
+            let html = markdown
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+                .replace(/^##### (.*$)/gm, '<h5>$1</h5>')
+                .replace(/^###### (.*$)/gm, '<h6>$1</h6>')
+                // 替换粗体：**text** 或 __text__
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                // 替换斜体：*text* 或 _text_
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/_(.*?)_/g, '<em>$1</em>')
+                // 替换代码块：`code`
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                // 替换多行代码块：```language\ncode\n```
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+                // 替换无序列表：- 或 * 开头
+                .replace(/^\s*[-*]\s+(.*$)/gm, '<li>$1</li>')
+                // 替换有序列表：1. 开头
+                .replace(/^\s*\d+\.\s+(.*$)/gm, '<li>$1</li>')
+                // 将连续的<li>包装在<ul>或<ol>中（简化处理）
+                .replace(/(<li>.*<\/li>)/gs, function(match) {
+                    // 检查是否有序号前缀（简单判断）
+                    if (match.match(/^\s*\d+\./m)) {
+                        return '<ol>' + match + '</ol>';
+                    } else {
+                        return '<ul>' + match + '</ul>';
+                    }
+                })
+                // 替换水平线：---
+                .replace(/^\s*---\s*$/gm, '<hr>')
+                // 替换链接：[text](url)
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+                // 替换图片：![alt](src)
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+                // 替换表格（简化处理：仅支持简单表格）
+                .replace(/^\|(.+)\|$/gm, function(match, row) {
+                    const cells = row.split('|').map(cell => cell.trim());
+                    if (cells.length > 1) {
+                        // 判断是否为表头行（下一行是分隔线）
+                        return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+                    }
+                    return match;
+                })
+                // 将表格行包装在<table>中（简化处理）
+                .replace(/(<tr>.*<\/tr>)/gs, function(match) {
+                    // 检查是否有多个行
+                    const rows = match.split('</tr><tr>').length;
+                    if (rows > 1) {
+                        return '<table>' + match + '</table>';
+                    }
+                    return match;
+                })
+                // 替换段落：将连续的非空行包装在<p>中
+                .replace(/^\s*([^<\n].*[^>\n])\s*$/gm, '<p>$1</p>')
+                // 清理多余的<p>标签
+                .replace(/<p>\s*<\/p>/g, '')
+                // 将多个连续的空行合并
+                .replace(/\n\s*\n/g, '\n');
+
+            return html;
+        }
+
         // 显示帮助模态框
         async function showHelpModal() {
             helpModal.style.display = 'flex';
@@ -1698,15 +1881,20 @@
                         throw new Error('无法加载帮助文档');
                     }
                     const markdown = await response.text();
-                    // 简单地将markdown转换为HTML（这里使用简单的换行处理，实际可以使用marked库）
-                    const html = markdown
-                        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                        .replace(/`([^`]+)`/g, '<code>$1</code>')
-                        .replace(/\n\n/g, '</p><p>')
-                        .replace(/\n/g, '<br>');
-                    helpModalBody.querySelector('.help-content').innerHTML = `<p>${html}</p>`;
+                    let html;
+                    // 如果marked.js可用，使用它；否则使用降级方案
+                    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                        html = marked.parse(markdown, {
+                            breaks: true,
+                            gfm: true,
+                            tables: true,
+                            headerIds: true
+                        });
+                    } else {
+                        console.warn('marked.js未加载，使用降级Markdown解析');
+                        html = simpleMarkdown(markdown);
+                    }
+                    helpModalBody.querySelector('.help-content').innerHTML = html;
                     helpModalBody.dataset.loaded = true;
                 } catch (error) {
                     helpModalBody.querySelector('.help-content').innerHTML = `<p style="color: var(--danger-color);">加载帮助文档失败: ${error.message}</p>`;
