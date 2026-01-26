@@ -1248,6 +1248,18 @@
                     }
                 },
                 //__________________________________________________________________________
+                "A3-2 结构备料部": {
+                    "tasks": {
+                        "去空车_31前端3F_to_32前端备料2F_453": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_back_31QD3F_to_32QDBD2F_453",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+                //__________________________________________________________________________
                 "A3-2 半成品备料部": {
                     "tasks": {
                         "去空车_27半成品2F_to_31前端3F_421": {
@@ -1297,7 +1309,16 @@
                             "requires_task_path": true,
                             "task_path_options": [
                                 {"value": "99992019", "label": "左"},
-                                {"value": "99992006", "label": "右"}
+                                {"value": "99992006", "label": "右"},
+                                //{"value":"99992018","label":"gong"}
+                            ]
+                        },
+                        "下架回库_27半成品3F_to_19华消F_452": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "XJHK_27BCP2F_to_19HX1F_452",
+                            "requires_shelf": true,
+                            "requires_task_path": false,
+                            "task_path_options": [
                             ]
                         },
                     }
