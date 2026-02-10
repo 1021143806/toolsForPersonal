@@ -724,7 +724,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.4.2",
+                "title": "AGV 跨环境任务下发系统 v1.4.3",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1359,7 +1359,34 @@
                             "task_path_options": []
                         },
                     }
-                }
+                },
+                //__________________________________________________________________________
+                "A4-2 行业备料部": {
+                    "tasks": {
+                        "空车跨环境去行业车间_334": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "EmptyCarstoHY",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "空车跨环境去行业一部_339": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "EmptyCarstoHY1",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "空车跨环境去行业车间_回_335": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "EmptyCarstoHY_back",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        }
+                    }
+                },
+                //__________________________________________________________________________
             }
         };
 
