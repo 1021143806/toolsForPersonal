@@ -176,6 +176,12 @@
             box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.2);
         }
 
+        /* 禁用选项样式 */
+        select option:disabled {
+            color: var(--secondary-color);
+            background-color: var(--card-bg);
+        }
+
         .btn {
             padding: 12px 25px;
             background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -526,7 +532,7 @@
             opacity: 0.5;
         }
         
-        /* 新增：点位注释样式 */
+        /* 点位注释样式（保留用于旧版，新版使用内联计数） */
         .option-with-comment {
             display: flex;
             justify-content: space-between;
@@ -706,6 +712,14 @@
         </div>
     </div>
 
+    <div class="modal" id="capacity-modal">
+        <div class="modal-content">
+            <h2>点位容量已满</h2>
+            <p id="capacity-modal-message"></p>
+            <button class="btn" id="capacity-modal-close">确定</button>
+        </div>
+    </div>
+
     <div class="modal" id="help-modal">
         <div class="modal-content modal-content-large">
             <h2>帮助文档</h2>
@@ -724,7 +738,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.4.3",
+                "title": "AGV 跨环境任务下发系统 v1.5.0",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -761,7 +775,6 @@
                         }
                     }
                 },
-            //------------------------------------------------------
             //------------------------------------------------------
                 "A1-2 电装工厂": {
                     "tasks": {
@@ -1029,8 +1042,9 @@
                             "requires_task_path": true,
                             "task_path_options": [
                                 {"value": "43000688", "label": "43000688点一"},
-                                {"value": "43000687", "label": "43000687点二"},
-                            ]
+                                {"value": "43000687", "label": "43000687点二"}
+                            ],
+                            "capacity": 1   // 示例：启用容量管控，最大并发1
                         },
                         "异常回库_零跑物料配送跨环境A1-1上料华昱欣线体_436": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
@@ -1039,7 +1053,7 @@
                             "requires_task_path": false,
                             "task_path_options": [
                                 {"value": "43000688", "label": "43000688点一"},
-                                {"value": "43000687", "label": "43000687点二"},
+                                {"value": "43000687", "label": "43000687点二"}
                             ]
                         }
                     }
@@ -1088,10 +1102,9 @@
                             "requires_shelf": true,
                             "requires_task_path": false,
                             "task_path_options": []
-                        },
+                        }
                     }
                 },
-            //------------------------------------------------------
             //------------------------------------------------------
                 "A2-3 华昱欣-CZ01-LH001": {
                     "tasks": {
@@ -1174,47 +1187,33 @@
                             "task_path_options": [
                                 {"value": "66000358", "label": "四线 1"},
                                 {"value": "66000359", "label": "四线 2"},
-                                {"value": "66000380", "label": "五线"},
-                            ]
+                                {"value": "66000380", "label": "五线"}
+                            ],
+                            "capacity": 1  // 示例：最大并发2
                         },
-                        //"送满_A3点胶2F去A3前端四部3F_445（临时408）": {
                         "送满_A3点胶2F去A3前端四部3F_445": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code": "HJBY_go_32A3DJ2F_to_31A3QD4B3F_445",
-                            //"code":"HJBY_go_27HY2DJ2F_to_31A3QD4B3F",
                             "requires_shelf": true,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        //"回空_A3点胶2F去A3前端四部3F_446（临时409）": {
                         "回空_A3点胶2F去A3前端四部3F_446": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code":"HJBY_back_32A3DJ2F_to_31A3QD4B3F_446",
-                            //"code":"HJBY_back_27HY2DJ2F_to_31A3QD4B3F",
                             "requires_shelf": true,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        // "回空车A3货架区二2F去A3点胶指定DJ_410": {
-                        //     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                        //     "code": "K_back_27HY2DJ2F_to_31DJ",
-                        //     "requires_shelf": false,
-                        //     "requires_task_path": false,
-                        //     "task_path_options": []
-                        // },
-                        //"去空车_A3点胶2F去A3前端四部3F_443（临时320）": {
                         "去空车_A3点胶2F去A3前端四部3F_443": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            // "code": "K_go_32A3DJ2F_to_31A3QD4B3F",
                             "code": "K_go_32A3DJ2F_to_31A3QD4B3F_443",
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        //"回空车_A3点胶2F去A3前端四部3F_444（临时321）": {
                         "回空车_A3点胶2F回A3前端四部3F_444": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            //"code": "K_back_32A3DJ2F_to_31A3QD4B3F",
                              "code": "K_back_32A3DJ2F_to_31A3QD4B3F_444",
                             "requires_shelf": false,
                             "requires_task_path": false,
@@ -1226,7 +1225,7 @@
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
-                        },
+                        }
                     }
                 },
                 //__________________________________________________________________________
@@ -1310,8 +1309,7 @@
                             "requires_task_path": true,
                             "task_path_options": [
                                 {"value": "99992019", "label": "左"},
-                                {"value": "99992006", "label": "右"},
-                                //{"value":"99992018","label":"gong"}
+                                {"value": "99992006", "label": "右"}
                             ]
                         },
                         "下架回库_27半成品3F_to_19华消F_452": {
@@ -1319,9 +1317,8 @@
                             "code": "XJHK_27BCP2F_to_19HX1F_452",
                             "requires_shelf": true,
                             "requires_task_path": false,
-                            "task_path_options": [
-                            ]
-                        },
+                            "task_path_options": []
+                        }
                     }
                 },
                 //__________________________________________________________________________
@@ -1358,7 +1355,7 @@
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
-                        },
+                        }
                     }
                 },
                 //__________________________________________________________________________
@@ -1386,7 +1383,7 @@
                             "task_path_options": []
                         }
                     }
-                },
+                }
                 //__________________________________________________________________________
             }
         };
@@ -1435,6 +1432,11 @@
         const priorityModalMessage = document.getElementById('priority-modal-message');
         const priorityModalClose = document.getElementById('priority-modal-close');
         
+        // 新增容量管控模态框
+        const capacityModal = document.getElementById('capacity-modal');
+        const capacityModalMessage = document.getElementById('capacity-modal-message');
+        const capacityModalClose = document.getElementById('capacity-modal-close');
+        
         // 帮助相关DOM元素
         const helpToggle = document.getElementById('help-toggle');
         const helpModal = document.getElementById('help-modal');
@@ -1466,6 +1468,7 @@
             helpToggle.addEventListener('click', showHelpModal);
             helpModalClose.addEventListener('click', closeHelpModal);
             priorityModalClose.addEventListener('click', closePriorityModal);
+            capacityModalClose.addEventListener('click', closeCapacityModal);
             
             // 查询相关事件监听
             queryToggleOptions.forEach(option => {
@@ -1474,13 +1477,12 @@
             queryBtn.addEventListener('click', queryTasks);
             
             // 任务路径选择框变化时隐藏错误提示
-            // 在事件监听中添加视觉反馈
             taskPathSelect.addEventListener('change', function() {
                 if (this.value && this.value.trim() !== '' && this.value !== '请选择任务路径') {
                     taskPathError.style.display = 'none';
-                    this.style.borderColor = 'green'; // 绿色边框表示有效
+                    this.style.borderColor = 'green';
                 } else {
-                    this.style.borderColor = 'red'; // 红色边框表示无效
+                    this.style.borderColor = 'red';
                 }
             });
             
@@ -1488,12 +1490,12 @@
             shelfInput.addEventListener('input', function() {
                 if (this.value.trim()) {
                     shelfError.style.display = 'none';
-                    this.style.borderColor = 'green'; // 绿色边框表示有效
+                    this.style.borderColor = 'green';
                 } else {
-                    this.style.borderColor = 'red'; // 红色边框表示无效
+                    this.style.borderColor = 'red';
                 }
                 
-                // 同时检查货架锁定状态
+                // 检查货架锁定状态
                 const area = areaSelect.value;
                 const taskName = taskSelect.value;
                 
@@ -1580,39 +1582,31 @@
                     
                     // 填充任务路径选项
                     taskPathSelect.innerHTML = '<option value="">请选择任务路径</option>';
+                    
                     task.task_path_options.forEach(option => {
                         const optionElement = document.createElement('option');
                         
                         // 判断配置格式：支持对象格式和字符串/数字格式
+                        let value, baseText;
                         if (typeof option === 'object') {
-                            // 对象格式：包含value和label
-                            optionElement.value = option.value;
-                            
-                            // 创建带注释的显示文本
-                            const container = document.createElement('div');
-                            container.className = 'option-with-comment';
-                            
-                            const valueSpan = document.createElement('span');
-                            valueSpan.className = 'option-value';
-                            valueSpan.textContent = option.value;
-                            
-                            const commentSpan = document.createElement('span');
-                            commentSpan.className = 'option-comment';
-                            commentSpan.textContent = option.label;
-                            
-                            container.appendChild(valueSpan);
-                            container.appendChild(commentSpan);
-                            
-                            // 使用innerHTML设置选项内容
-                            optionElement.innerHTML = container.outerHTML;
+                            value = option.value;
+                            baseText = option.label ? `${option.label} (${option.value})` : option.value;
                         } else {
-                            // 字符串或数字格式：直接显示
-                            optionElement.value = option;
-                            optionElement.textContent = option;
+                            value = option;
+                            baseText = option;
                         }
                         
+                        optionElement.value = value;
+                        optionElement.textContent = baseText;
+                        // 保存基础文本，用于后续更新计数
+                        optionElement.dataset.baseText = baseText;
                         taskPathSelect.appendChild(optionElement);
                     });
+                    
+                    // 如果任务配置了容量，则加载并更新点位占用计数
+                    if (task.capacity && task.capacity > 0) {
+                        loadPathCapacity(task.code, task.capacity);
+                    }
                 } else {
                     taskPathGroup.style.display = 'none';
                 }
@@ -1620,6 +1614,101 @@
                 shelfGroup.style.display = 'none';
                 taskPathGroup.style.display = 'none';
                 submitBtn.disabled = false;
+            }
+        }
+
+        /**
+         * 加载指定任务模板的点位容量占用情况，并更新下拉选项
+         * @param {string} modelProcessCode 任务模板code
+         * @param {number} capacity 容量上限
+         */
+        async function loadPathCapacity(modelProcessCode, capacity) {
+            try {
+                // 查询状态 4,6,9,-1 的未完成任务
+                const statusList = [4, 6, 9, -1];
+                const countMap = new Map(); // key: taskPath, value: 计数
+                
+                for (const status of statusList) {
+                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            modelProcessCode: modelProcessCode,
+                            taskStatus: status.toString(),
+                            pageSize: 100, // 一次性拉取较多数据
+                            pageNo: 1
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.code === 1000 && data.data.list) {
+                        data.data.list.forEach(task => {
+                            const path = task.taskPath;
+                            if (path) {
+                                countMap.set(path, (countMap.get(path) || 0) + 1);
+                            }
+                        });
+                    }
+                }
+                
+                // 更新下拉选项的显示文本和禁用状态
+                Array.from(taskPathSelect.options).forEach(option => {
+                    if (option.value && option.dataset.baseText) {
+                        const path = option.value;
+                        const currentCount = countMap.get(path) || 0;
+                        const isFull = currentCount >= capacity;
+                        
+                        // 更新文本：基础文本 + [当前/容量]
+                        option.textContent = `${option.dataset.baseText} [${currentCount}/${capacity}]`;
+                        
+                        // 根据是否满额禁用选项
+                        option.disabled = isFull;
+                        
+                        // 可选：设置颜色样式（浏览器默认会灰显）
+                    }
+                });
+            } catch (error) {
+                console.error('加载点位容量失败:', error);
+                // 失败时保持原样，不阻塞用户操作
+            }
+        }
+
+        /**
+         * 检查指定任务模板下某个点位的实时占用是否已达容量上限
+         * @param {string} modelProcessCode 
+         * @param {string} taskPath 
+         * @param {number} capacity 
+         * @returns {Promise<boolean>} true表示已满，false表示未满
+         */
+        async function isPathCapacityFull(modelProcessCode, taskPath, capacity) {
+            if (!capacity || capacity <= 0) return false;
+            
+            try {
+                const statusList = [4, 6, 9, -1];
+                let total = 0;
+                
+                for (const status of statusList) {
+                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            modelProcessCode: modelProcessCode,
+                            taskStatus: status.toString(),
+                            pageSize: 100,
+                            pageNo: 1
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.code === 1000 && data.data.list) {
+                        total += data.data.list.filter(task => task.taskPath === taskPath).length;
+                    }
+                }
+                
+                return total >= capacity;
+            } catch (error) {
+                console.error('检查点位容量失败:', error);
+                return false; // 查询失败时允许下发（容错）
             }
         }
 
@@ -1699,25 +1788,19 @@
                 alert('错误：找不到对应的任务配置，请重新选择');
                 return;
             }
-            let shelf = shelfInput.value.trim(); // 改为let，允许重新赋值
+            let shelf = shelfInput.value.trim();
             
-            // 验证货架号 - 修复版
+            // 验证货架号
             if (task.requires_shelf) {
-                // 使用不同的变量名，避免作用域冲突
-                const shelfValue = shelfInput.value.trim();
-                
-                if (!shelfValue) {
+                if (!shelf) {
                     console.error('货架号验证失败: 货架号为空或只有空格');
                     shelfError.style.display = 'block';
                     alert('错误：请输入有效的货架号！');
                     return;
                 }
-                
-                // 更新外部shelf变量
-                shelf = shelfValue;
             }
 
-            // 验证任务路径 - 加强版
+            // 验证任务路径
             if (task.requires_task_path) {
                 const taskPathValue = taskPathSelect.value;
                 
@@ -1771,25 +1854,24 @@
                 submitBtn.textContent = '下发中...';
             }
             
+            // 新增：如果任务启用了容量管控，检查所选点位的实时占用
+            if (task.requires_task_path && task.capacity && task.capacity > 0) {
+                const selectedPath = taskPathSelect.value;
+                const isFull = await isPathCapacityFull(task.code, selectedPath, task.capacity);
+                
+                if (isFull) {
+                    capacityModalMessage.textContent = `所选点位 ${selectedPath} 当前占用已达上限 (${task.capacity}/${task.capacity})，请等待任务执行完成后再试。`;
+                    capacityModal.style.display = 'flex';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '下发任务';
+                    return;
+                }
+            }
+            
             // 准备请求数据
             const getBeijingTime = () => {
                 const now = new Date();
-                // 修复时间差8小时问题：使用本地时间（北京时间）格式化
-                // 方法1：使用toLocaleString指定时区
                 return now.toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('T', ' ');
-                
-                // 备选方法2：手动格式化本地时间
-                // const year = now.getFullYear();
-                // const month = String(now.getMonth() + 1).padStart(2, '0');
-                // const day = String(now.getDate()).padStart(2, '0');
-                // const hours = String(now.getHours()).padStart(2, '0');
-                // const minutes = String(now.getMinutes()).padStart(2, '0');
-                // const seconds = String(now.getSeconds()).padStart(2, '0');
-                // return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                
-                // 备选方法3：原始的UTC+8小时方法
-                // const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-                // return beijingTime.toISOString().replace(/T/, ' ').replace(/\..+/, '');
             };
 
             const requestData = [{
@@ -1806,7 +1888,6 @@
             // 显示调试信息
             debugInfo.textContent = JSON.stringify(requestData, null, 2);
             
-            // 添加调试日志
             console.log('=== 任务下发调试信息 ===');
             console.log('区域:', area);
             console.log('任务模板:', taskName);
@@ -1818,8 +1899,7 @@
             console.log('========================');
             
             try {
-                // 发送请求 - 修复URL选择逻辑
-                const targetUrl = task.base_url; // 移除不存在的config.areas[area].base_url
+                const targetUrl = task.base_url;
                 console.log('实际发送到URL:', targetUrl);
                 
                 const response = await fetch(targetUrl, {
@@ -1852,6 +1932,13 @@
                     orderQueryInput.value = orderId;
                     toggleQueryType({ target: document.querySelector('.toggle-option[data-type="order"]') });
                     queryTasks();
+                    
+                    // 如果启用了容量管控，刷新下拉列表的计数
+                    if (task.requires_task_path && task.capacity && task.capacity > 0) {
+                        setTimeout(() => {
+                            loadPathCapacity(task.code, task.capacity);
+                        }, 500); // 稍等片刻让后端更新状态
+                    }
                 }
             } catch (error) {
                 responseBox.style.display = 'block';
@@ -1886,6 +1973,11 @@
         // 关闭优先级调整模态框
         function closePriorityModal() {
             priorityModal.style.display = 'none';
+        }
+
+        // 关闭容量管控模态框
+        function closeCapacityModal() {
+            capacityModal.style.display = 'none';
         }
 
         // 简单的Markdown解析函数（降级方案）
