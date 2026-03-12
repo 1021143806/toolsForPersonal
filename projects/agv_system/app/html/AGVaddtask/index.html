@@ -1179,17 +1179,38 @@
                             "task_path_options": [
                             ]
                         },
-                        "上架搬运_行业货架区2去点胶回_447": {
+                        // "上架搬运_行业货架区2去点胶回_447": {
+                        //     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                        //     "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_447",
+                        //     "requires_shelf": true,
+                        //     "requires_task_path": true,
+                        //     "task_path_options": [
+                        //         {"value": "66000358", "label": "四线 1"},
+                        //         {"value": "66000359", "label": "四线 2"},
+                        //         {"value": "66000380", "label": "五线"}
+                        //     ],
+                        //     "capacity": 1  // 示例：最大并发2
+                        // },
+                        "上架搬运_A3点胶2F去A3前端四部3F_四线_454": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_447",
+                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_Line4_454",
                             "requires_shelf": true,
                             "requires_task_path": true,
                             "task_path_options": [
                                 {"value": "66000358", "label": "四线 1"},
-                                {"value": "66000359", "label": "四线 2"},
+                                {"value": "66000359", "label": "四线 2"}
+                            ],
+                            "capacity": 10  // 示例：最大并发2
+                        },
+                        "上架搬运_A3点胶2F去A3前端四部3F_五线_455": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_Line5_455",
+                            "requires_shelf": true,
+                            "requires_task_path": true,
+                            "task_path_options": [
                                 {"value": "66000380", "label": "五线"}
                             ],
-                            "capacity": 1  // 示例：最大并发2
+                            "capacity": 10  // 示例：最大并发2
                         },
                         "送满_A3点胶2F去A3前端四部3F_445": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
