@@ -1416,6 +1416,9 @@
         let queryLastClickTime = 0;
         let priorityLastClickTime = 0;
 
+        // 容量加载节流记录（按任务模板编码）
+        const lastCapacityLoadByCode = {};
+
         // DOM元素
         const areaSelect = document.getElementById('area-select');
         const taskSelect = document.getElementById('task-select');
@@ -1536,6 +1539,18 @@
                     }
                 }
             });
+
+            // 为任务路径下拉框添加 focus 事件，点击时刷新容量（带节流）
+            taskPathSelect.addEventListener('focus', () => {
+                const area = areaSelect.value;
+                const taskName = taskSelect.value;
+                if (area && taskName) {
+                    const task = config.areas[area]?.tasks[taskName];
+                    if (task && task.requires_task_path && task.capacity && task.capacity > 0) {
+                        loadPathCapacity(task.code, task.capacity);
+                    }
+                }
+            });
             
             // 检查本地存储的主题偏好
             if (localStorage.getItem('darkMode') === 'true') {
@@ -1624,7 +1639,7 @@
                         taskPathSelect.appendChild(optionElement);
                     });
                     
-                    // 如果任务配置了容量，则加载并更新点位占用计数
+                    // 如果任务配置了容量，则加载并更新点位占用计数（内部会节流）
                     if (task.capacity && task.capacity > 0) {
                         loadPathCapacity(task.code, task.capacity);
                     }
@@ -1640,10 +1655,20 @@
 
         /**
          * 加载指定任务模板的点位容量占用情况，并更新下拉选项
+         * 内置节流：同一模板3秒内只执行一次
          * @param {string} modelProcessCode 任务模板code
          * @param {number} capacity 容量上限
          */
         async function loadPathCapacity(modelProcessCode, capacity) {
+            // 节流控制：同一模板3秒内只执行一次
+            const now = Date.now();
+            const last = lastCapacityLoadByCode[modelProcessCode];
+            if (last && now - last < 3000) {
+                console.log(`容量刷新节流: ${modelProcessCode} 在3秒内已刷新，跳过`);
+                return;
+            }
+            lastCapacityLoadByCode[modelProcessCode] = now;
+
             try {
                 // 查询状态 4,6,9,-1 的未完成任务
                 const statusList = [4, 6, 9, -1];
