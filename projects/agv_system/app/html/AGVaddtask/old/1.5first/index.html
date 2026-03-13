@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AGV 跨环境任务下发系统</title>
-    <!-- 内联 favicon，避免 403 错误 -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='80' height='40' x='10' y='30' fill='%234a6cf7' rx='8'/%3E%3Ccircle cx='30' cy='70' r='12' fill='%23333'/%3E%3Ccircle cx='70' cy='70' r='12' fill='%23333'/%3E%3C/svg%3E">
     <style>
         /* 原有的CSS样式保持不变 */
         :root {
@@ -1046,7 +1044,7 @@
                                 {"value": "43000688", "label": "43000688点一"},
                                 {"value": "43000687", "label": "43000687点二"}
                             ],
-                            "capacity": 10   // 示例：启用容量管控，最大并发1
+                            "capacity": 1   // 示例：启用容量管控，最大并发1
                         },
                         "异常回库_零跑物料配送跨环境A1-1上料华昱欣线体_436": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
@@ -1181,38 +1179,17 @@
                             "task_path_options": [
                             ]
                         },
-                        // "上架搬运_行业货架区2去点胶回_447": {
-                        //     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                        //     "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_447",
-                        //     "requires_shelf": true,
-                        //     "requires_task_path": true,
-                        //     "task_path_options": [
-                        //         {"value": "66000358", "label": "四线 1"},
-                        //         {"value": "66000359", "label": "四线 2"},
-                        //         {"value": "66000380", "label": "五线"}
-                        //     ],
-                        //     "capacity": 1  // 示例：最大并发2
-                        // },
-                        "上架搬运_A3点胶2F去A3前端四部3F_四线_454": {
+                        "上架搬运_行业货架区2去点胶回_447": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_Line4_454",
+                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_447",
                             "requires_shelf": true,
                             "requires_task_path": true,
                             "task_path_options": [
                                 {"value": "66000358", "label": "四线 1"},
-                                {"value": "66000359", "label": "四线 2"}
-                            ],
-                            "capacity": 10  // 示例：最大并发2
-                        },
-                        "上架搬运_A3点胶2F去A3前端四部3F_五线_455": {
-                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                            "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_Line5_455",
-                            "requires_shelf": true,
-                            "requires_task_path": true,
-                            "task_path_options": [
+                                {"value": "66000359", "label": "四线 2"},
                                 {"value": "66000380", "label": "五线"}
                             ],
-                            "capacity": 10  // 示例：最大并发2
+                            "capacity": 2   // 示例：最大并发2
                         },
                         "送满_A3点胶2F去A3前端四部3F_445": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
