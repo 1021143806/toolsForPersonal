@@ -99,8 +99,9 @@
         }
 
         .theme-toggle:hover {
-            transform: rotate(20deg);
+            transform: rotate(15deg) scale(1.05);
             border-color: var(--primary);
+            color: var(--primary);
         }
 
         /* 任务切换三按钮 */
@@ -370,13 +371,13 @@
         }
 
         .help-fab:hover {
-            transform: scale(1.1) rotate(5deg);
+            transform: scale(1.1) rotate(3deg);
             background: var(--primary-light);
         }
 
         .help-fab svg {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             fill: white;
         }
 
@@ -447,9 +448,10 @@
     <!-- 头部 -->
     <header class="header">
         <h1>📦 任务下发 · 三合一</h1>
+        <!-- 右上角暗黑模式切换 · 改为月牙形正常图标 -->
         <div class="theme-toggle" id="themeToggle" title="深色/浅色">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4 4l2 2M18 18l2 2M2 12h2M20 12h2M6 6l2-2M18 6l2-2"/>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
             </svg>
         </div>
     </header>
@@ -517,9 +519,11 @@
     <footer>任务下发系统 · 仅支持上架/下架/回库</footer>
 </div>
 
-<!-- 右下角帮助按钮 -->
+<!-- 右下角帮助按钮 · 纯白色问号路径（无外圆，永不分离） -->
 <div class="help-fab" id="helpBtn">
-    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2-7h-2v-1c0-1.1-.9-2-2-2s-2 .9-2 2v1h2v-1c0-.3.2-.5.5-.5s.5.2.5.5v1.5h-3V12c0-1.7 1.3-3 3-3s3 1.3 3 3v1z"/></svg>
+    <svg viewBox="0 0 24 24">
+        <path d="M12 4c-2.8 0-5 2.2-5 5h2c0-1.7 1.3-3 3-3s3 1.3 3 3c0 1.1-0.6 2-1.5 2.6-1.2 0.8-1.5 1.5-1.5 2.4v1h2v-1c0-0.4 0.2-0.8 0.8-1.2 1.1-0.7 1.7-1.8 1.7-2.8 0-2.8-2.2-5-5-5zM11 18h2v2h-2z"/>
+    </svg>
 </div>
 
 <!-- 成功模态框 -->
@@ -640,7 +644,6 @@
             currentTaskCode = taskCode;
             const meta = taskMeta[taskCode];
             cardTitle.textContent = meta.name;
-            cardIcon.setAttribute('d', meta.icon);  // 简单修改path, 但svg内部需要替换path? 直接重设innerHTML更快
             cardIcon.innerHTML = `<path d="${meta.icon}"/>`;
 
             // 激活样式
