@@ -740,7 +740,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.5.1.1",
+                "title": "AGV 跨环境任务下发系统 v1.5.1.2",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1294,9 +1294,16 @@
                 //__________________________________________________________________________
                 "A3-2 结构备料部": {
                     "tasks": {
-                        "去空车_31前端3F_to_32前端备料2F_453": {
+                        "去空车_31前端二部（右99992321）3F_to_32前端备料2F_453": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code": "K_back_31QD3F_to_32QDBD2F_453",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "去空车_31前端点胶路径（左99990249）3F_to_32前端备料2F_461": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                            "code": "K_back_31QD3F_to_32QDBD2F_461",
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
