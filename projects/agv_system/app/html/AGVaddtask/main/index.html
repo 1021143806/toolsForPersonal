@@ -740,7 +740,7 @@
         // 配置数据（实际应用中从config.json加载）
         const config = {
             "general": {
-                "title": "AGV 跨环境任务下发系统 v1.5.1.2",
+                "title": "AGV 跨环境任务下发系统 v1.5.1.3",
                 "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
             },
             "areas": {
@@ -1188,18 +1188,6 @@
                             "task_path_options": [
                             ]
                         },
-                        // "上架搬运_行业货架区2去点胶回_447": {
-                        //     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                        //     "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_447",
-                        //     "requires_shelf": true,
-                        //     "requires_task_path": true,
-                        //     "task_path_options": [
-                        //         {"value": "66000358", "label": "四线 1"},
-                        //         {"value": "66000359", "label": "四线 2"},
-                        //         {"value": "66000380", "label": "五线"}
-                        //     ],
-                        //     "capacity": 1  // 示例：最大并发2
-                        // },
                         "上架搬运_A3点胶2F去A3前端四部3F_四线_454": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                             "code": "SJBY_32A3DJ2F_to_31A3QD4B3F_Line4_454",
@@ -1263,9 +1251,16 @@
                             "requires_task_path": false,
                             "task_path_options": []
                         },
-                        "回空车_A3点胶2F回A3货架区2-2F_448": {
+                        "去空车_32结构备料2F_to_32点胶备料2F_462": {
                             "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                             "code": "K_back_32A3DJ2F_to_31A3QD4B3F_448",
+                             "code": "K_go_32JGBL2F_to_32DJBL2F_462",
+                            "requires_shelf": false,
+                            "requires_task_path": false,
+                            "task_path_options": []
+                        },
+                        "回空车_32结构备料2F_to_32点胶备料2F_463": {
+                            "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                             "code": "K_back_32JGBL2F_to_32DJBL2F_463",
                             "requires_shelf": false,
                             "requires_task_path": false,
                             "task_path_options": []
