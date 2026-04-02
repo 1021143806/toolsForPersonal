@@ -6,6 +6,10 @@
 
 set -e
 
+# 导入路径辅助函数
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/path_helpers.sh"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -520,7 +524,7 @@ find_dpl_log() {
     fi
 }
 
-# 复制文件到目标目录
+# 复制文件到目标目录（向前兼容）
 copy_log_file() {
     local source_file="$1"
     local target_dir="$2"
@@ -547,6 +551,41 @@ copy_log_file() {
     fi
 }
 
+# 智能复制函数 - 优先使用新的copy_to_alllog函数
+smart_copy_file() {
+    local source_file="$1"
+    local timestamp="$2"
+    local log_type="$3"
+    local area="${4:-}"
+    
+    # 尝试使用新的copy_to_alllog函数
+    if type copy_to_alllog &>/dev/null; then
+        if copy_to_alllog "$source_file" "$timestamp" "$log_type" "$area"; then
+            return 0
+        else
+            log_warning "使用copy_to_alllog失败，回退到旧方法"
+            # 回退到旧方法
+            local target_dir=$(get_target_dir "$timestamp")
+            if [ -z "$target_dir" ]; then
+                target_dir="$PWD/alllog/$timestamp"
+                mkdir -p "$target_dir"
+            fi
+            local filename=$(get_output_filename "$timestamp" "$log_type" "$area")
+            return copy_log_file "$source_file" "$target_dir" "$filename"
+        fi
+    else
+        # 如果没有path_helpers.sh，使用旧方法
+        local target_dir=$(dirname "$(get_script_dir)")/alllog/$timestamp
+        mkdir -p "$target_dir"
+        local filename="${timestamp}_${log_type}"
+        if [ -n "$area" ]; then
+            filename="${filename}_${area}"
+        fi
+        filename="${filename}.log"
+        return copy_log_file "$source_file" "$target_dir" "$filename"
+    fi
+}
+
 # 主函数
 main() {
     log_info "开始拉取算法日志..."
@@ -554,9 +593,14 @@ main() {
     # 验证参数
     validate_parameters "$@"
     
-    # 目标目录
-    BASE_TARGET_DIR="/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/agv_log_fetcher/alllog"
-    TARGET_DIR="$BASE_TARGET_DIR/$TIMESTAMP"
+    # 验证时间戳
+    if ! validate_timestamp "$TIMESTAMP" "RTPS"; then
+        exit 1
+    fi
+    
+    # 目标目录 - 使用相对路径
+    TARGET_DIR=$(get_target_dir "$TIMESTAMP")
+    echo "目标目录: $TARGET_DIR"
     
     # 查找rtpsa文件夹
     rtpsa_folders=($(find_rtpsa_folders "$AREA"))
@@ -600,13 +644,8 @@ main() {
             tal_log=$(find_tal_log "$tal_dir" "$TIMESTAMP")
             
             if [ -n "$tal_log" ]; then
-                # 生成目标文件名
-                new_filename="${TIMESTAMP}_rtpsa_${areas_list}_TAL.log"
-                if [[ "$tal_log" == *.zip ]]; then
-                    new_filename="${new_filename}.zip"
-                fi
-                
-                copy_log_file "$tal_log" "$TARGET_DIR" "$new_filename"
+                # 使用智能复制函数
+                smart_copy_file "$tal_log" "$TIMESTAMP" "TAL" "$areas_list"
             fi
             
             # 2. 处理rtps日志
@@ -614,13 +653,8 @@ main() {
             rtps_log=$(find_rtps_log "$logs_dir" "$TIMESTAMP")
             
             if [ -n "$rtps_log" ]; then
-                # 生成目标文件名
-                new_filename="${TIMESTAMP}_${areas_list}_rtps.log"
-                if [[ "$rtps_log" == *.gz ]]; then
-                    new_filename="${new_filename}.gz"
-                fi
-                
-                copy_log_file "$rtps_log" "$TARGET_DIR" "$new_filename"
+                # 使用智能复制函数
+                smart_copy_file "$rtps_log" "$TIMESTAMP" "RTPS" "$areas_list"
             fi
         done
     else
@@ -641,13 +675,8 @@ main() {
             dpl_log=$(find_dpl_log "$dpl_dir" "$TIMESTAMP")
             
             if [ -n "$dpl_log" ]; then
-                # 生成目标文件名
-                new_filename="${TIMESTAMP}_rtpsp_${AREA}_DPL.log"
-                if [[ "$dpl_log" == *.gz ]]; then
-                    new_filename="${new_filename}.gz"
-                fi
-                
-                copy_log_file "$dpl_log" "$TARGET_DIR" "$new_filename"
+                # 使用智能复制函数
+                smart_copy_file "$dpl_log" "$TIMESTAMP" "DPL" "$AREA"
             fi
         done
     else

@@ -4,13 +4,12 @@
 # 功能：根据时间参数从 TPS 日志中拉取包含该时间点的日志文件
 # 用法：./copy_tps_log.sh 20260401_1010
 
-# 定义绝对路径
-LOG_DIR="/main/app/tps/logs"
-BASE_DEST_DIR="/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/agv_log_fetcher/alllog"
+# 导入路径辅助函数
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/path_helpers.sh"
 
-# 根据参数设置目标目录
-param="$1"
-DEST_DIR="$BASE_DEST_DIR/$param"
+# TPS日志目录
+LOG_DIR="/main/app/tps/logs"
 
 # 检查参数
 if [ $# -ne 1 ]; then
@@ -19,6 +18,7 @@ if [ $# -ne 1 ]; then
 fi
 
 # 解析日期和时间
+param="$1"
 IFS='_' read -r date_str hour_min <<< "$param"
 if [ -z "$date_str" ] || [ -z "$hour_min" ]; then
     echo "错误：参数格式不正确，应为 YYYYMMDD_HHMM"
@@ -39,15 +39,18 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 目标目录和输出文件名
-mkdir -p "$DEST_DIR" || { echo "无法创建目录 $DEST_DIR"; exit 1; }
-output_file="${DEST_DIR}/${param}_TPS.log"
+# 验证时间戳
+if ! validate_timestamp "$param" "TPS"; then
+    exit 1
+fi
 
 # 进入日志目录
 if ! cd "$LOG_DIR" 2>/dev/null; then
     echo "错误：无法进入日志目录 $LOG_DIR"
     exit 1
 fi
+
+echo "开始拉取TPS日志，时间: $target_time"
 
 # 函数：检查日志文件是否包含目标时间
 # 参数：文件路径，返回 0 表示包含，1 表示不包含
@@ -99,8 +102,13 @@ contains_time() {
 # 1. 先检查 TPS.log
 if contains_time "TPS.log"; then
     echo "找到日志文件：TPS.log"
-    cp "TPS.log" "$output_file" && echo "已拷贝并重命名为 $output_file"
-    exit 0
+    if copy_to_alllog "TPS.log" "$param" "tps"; then
+        echo "TPS日志拉取成功"
+        exit 0
+    else
+        echo "TPS日志拷贝失败"
+        exit 1
+    fi
 fi
 
 # 2. 检查当天的分片日志文件 TPS-YYYY-MM-DD.N.log
@@ -117,13 +125,28 @@ fi
 for file in $shard_files; do
     if contains_time "$file"; then
         echo "找到日志文件：$file"
-        cp "$file" "$output_file" && echo "已拷贝并重命名为 $output_file"
-        found=1
-        break
+        if copy_to_alllog "$file" "$param" "tps"; then
+            echo "TPS日志拉取成功"
+            found=1
+            break
+        else
+            echo "TPS日志拷贝失败"
+        fi
     fi
 done
 
 if [ $found -eq 0 ]; then
-    echo "错误：未找到包含时间 $target_time 的日志文件"
+    echo "错误：未找到包含时间 $target_time 的TPS日志文件"
+    
+    # 显示目录内容用于调试
+    echo "当前目录文件列表:"
+    ls -la *.log 2>/dev/null | head -10 || echo "没有找到日志文件"
+    echo ""
+    echo "当天相关的分片文件:"
+    ls *${year}-${month}-${day}*.log 2>/dev/null || echo "没有当天文件"
+    
     exit 1
 fi
+
+# 显示alllog目录内容
+show_alllog_contents "$param"

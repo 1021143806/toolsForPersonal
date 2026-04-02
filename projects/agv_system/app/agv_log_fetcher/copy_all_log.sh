@@ -232,15 +232,24 @@ pull_all_logs() {
     echo ""
     log_header "批量拉取完成"
     
-# 展示拉取的日志文件
-    local script_dir="$(dirname "$0")"
+# 展示拉取的日志文件 - 使用相对路径
+    local script_dir="$(cd "$(dirname "$0")" && pwd)"
     local base_target_dir="$script_dir/alllog"
     local target_dir="$base_target_dir/$timestamp"
     log_info "拉取的日志文件保存到: $target_dir"
-
+    
     if [ -d "$target_dir" ]; then
         log_info "目录内容:"
         ls -lh "$target_dir"/ 2>/dev/null || log_info "目录为空"
+        
+        # 显示文件数量统计
+        local file_count=$(find "$target_dir" -type f -name "*.log" -o -name "*.gz" -o -name "*.zip" 2>/dev/null | wc -l)
+        log_info "共拉取 $file_count 个日志文件"
+        
+        # 显示文件详细信息
+        echo ""
+        log_info "拉取的日志文件："
+        find "$target_dir" -type f -name "*.log" -o -name "*.gz" -o -name "*.zip" 2>/dev/null | xargs -I {} sh -c 'echo "  - {} ($(ls -lh "{}" | awk "{print \$5}"))"' || log_info "没有找到文件"
     fi
 }
 
