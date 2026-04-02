@@ -6,15 +6,17 @@
 
 # 定义绝对路径
 LOG_DIR="/main/app/tps/logs"
-DEST_DIR="/home/ymsk/alllog"
+BASE_DEST_DIR="/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/agv_log_fetcher/alllog"
+
+# 根据参数设置目标目录
+param="$1"
+DEST_DIR="$BASE_DEST_DIR/$param"
 
 # 检查参数
 if [ $# -ne 1 ]; then
     echo "用法: $0 时间参数 (格式: YYYYMMDD_HHMM)"
     exit 1
 fi
-
-param="$1"
 
 # 解析日期和时间
 IFS='_' read -r date_str hour_min <<< "$param"
