@@ -232,11 +232,12 @@ pull_all_logs() {
     echo ""
     log_header "批量拉取完成"
     
-    # 展示拉取的日志文件
-    local base_target_dir="/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/agv_log_fetcher/alllog"
+# 展示拉取的日志文件
+    local script_dir="$(dirname "$0")"
+    local base_target_dir="$script_dir/alllog"
     local target_dir="$base_target_dir/$timestamp"
     log_info "拉取的日志文件保存到: $target_dir"
-    
+
     if [ -d "$target_dir" ]; then
         log_info "目录内容:"
         ls -lh "$target_dir"/ 2>/dev/null || log_info "目录为空"
