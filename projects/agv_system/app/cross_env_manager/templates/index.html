@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}跨环境任务模板管理系统 - 首页{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="search-box">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title mb-4">
+                        <i class="bi bi-search"></i> 搜索任务模板
+                    </h3>
+                    <p class="card-text mb-4">
+                        输入任务模板代码或名称进行搜索，例如：<code>HJBY_back_32A3DJ2F_to_31A3QD4B3F</code>
+                    </p>
+                    
+                    <form action="{{ url_for('search') }}" method="post" class="mb-3">
+                        <div class="input-group input-group-lg">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search_term" 
+                                   placeholder="输入任务模板代码或名称..." 
+                                   required
+                                   autofocus>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search"></i> 搜索
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            支持模糊搜索，可以输入部分关键词
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <h5>搜索示例：</h5>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="{{ url_for('search') }}?search_term=HJBY" class="btn btn-outline-secondary btn-sm">
+                                HJBY
+                            </a>
+                            <a href="{{ url_for('search') }}?search_term=back" class="btn btn-outline-secondary btn-sm">
+                                back
+                            </a>
+                            <a href="{{ url_for('search') }}?search_term=test" class="btn btn-outline-secondary btn-sm">
+                                test
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-info-circle text-primary"></i> 系统功能
+                        </h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 任务模板查询
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 模板详情查看
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 模板信息修改
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 模板复制插入
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 子任务管理
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-database text-warning"></i> 数据库信息
+                        </h5>
+                        <p class="card-text">
+                            当前连接数据库：<code>agv_cross_env_test</code>
+                        </p>
+                        <p class="card-text">
+                            管理表：
+                        </p>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-secondary">fy_cross_model_process</span>
+                            <span class="badge bg-secondary">fy_cross_model_process_detail</span>
+                            <span class="badge bg-secondary">join_qr_node_info</span>
+                            <span class="badge bg-secondary">agv_robot</span>
+                            <span class="badge bg-secondary">agv_robot_ext</span>
+                        </div>
+                        <div class="mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#dbInfoModal">
+                                <i class="bi bi-info-square"></i> 查看表结构
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-lightbulb text-info"></i> 使用说明
+                </h5>
+                <div class="accordion" id="usageAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                1. 如何搜索任务模板？
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <p>在搜索框中输入任务模板代码或名称，支持模糊匹配。例如：</p>
+                                <ul>
+                                    <li>输入 <code>HJBY</code> 查找所有包含 HJBY 的任务模板</li>
+                                    <li>输入完整代码如 <code>HJBY_back_32A3DJ2F_to_31A3QD4B3F_446</code></li>
+                                    <li>输入部分关键词如 <code>back</code> 或 <code>test</code></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                2. 如何复制模板？
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <p>在搜索结果页面或模板详情页面，点击"复制模板"按钮。</p>
+                                <p>系统会自动生成新的模板代码：</p>
+                                <ul>
+                                    <li>如果输入 <code>HJBY_test</code>，系统会检查最后一条记录ID（如484）</li>
+                                    <li>自动生成新ID为485，新模板代码为 <code>HJBY_test_485</code></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                3. 如何修改模板信息？
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <p>在模板详情页面点击"编辑"按钮，进入编辑页面。</p>
+                                <p>修改完成后点击"保存"，系统会提示确认修改。</p>
+                                <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> 注意：修改操作会直接更新数据库，请谨慎操作。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据库信息模态框 -->
+<div class="modal fade" id="dbInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">数据库表结构</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>fy_cross_model_process (跨环境任务模板主表)</h6>
+                <ul class="small">
+                    <li><code>id</code> - 主键ID</li>
+                    <li><code>model_process_code</code> - 模板代码 (如 HJBY_back_32A3DJ2F_to_31A3QD4B3F_446)</li>
+                    <li><code>model_process_name</code> - 模板名称</li>
+                    <li><code>enable</code> - 是否启用 (0=禁用/跨环境任务, 1=启用)</li>
+                    <li><code>request_url</code> - 回调URL</li>
+                    <li><code>capacity</code> - 容量管控值</li>
+                    <li><code>target_points</code> - 目标点位</li>
+                    <li><code>area_id</code> - 区域ID</li>
+                    <li><code>target_points_ip</code> - 目标服务器IP</li>
+                </ul>
+                
+                <h6>fy_cross_model_process_detail (跨环境子任务模板明细表)</h6>
+                <ul class="small">
+                    <li><code>id</code> - 主键ID</li>
+                    <li><code>model_process_id</code> - 关联主模板ID</li>
+                    <li><code>task_seq</code> - 任务顺序</li>
+                    <li><code>task_servicec</code> - 下发服务器地址</li>
+                    <li><code>template_code</code> - 子任务模板代码</li>
+                    <li><code>template_name</code> - 子任务名称</li>
+                    <li><code>task_path</code> - 目标点标识</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // 搜索建议功能
+    $(document).ready(function() {
+        const searchInput = $('input[name="search_term"]');
+        
+        searchInput.on('input', function() {
+            const term = $(this).val();
+            if (term.length < 2) return;
+            
+            // 这里可以添加搜索建议功能
+            // 实际实现需要调用后端API
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

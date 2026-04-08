@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}编辑模板 - {{ template.model_process_code }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="bi bi-pencil text-warning"></i> 编辑任务模板
+        </h2>
+        <p class="text-muted">
+            模板代码: <code>{{ template.model_process_code }}</code> | ID: {{ template.id }}
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('view_template', template_id=template.id) }}" 
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回详情
+        </a>
+    </div>
+</div>
+
+<form action="{{ url_for('edit_template', template_id=template.id) }}" method="post">
+    <!-- 模板基本信息 -->
+    <div class="form-section">
+        <h4><i class="bi bi-info-circle"></i> 模板基本信息</h4>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">模板代码</label>
+                <input type="text" class="form-control" value="{{ template.model_process_code }}" readonly>
+                <div class="form-text">模板代码不可修改</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">模板名称</label>
+                <input type="text" class="form-control" name="model_process_name" 
+                       value="{{ template.model_process_name }}" required>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">状态</label>
+                <select class="form-select" name="enable">
+                    <option value="0" {% if template.enable == 0 %}selected{% endif %}>禁用 (跨环境任务)</option>
+                    <option value="1" {% if template.enable == 1 %}selected{% endif %}>启用 (普通任务)</option>
+                </select>
+                <div class="form-text">跨环境任务应设为禁用</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">容量管控值</label>
+                <input type="number" class="form-control" name="capacity" 
+                       value="{{ template.capacity }}">
+                <div class="form-text">-1 表示不限制</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">区域ID</label>
+                <input type="number" class="form-control" name="area_id" 
+                       value="{{ template.area_id or '' }}">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 服务器配置 -->
+    <div class="form-section">
+        <h4><i class="bi bi-server"></i> 服务器配置</h4>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">回调URL</label>
+                <input type="url" class="form-control" name="request_url" 
+                       value="{{ template.request_url or '' }}" 
+                       placeholder="http://10.1.80.60:5000/Api/RCS/PushJobStatus">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">目标服务器IP</label>
+                <input type="text" class="form-control" name="target_points_ip" 
+                       value="{{ template.target_points_ip or '' }}" 
+                       placeholder="http://10.68.2.32:7000">
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">目标点位</label>
+                <input type="text" class="form-control" name="target_points" 
+                       value="{{ template.target_points or '' }}" 
+                       placeholder="CONVERT0000">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">检查回流区域</label>
+                <input type="text" class="form-control" name="check_area_name" 
+                       value="{{ template.check_area_name or '' }}">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 回流配置 -->
+    <div class="form-section">
+        <h4><i class="bi bi-arrow-repeat"></i> 回流配置</h4>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">货架回流模板</label>
+                <input type="text" class="form-control" name="backflow_template_code" 
+                       value="{{ template.backflow_template_code or '' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">空车回流模板</label>
+                <input type="text" class="form-control" name="comeback_template_code" 
+                       value="{{ template.comeback_template_code or '' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">换电出发模板</label>
+                <input type="text" class="form-control" name="change_charge_template_code" 
+                       value="{{ template.change_charge_template_code or '' }}">
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">换电触发电量 (%)</label>
+                <input type="number" class="form-control" name="min_power" 
+                       value="{{ template.min_power or 0 }}" min="0" max="100">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">空车回流等待时间 (秒)</label>
+                <input type="number" class="form-control" name="back_wait_time" 
+                       value="{{ template.back_wait_time or 0 }}" min="0">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 子任务编辑 -->
+    <div class="form-section">
+        <h4><i class="bi bi-list-task"></i> 子任务管理</h4>
+        
+        {% if details %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>顺序</th>
+                            <th>模板代码</th>
+                            <th>模板名称</th>
+                            <th>服务器地址</th>
+                            <th>目标点</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in details %}
+                            <tr>
+                                <td>{{ detail.id }}</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" 
+                                           name="detail_{{ detail.id }}_task_seq" 
+                                           value="{{ detail.task_seq }}" style="width: 70px;">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="detail_{{ detail.id }}_template_code" 
+                                           value="{{ detail.template_code }}">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="detail_{{ detail.id }}_template_name" 
+                                           value="{{ detail.template_name }}">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="detail_{{ detail.id }}_task_servicec" 
+                                           value="{{ detail.task_servicec }}">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           name="detail_{{ detail.id }}_task_path" 
+                                           value="{{ detail.task_path }}">
+                                </td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-warning" 
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#editDetailModal{{ detail.id }}">
+                                        <i class="bi bi-pencil"></i> 详细
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                注意：子任务的详细编辑需要通过单独的编辑页面进行。上表仅显示基本信息。
+            </div>
+        {% else %}
+            <div class="alert alert-warning text-center py-4">
+                <i class="bi bi-exclamation-triangle display-4 d-block mb-3"></i>
+                <h5>该模板没有配置子任务</h5>
+                <p class="mb-3">子任务管理功能将在后续版本中添加</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="form-section">
+        <div class="d-flex justify-content-between">
+            <div>
+                <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                    <i class="bi bi-x-circle"></i> 取消
+                </button>
+            </div>
+            <div>
+                <button type="button" class="btn btn-warning" onclick="confirmSave()">
+                    <i class="bi bi-check-circle"></i> 保存修改
+                </button>
+                <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+                    确认保存
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- 编辑子任务模态框 -->
+{% for detail in details %}
+<div class="modal fade" id="editDetailModal{{ detail.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑子任务 #{{ detail.task_seq }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('edit_detail', detail_id=detail.id) }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">任务顺序</label>
+                        <input type="number" class="form-control" name="task_seq" 
+                               value="{{ detail.task_seq }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">模板代码</label>
+                        <input type="text" class="form-control" name="template_code" 
+                               value="{{ detail.template_code }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">模板名称</label>
+                        <input type="text" class="form-control" name="template_name" 
+                               value="{{ detail.template_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">服务器地址</label>
+                        <input type="text" class="form-control" name="task_servicec" 
+                               value="{{ detail.task_servicec }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">目标点标识</label>
+                        <input type="text" class="form-control" name="task_path" 
+                               value="{{ detail.task_path }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">货架回流模板</label>
+                        <input type="text" class="form-control" name="backflow_template_code" 
+                               value="{{ detail.backflow_template_code or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">空车回流模板</label>
+                        <input type="text" class="form-control" name="comeback_template_code" 
+                               value="{{ detail.comeback_template_code or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">回流等待时间 (秒)</label>
+                        <input type="number" class="form-control" name="back_wait_time" 
+                               value="{{ detail.back_wait_time or 0 }}" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- 警告信息 -->
+<div class="alert alert-warning mt-4">
+    <h5><i class="bi bi-exclamation-triangle"></i> 重要提示</h5>
+    <ul class="mb-0">
+        <li>修改模板信息将直接更新数据库，请谨慎操作</li>
+        <li>跨环境任务模板的 <code>enable</code> 字段应设置为 0 (禁用)</li>
+        <li>修改完成后，相关AGV任务将使用新的配置</li>
+        <li>建议在修改前备份当前配置</li>
+    </ul>
+</div>
+
+{% block extra_js %}
+<script>
+    // 确认保存
+    function confirmSave() {
+        if (confirm('确定要保存对模板的修改吗？\n\n此操作将直接更新数据库。')) {
+            // 显示确认按钮并点击
+            document.getElementById('submitBtn').style.display = 'inline-block';
+            document.getElementById('submitBtn').click();
+        }
+    }
+    
+    // 表单验证
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        
+        form.addEventListener('submit', function(event) {
+            // 可以在这里添加额外的表单验证
+            console.log('表单提交中...');
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -2,18 +2,20 @@
 
 # copy_all_log.sh - AGV日志统一拉取脚本
 # 功能：根据输入的参数，调用相应的日志拉取脚本
-# 支持多种日志类型：TPS、RTPS（算法）、ICS
+# 支持多种日志类型：TPS、RTPS（算法）、ICS、FYWDS
 #
 # 用法：
 #   1. 拉取TPS日志：./copy_all_log.sh tps <时间戳>
-#   2. 拉取RTPS算法日志：./copy_all_log.sh rtps <区域号> <时间戳>
+#   2. 拉取RTPS算法日志：./copy_all_log.sh rtps <时间戳> <区域号>
 #   3. 拉取ICS日志：./copy_all_log.sh ics <时间戳>
-#   4. 批量拉取所有类型日志：./copy_all_log.sh all <时间戳> [区域号 - 可选，默认为4]
+#   4. 拉取FYWDS日志：./copy_all_log.sh fywds <时间戳>
+#   5. 批量拉取所有类型日志：./copy_all_log.sh all <时间戳> [区域号 - 可选，默认为4]
 #
 # 示例：
 #   ./copy_all_log.sh tps 20260401_1010
-#   ./copy_all_log.sh rtps 4 20260401_1010
+#   ./copy_all_log.sh rtps 20260401_1010 4
 #   ./copy_all_log.sh ics 20260401_1010
+#   ./copy_all_log.sh fywds 20260401_1010
 #   ./copy_all_log.sh all 20260401_1010
 #   ./copy_all_log.sh all 20260401_1010 6
 
@@ -54,22 +56,24 @@ log_header() {
 show_usage() {
     echo "AGV日志统一拉取工具"
     echo ""
-    echo "用法: $0 <日志类型> [区域号] <时间戳>"
+    echo "用法: $0 <日志类型> <时间戳> [区域号]"
     echo ""
     echo "可用日志类型:"
     echo "  tps     - 拉取TPS日志"
     echo "  rtps    - 拉取RTPS算法日志（需要区域号参数）"
     echo "  ics     - 拉取ICS日志"
+    echo "  fywds   - 拉取FYWDS日志"
     echo "  all     - 批量拉取所有类型日志"
     echo ""
     echo "参数说明:"
-    echo "  区域号: 需要拉取日志的区域编号（如4,5,6等），仅rtps类型需要"
     echo "  时间戳: 日志时间戳，格式为YYYYMMDD_HHMM（如20260401_1010）"
+    echo "  区域号: 需要拉取日志的区域编号（如4,5,6等），仅rtps类型需要"
     echo ""
     echo "示例:"
     echo "  $0 tps 20260401_1010"
-    echo "  $0 rtps 4 20260401_1010"
+    echo "  $0 rtps 20260401_1010 4"
     echo "  $0 ics 20260401_1010"
+    echo "  $0 fywds 20260401_1010"
     echo "  $0 all 20260401_1010"
     echo "  $0 all 20260401_1010 6"
     echo ""
@@ -162,7 +166,7 @@ pull_rtps_log() {
     fi
     
     log_info "执行RTPS日志拉取..."
-    if bash "$rtps_script" "$area" "$timestamp"; then
+    if bash "$rtps_script" "$timestamp" "$area"; then
         log_success "RTPS日志拉取成功"
         return 0
     else
@@ -199,6 +203,34 @@ pull_ics_log() {
     fi
 }
 
+# 拉取FYWDS日志
+pull_fywds_log() {
+    local timestamp="$1"
+    local script_dir="$(dirname "$0")"
+    local fywds_script="$script_dir/bin/copy_fywds_log.sh"
+    
+    log_header "开始拉取FYWDS日志"
+    log_info "时间戳: $timestamp"
+    
+    if [ ! -f "$fywds_script" ]; then
+        log_error "FYWDS日志拉取脚本不存在: $fywds_script"
+        return 1
+    fi
+    
+    if ! validate_timestamp "$timestamp" "FYWDS"; then
+        return 1
+    fi
+    
+    log_info "执行FYWDS日志拉取..."
+    if bash "$fywds_script" "$timestamp"; then
+        log_success "FYWDS日志拉取成功"
+        return 0
+    else
+        log_error "FYWDS日志拉取失败"
+        return 1
+    fi
+}
+
 # 批量拉取所有日志
 pull_all_logs() {
     local timestamp="$1"
@@ -228,7 +260,14 @@ pull_all_logs() {
     if ! pull_ics_log "$timestamp"; then
         log_warning "ICS日志拉取失败，继续处理其他日志..."
     fi
-    
+
+    echo ""
+
+    # 拉取FYWDS日志
+    if ! pull_fywds_log "$timestamp"; then
+        log_warning "FYWDS日志拉取失败，继续处理其他日志..."
+    fi
+
     echo ""
     log_header "批量拉取完成"
     
@@ -272,10 +311,10 @@ main() {
             
         rtps)
             if [ $# -ne 3 ]; then
-                log_error "rtps日志需要两个参数：区域号 时间戳"
+                log_error "rtps日志需要两个参数：时间戳 区域号"
                 show_usage
             fi
-            pull_rtps_log "$2" "$3"
+            pull_rtps_log "$3" "$2"  # 注意：现在第2个参数是时间戳，第3个是区域号
             ;;
             
         ics)
@@ -284,6 +323,14 @@ main() {
                 show_usage
             fi
             pull_ics_log "$2"
+            ;;
+            
+        fywds)
+            if [ $# -ne 2 ]; then
+                log_error "fywds日志需要一个参数：时间戳"
+                show_usage
+            fi
+            pull_fywds_log "$2"
             ;;
             
         all)

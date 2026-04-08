@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# 用法：./copy_ics_log.sh 20260401_1000
-# 此脚本支持多种ICS日志格式：
-# 1. 标准格式：ICS.log 或 ICS-YYYY-MM-DD.N.log
-# 2. 业务格式：ICS-BUSINESS.log 或 ICS-BUSINESS-YYYY-MM-DD.N.log
-# 3. 其他变体格式
+# 用法：./copy_fywds_log.sh 20260401_1000
+# 此脚本支持多种FYWDS日志格式：
+# 1. 标准格式：FYWDS.log 或 FYWDS-YYYY-MM-DD.N.log
+# 2. 其他变体格式
 
 # 导入路径辅助函数
 # 更健壮的方法获取脚本目录
@@ -34,16 +33,15 @@ fi
 # 检测日志目录
 detect_log_dir() {
     # 如果设置了环境变量，直接使用
-    if [ -n "$ICS_LOG_DIR" ] && [ -d "$ICS_LOG_DIR" ]; then
-        echo "$ICS_LOG_DIR"
+    if [ -n "$FYWDS_LOG_DIR" ] && [ -d "$FYWDS_LOG_DIR" ]; then
+        echo "$FYWDS_LOG_DIR"
         return 0
     fi
     
     # 尝试查找常见目录
     local possible_dirs=(
-        "/main/app/ics/logs"
-        "/main/app/ics-business/logs"
-        "/main/app/ics/log"
+        "/main/app/fywds/logs"
+        "/main/app/fywds/log"
         "./logs"
         "."
     )
@@ -64,7 +62,7 @@ if [ $# -ne 1 ]; then
     echo "用法: $0 时间参数 (格式: YYYYMMDD_HHMM)"
     echo ""
     echo "可选步骤："
-    echo "1. 设置环境变量 ICS_LOG_DIR 指定日志目录"
+    echo "1. 设置环境变量 FYWDS_LOG_DIR 指定日志目录"
     echo "2. 脚本会自动检测常见目录"
     exit 1
 fi
@@ -72,7 +70,7 @@ fi
 param="$1"
 
 # 验证时间戳
-if ! validate_timestamp "$param" "ICS"; then
+if ! validate_timestamp "$param" "FYWDS"; then
     exit 1
 fi
 
@@ -95,15 +93,14 @@ fi
 # 检测日志目录
 LOG_DIR=$(detect_log_dir)
 if [ -z "$LOG_DIR" ]; then
-    echo "错误：未找到ICS日志目录"
+    echo "错误：未找到FYWDS日志目录"
     echo "请检查以下目录是否存在："
-    echo "- /main/app/ics/logs"
-    echo "- /main/app/ics-business/logs"
-    echo "- 或设置环境变量 ICS_LOG_DIR"
+    echo "- /main/app/fywds/logs"
+    echo "- 或设置环境变量 FYWDS_LOG_DIR"
     exit 1
 fi
 
-echo "找到ICS日志目录: $LOG_DIR"
+echo "找到FYWDS日志目录: $LOG_DIR"
 
 # 进入日志目录，如果失败则退出
 echo "进入日志目录: $LOG_DIR"
@@ -112,17 +109,16 @@ if ! cd "$LOG_DIR" 2>/dev/null; then
     exit 1
 fi
 
-echo "开始搜索包含时间 $target_time 的ICS日志文件..."
+echo "开始搜索包含时间 $target_time 的FYWDS日志文件..."
 echo "支持的日志格式："
-echo "1. 标准格式: ICS.log 或 ICS-YYYY-MM-DD.N.log"
-echo "2. 业务格式: ICS-BUSINESS.log 或 ICS-BUSINESS-YYYY-MM-DD.N.log"
-echo "3. 其他变体: ICS-APP, ICS-SERVICE等"
+echo "1. 标准格式: FYWDS.log 或 FYWDS-YYYY-MM-DD.N.log"
+echo "2. 其他变体格式"
 echo ""
 
 # 函数：检查日志文件是否包含目标时间
 contains_time() {
     local file="$1"
-    local max_lines_to_scan="${ICS_MAX_SCAN_LINES:-1000}"
+    local max_lines_to_scan="${FYWDS_MAX_SCAN_LINES:-1000}"
     
     if [ ! -f "$file" ]; then
         return 1
@@ -180,13 +176,13 @@ contains_time() {
     fi
 }
 
-# 按顺序尝试不同的ICS日志格式
+# 按顺序尝试不同的FYWDS日志格式
 found=0
 
-# 格式列表：基本格式在前，业务格式在后
-ics_formats=("ICS" "ICS-BUSINESS" "ICS-APP" "ICS-SERVICE")
+# 格式列表：基本格式在前
+fywds_formats=("FYWDS")
 
-for format in "${ics_formats[@]}"; do
+for format in "${fywds_formats[@]}"; do
     echo "尝试查找格式: $format"
     
     # 检查单一文件
@@ -194,12 +190,12 @@ for format in "${ics_formats[@]}"; do
         echo "找到单一文件: ${format}.log"
         if contains_time "${format}.log"; then
             echo "文件包含目标时间 $target_time"
-            if copy_to_alllog "${format}.log" "$param" "ics"; then
-                echo "ICS日志拉取成功"
+            if copy_to_alllog "${format}.log" "$param" "fywds"; then
+                echo "FYWDS日志拉取成功"
                 found=1
                 break
             else
-                echo "ICS日志拷贝失败"
+                echo "FYWDS日志拷贝失败"
             fi
         else
             echo "文件 ${format}.log 不包含目标时间 $target_time"
@@ -221,13 +217,13 @@ for format in "${ics_formats[@]}"; do
                 echo "检查分片文件: $(basename "$file")"
                 if contains_time "$file"; then
                     echo "找到合适的日志文件：$(basename "$file")"
-                    if copy_to_alllog "$file" "$param" "ics"; then
-                        echo "ICS日志拉取成功"
+                    if copy_to_alllog "$file" "$param" "fywds"; then
+                        echo "FYWDS日志拉取成功"
                         found=1
                         found_in_shards=1
                         break
                     else
-                        echo "ICS日志拷贝失败"
+                        echo "FYWDS日志拷贝失败"
                     fi
                 fi
             fi
@@ -247,8 +243,8 @@ done
 
 echo ""
 if [ $found -eq 0 ]; then
-    echo "错误：未找到包含时间 $target_time 的ICS日志文件"
-    echo "已检查以下格式: ${ics_formats[*]}"
+    echo "错误：未找到包含时间 $target_time 的FYWDS日志文件"
+    echo "已检查以下格式: ${fywds_formats[*]}"
     
     # 显示目录中的实际文件，帮助调试
     echo ""
@@ -261,7 +257,7 @@ if [ $found -eq 0 ]; then
     exit 1
 fi
 
-echo "ICS日志拉取成功完成"
+echo "FYWDS日志拉取成功完成"
 
 # 显示alllog目录内容
 show_alllog_contents "$param"

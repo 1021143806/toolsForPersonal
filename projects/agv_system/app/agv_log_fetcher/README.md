@@ -10,7 +10,8 @@ agv_log_fetcher/
 │   ├── copy_all_log.sh    # 主脚本 - 统一入口
 │   ├── copy_tps_log.sh    # TPS日志拉取脚本
 │   ├── copy_rtps_log.sh   # RTPS算法日志拉取脚本
-│   └── copy_ics_log.sh    # ICS日志拉取脚本
+│   ├── copy_ics_log.sh    # ICS日志拉取脚本
+│   └── copy_fywds_log.sh  # FYWDS日志拉取脚本
 ├── alllog/                # 拉取的日志存储目录
 │   └── (拉取的日志文件)
 ├── docs/                  # 文档目录
@@ -29,6 +30,7 @@ agv_log_fetcher/
 1. **TPS日志** - Task Planning System（任务规划系统）日志
 2. **RTPS日志** - Real-Time Planning System（实时规划系统）算法日志
 3. **ICS日志** - Inter-Control System（内部控制系统）日志
+4. **FYWDS日志** - FYWDS系统日志
 
 ### 2. 脚本说明
 
@@ -44,6 +46,7 @@ agv_log_fetcher/
 - `tps` - 拉取TPS日志
 - `rtps` - 拉取RTPS算法日志（需要区域号参数）
 - `ics` - 拉取ICS日志
+- `fywds` - 拉取FYWDS日志
 - `all` - 批量拉取所有类型日志
 
 **示例：**
@@ -52,10 +55,13 @@ agv_log_fetcher/
 ./copy_all_log.sh tps 20260401_1010
 
 # 拉取RTPS算法日志（区域4）
-./copy_all_log.sh rtps 4 20260401_1010
+./copy_all_log.sh rtps 20260401_1010 4
 
 # 拉取ICS日志
 ./copy_all_log.sh ics 20260401_1010
+
+# 拉取FYWDS日志
+./copy_all_log.sh fywds 20260401_1010
 
 # 批量拉取所有日志
 ./copy_all_log.sh all 20260401_1010
@@ -124,6 +130,29 @@ YYYYMMDD_HHMM_TPS.log
 YYYYMMDD_HHMM_ICS.log
 ```
 
+#### FYWDS日志脚本：`copy_fywds_log.sh`
+拉取FYWDS日志的专用脚本。
+
+**用法：**
+```bash
+./copy_fywds_log.sh <时间戳>
+```
+
+**示例：**
+```bash
+./copy_fywds_log.sh 20260401_1000
+```
+
+**日志文件命名规则：**
+```
+YYYYMMDD_HHMM_FYWDS.log
+```
+
+**查找策略：**
+1. 首先检查 `FYWDS.log` 文件
+2. 如果不存在，检查分片日志文件 `FYWDS-YYYY-MM-DD.N.log`
+3. 根据时间范围确定包含目标时间戳的文件
+
 ## 配置文件说明
 
 所有脚本使用硬编码的目录路径，可以根据实际情况进行修改：
@@ -131,6 +160,7 @@ YYYYMMDD_HHMM_ICS.log
 ### 日志源目录
 - **TPS日志目录**: `/main/app/tps/logs`
 - **ICS日志目录**: `/main/app/ics/logs`
+- **FYWDS日志目录**: `/main/app/fywds/logs`
 - **RTPS日志根目录**: `/main/app/`
 
 ### 目标目录
@@ -171,6 +201,11 @@ YYYYMMDD_HHMM_TPS.log
 YYYYMMDD_HHMM_ICS.log
 ```
 
+### FYWDS日志
+```
+YYYYMMDD_HHMM_FYWDS.log
+```
+
 ### RTPS日志
 - **TAL调度日志**: `YYYYMMDD_HHMM_rtpsa_区域列表_TAL.log[.zip]`
 - **rtps日志**: `YYYYMMDD_HHMM_区域列表_rtps.log[.gz]`
@@ -181,6 +216,7 @@ YYYYMMDD_HHMM_ICS.log
 20260401_1010_rtpsa_4,5,6,8,16,17,18_TAL.log.zip
 20260401_1010_4,5,6,8,16,17,18_rtps.log.gz
 20260401_1010_rtpsp_4_DPL.log.gz
+20260401_1010_FYWDS.log
 ```
 
 ## 错误处理
@@ -232,6 +268,12 @@ YYYYMMDD_HHMM_ICS.log
 - 建议使用主脚本进行日常操作，专用脚本用于特殊情况或调试
 
 ## 版本历史
+
+### v1.1 (2026-04-03)
+- 添加FYWDS日志支持
+- 创建 `copy_fywds_log.sh` 脚本
+- 更新主脚本 `copy_all_log.sh` 支持fywds类型
+- 更新文档和示例
 
 ### v1.0 (2026-04-02)
 - 统一现有分散的日志拉取脚本

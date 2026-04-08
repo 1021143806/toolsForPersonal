@@ -5,8 +5,29 @@
 # 用法：./copy_tps_log.sh 20260401_1010
 
 # 导入路径辅助函数
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/path_helpers.sh"
+# 更健壮的方法获取脚本目录
+if [ -n "${BASH_SOURCE[0]}" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd 2>/dev/null)"
+fi
+
+# 如果BASH_SOURCE方法失败，尝试其他方法
+if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd 2>/dev/null)"
+fi
+
+# 如果仍然失败，使用当前目录
+if [ -z "$SCRIPT_DIR" ] || [ ! -d "$SCRIPT_DIR" ]; then
+    SCRIPT_DIR="$(pwd)"
+fi
+
+# 导入路径辅助函数
+if [ -f "$SCRIPT_DIR/path_helpers.sh" ]; then
+    source "$SCRIPT_DIR/path_helpers.sh"
+else
+    echo "错误：找不到 path_helpers.sh 文件"
+    echo "脚本目录: $SCRIPT_DIR"
+    exit 1
+fi
 
 # TPS日志目录
 LOG_DIR="/main/app/tps/logs"

@@ -13,7 +13,21 @@ get_script_dir() {
         # 如果是符号链接
         script_dir="$(dirname "$(readlink -f "$script_path" 2>/dev/null || readlink "$script_path" 2>/dev/null)")"
     else
-        script_dir="$(cd "$(dirname "$script_path")" && pwd -P)"
+        # 更健壮的方法：先检查目录是否存在
+        local dir_part="$(dirname "$script_path")"
+        if [ -d "$dir_part" ]; then
+            script_dir="$(cd "$dir_part" && pwd -P 2>/dev/null)"
+        fi
+        
+        # 如果上述方法失败，尝试使用BASH_SOURCE（如果可用）
+        if [ -z "$script_dir" ] && [ -n "${BASH_SOURCE[0]}" ]; then
+            script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P 2>/dev/null)"
+        fi
+        
+        # 如果仍然失败，使用当前目录
+        if [ -z "$script_dir" ]; then
+            script_dir="$(pwd -P)"
+        fi
     fi
     
     echo "$script_dir"

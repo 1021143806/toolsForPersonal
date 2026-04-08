@@ -336,3 +336,4 @@ MaiBot.code-workspace
 date.log
 .DS*
 local.md
+*.csv
