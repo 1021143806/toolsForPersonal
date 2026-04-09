@@ -735,6 +735,290 @@ def show_docs():
         # 如果读取失败，返回错误信息
         return f"无法读取文档: {str(e)}", 500
 
+@app.route('/stats')
+def show_stats():
+    """显示统计页面"""
+    return render_template('stats.html')
+
+@app.route('/api/stats/overview')
+def get_stats_overview():
+    """获取系统概览统计"""
+    try:
+        # 模板统计
+        template_stats_query = """
+        SELECT 
+            COUNT(*) as total_templates,
+            SUM(CASE WHEN enable = 1 THEN 1 ELSE 0 END) as enabled_templates,
+            SUM(CASE WHEN enable = 0 THEN 1 ELSE 0 END) as disabled_templates,
+            AVG(capacity) as avg_capacity,
+            MIN(capacity) as min_capacity,
+            MAX(capacity) as max_capacity,
+            COUNT(DISTINCT area_id) as distinct_areas,
+            COUNT(DISTINCT target_points_ip) as distinct_servers
+        FROM fy_cross_model_process
+        """
+        template_stats = execute_query(template_stats_query)
+        
+        # 子任务统计
+        detail_stats_query = """
+        SELECT 
+            COUNT(*) as total_subtasks,
+            COUNT(DISTINCT model_process_id) as templates_with_subtasks,
+            AVG(task_seq) as avg_task_seq,
+            MIN(task_seq) as min_task_seq,
+            MAX(task_seq) as max_task_seq,
+            COUNT(DISTINCT task_servicec) as distinct_servers,
+            COUNT(DISTINCT template_code) as distinct_template_codes
+        FROM fy_cross_model_process_detail
+        """
+        detail_stats = execute_query(detail_stats_query)
+        
+        # 最近创建的模板
+        recent_templates_query = """
+        SELECT id, model_process_code, model_process_name, enable, created_at
+        FROM fy_cross_model_process
+        ORDER BY id DESC
+        LIMIT 5
+        """
+        recent_templates = execute_query(recent_templates_query)
+        
+        if template_stats and detail_stats:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'template_stats': template_stats[0],
+                    'detail_stats': detail_stats[0],
+                    'recent_templates': recent_templates or []
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '无法获取统计信息'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/stats/distribution')
+def get_stats_distribution():
+    """获取分布统计"""
+    try:
+        # 启用状态分布
+        enable_distribution_query = """
+        SELECT 
+            enable as status,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM fy_cross_model_process), 2) as percentage
+        FROM fy_cross_model_process
+        GROUP BY enable
+        ORDER BY enable DESC
+        """
+        enable_distribution = execute_query(enable_distribution_query)
+        
+        # 容量分布
+        capacity_distribution_query = """
+        SELECT 
+            capacity,
+            COUNT(*) as count
+        FROM fy_cross_model_process
+        WHERE capacity > 0
+        GROUP BY capacity
+        ORDER BY capacity
+        """
+        capacity_distribution = execute_query(capacity_distribution_query)
+        
+        # 服务器分布
+        server_distribution_query = """
+        SELECT 
+            target_points_ip as server,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM fy_cross_model_process), 2) as percentage
+        FROM fy_cross_model_process
+        WHERE target_points_ip IS NOT NULL AND target_points_ip != ''
+        GROUP BY target_points_ip
+        ORDER BY count DESC
+        """
+        server_distribution = execute_query(server_distribution_query)
+        
+        # 区域分布
+        area_distribution_query = """
+        SELECT 
+            area_id as area,
+            COUNT(*) as count
+        FROM fy_cross_model_process
+        WHERE area_id IS NOT NULL
+        GROUP BY area_id
+        ORDER BY area_id
+        """
+        area_distribution = execute_query(area_distribution_query)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'enable_distribution': enable_distribution or [],
+                'capacity_distribution': capacity_distribution or [],
+                'server_distribution': server_distribution or [],
+                'area_distribution': area_distribution or []
+            }
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/stats/templates_by_server')
+def get_templates_by_server():
+    """按服务器分组获取模板信息"""
+    try:
+        query = """
+        SELECT 
+            target_points_ip as server,
+            COUNT(*) as template_count,
+            GROUP_CONCAT(model_process_code ORDER BY id DESC SEPARATOR ', ') as template_codes,
+            SUM(CASE WHEN enable = 1 THEN 1 ELSE 0 END) as enabled_count,
+            SUM(CASE WHEN enable = 0 THEN 1 ELSE 0 END) as disabled_count
+        FROM fy_cross_model_process
+        WHERE target_points_ip IS NOT NULL AND target_points_ip != ''
+        GROUP BY target_points_ip
+        ORDER BY template_count DESC
+        """
+        results = execute_query(query)
+        
+        if results:
+            return jsonify({
+                'success': True,
+                'data': results
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '无法获取服务器分组信息'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/stats/template_growth')
+def get_template_growth():
+    """获取模板增长趋势（基于ID顺序）"""
+    try:
+        query = """
+        SELECT 
+            FLOOR((id - 1) / 10) * 10 + 1 as range_start,
+            FLOOR((id - 1) / 10) * 10 + 10 as range_end,
+            COUNT(*) as count,
+            GROUP_CONCAT(id ORDER BY id SEPARATOR ',') as ids
+        FROM fy_cross_model_process
+        GROUP BY FLOOR((id - 1) / 10)
+        ORDER BY range_start
+        """
+        results = execute_query(query)
+        
+        if results:
+            return jsonify({
+                'success': True,
+                'data': results
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '无法获取增长趋势信息'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/stats/detailed_analysis')
+def get_detailed_analysis():
+    """获取详细分析数据"""
+    try:
+        # 模板基本信息分析
+        template_analysis_query = """
+        SELECT 
+            'total_templates' as metric,
+            COUNT(*) as value
+        FROM fy_cross_model_process
+        UNION ALL
+        SELECT 
+            'enabled_templates' as metric,
+            SUM(CASE WHEN enable = 1 THEN 1 ELSE 0 END) as value
+        FROM fy_cross_model_process
+        UNION ALL
+        SELECT 
+            'disabled_templates' as metric,
+            SUM(CASE WHEN enable = 0 THEN 1 ELSE 0 END) as value
+        FROM fy_cross_model_process
+        UNION ALL
+        SELECT 
+            'templates_with_capacity' as metric,
+            SUM(CASE WHEN capacity > 0 THEN 1 ELSE 0 END) as value
+        FROM fy_cross_model_process
+        UNION ALL
+        SELECT 
+            'templates_without_capacity' as metric,
+            SUM(CASE WHEN capacity <= 0 THEN 1 ELSE 0 END) as value
+        FROM fy_cross_model_process
+        UNION ALL
+        SELECT 
+            'avg_subtasks_per_template' as metric,
+            ROUND(
+                (SELECT COUNT(*) FROM fy_cross_model_process_detail) * 1.0 / 
+                (SELECT COUNT(*) FROM fy_cross_model_process), 
+                2
+            ) as value
+        """
+        template_analysis = execute_query(template_analysis_query)
+        
+        # 子任务分析
+        subtask_analysis_query = """
+        SELECT 
+            'total_subtasks' as metric,
+            COUNT(*) as value
+        FROM fy_cross_model_process_detail
+        UNION ALL
+        SELECT 
+            'templates_with_subtasks' as metric,
+            COUNT(DISTINCT model_process_id) as value
+        FROM fy_cross_model_process_detail
+        UNION ALL
+        SELECT 
+            'avg_task_seq' as metric,
+            ROUND(AVG(task_seq), 2) as value
+        FROM fy_cross_model_process_detail
+        UNION ALL
+        SELECT 
+            'max_task_seq' as metric,
+            MAX(task_seq) as value
+        FROM fy_cross_model_process_detail
+        """
+        subtask_analysis = execute_query(subtask_analysis_query)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'template_analysis': template_analysis or [],
+                'subtask_analysis': subtask_analysis or []
+            }
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # 创建模板目录
     os.makedirs('templates', exist_ok=True)
