@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}跨环境任务模板管理系统 - 文档{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-journal-text me-2"></i> 系统文档
+                    </h4>
+                    <div>
+                        <a href="{{ url_for('index') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i> 返回首页
+                        </a>
+                        <button onclick="window.print()" class="btn btn-light btn-sm ms-2">
+                            <i class="bi bi-printer me-1"></i> 打印
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    本文档基于项目根目录下的 <code>README.md</code> 文件生成，内容与本地文档完全一致。
+                </div>
+                
+                <!-- 文档导航 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list me-2"></i> 文档目录
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><a href="#功能特性"><i class="bi bi-check-circle text-success me-2"></i>功能特性</a></li>
+                                    <li><a href="#系统要求"><i class="bi bi-gear text-primary me-2"></i>系统要求</a></li>
+                                    <li><a href="#安装部署"><i class="bi bi-download text-warning me-2"></i>安装部署</a></li>
+                                    <li><a href="#使用说明"><i class="bi bi-play-circle text-info me-2"></i>使用说明</a></li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><a href="#数据库表结构"><i class="bi bi-database text-secondary me-2"></i>数据库表结构</a></li>
+                                    <li><a href="#开发说明"><i class="bi bi-code-slash text-dark me-2"></i>开发说明</a></li>
+                                    <li><a href="#故障排除"><i class="bi bi-tools text-danger me-2"></i>故障排除</a></li>
+                                    <li><a href="#部署到生产环境"><i class="bi bi-server text-success me-2"></i>部署到生产环境</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Markdown内容 -->
+                <div class="markdown-content p-4 border rounded bg-light">
+                    {{ content|safe }}
+                </div>
+                
+                <!-- 文档信息 -->
+                <div class="card mt-4">
+                    <div class="card-body text-center">
+                        <p class="mb-2">
+                            <i class="bi bi-clock-history me-1"></i>
+                            文档最后更新: <strong>2026-04-08</strong>
+                        </p>
+                        <p class="mb-0">
+                            <i class="bi bi-file-earmark-text me-1"></i>
+                            源文件: <code>README.md</code> ({{ content|length }} 字符)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .markdown-content {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+    }
+    
+    .markdown-content h1,
+    .markdown-content h2,
+    .markdown-content h3,
+    .markdown-content h4,
+    .markdown-content h5,
+    .markdown-content h6 {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+        font-weight: 600;
+        line-height: 1.25;
+        border-bottom: 1px solid #eaecef;
+        padding-bottom: 0.3em;
+    }
+    
+    .markdown-content h1 { font-size: 2em; }
+    .markdown-content h2 { font-size: 1.5em; }
+    .markdown-content h3 { font-size: 1.25em; }
+    .markdown-content h4 { font-size: 1em; }
+    .markdown-content h5 { font-size: 0.875em; }
+    .markdown-content h6 { font-size: 0.85em; color: #6a737d; }
+    
+    .markdown-content p {
+        margin-top: 0;
+        margin-bottom: 16px;
+    }
+    
+    .markdown-content ul,
+    .markdown-content ol {
+        padding-left: 2em;
+        margin-top: 0;
+        margin-bottom: 16px;
+    }
+    
+    .markdown-content li {
+        margin-bottom: 0.25em;
+    }
+    
+    .markdown-content code {
+        padding: 0.2em 0.4em;
+        margin: 0;
+        font-size: 85%;
+        background-color: rgba(27,31,35,0.05);
+        border-radius: 3px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    }
+    
+    .markdown-content pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+        background-color: #f6f8fa;
+        border-radius: 3px;
+        margin-bottom: 16px;
+    }
+    
+    .markdown-content pre code {
+        padding: 0;
+        margin: 0;
+        font-size: 100%;
+        word-break: normal;
+        white-space: pre;
+        background: transparent;
+        border: 0;
+    }
+    
+    .markdown-content table {
+        display: block;
+        width: 100%;
+        overflow: auto;
+        margin-bottom: 16px;
+        border-spacing: 0;
+        border-collapse: collapse;
+    }
+    
+    .markdown-content table th {
+        font-weight: 600;
+        padding: 6px 13px;
+        border: 1px solid #dfe2e5;
+    }
+    
+    .markdown-content table td {
+        padding: 6px 13px;
+        border: 1px solid #dfe2e5;
+    }
+    
+    .markdown-content table tr {
+        background-color: #fff;
+        border-top: 1px solid #c6cbd1;
+    }
+    
+    .markdown-content table tr:nth-child(2n) {
+        background-color: #f6f8fa;
+    }
+    
+    .markdown-content blockquote {
+        padding: 0 1em;
+        color: #6a737d;
+        border-left: 0.25em solid #dfe2e5;
+        margin: 0 0 16px 0;
+    }
+    
+    .markdown-content img {
+        max-width: 100%;
+        box-sizing: content-box;
+        background-color: #fff;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content {
+        background-color: #2d2d2d;
+        color: #e9ecef;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content code {
+        background-color: rgba(255,255,255,0.1);
+    }
+    
+    [data-bs-theme="dark"] .markdown-content pre {
+        background-color: #1e1e1e;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content table th,
+    [data-bs-theme="dark"] .markdown-content table td {
+        border-color: #495057;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content table tr {
+        background-color: #2d2d2d;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content table tr:nth-child(2n) {
+        background-color: #1e1e1e;
+    }
+    
+    [data-bs-theme="dark"] .markdown-content blockquote {
+        color: #adb5bd;
+        border-left-color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 平滑滚动到锚点
+    document.querySelectorAll('.markdown-content a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // 为所有标题添加锚点
+    document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6').forEach(heading => {
+        const id = heading.textContent.toLowerCase().replace(/[^\w]+/g, '-');
+        heading.id = id;
+        
+        // 添加锚点链接
+        const anchor = document.createElement('a');
+        anchor.href = `#${id}`;
+        anchor.className = 'heading-anchor ms-2';
+        anchor.innerHTML = '<i class="bi bi-link-45deg"></i>';
+        anchor.style.opacity = '0.5';
+        anchor.style.textDecoration = 'none';
+        anchor.style.fontSize = '0.8em';
+        
+        heading.appendChild(anchor);
+        
+        // 鼠标悬停时显示锚点
+        heading.addEventListener('mouseenter', () => {
+            anchor.style.opacity = '1';
+        });
+        heading.addEventListener('mouseleave', () => {
+            anchor.style.opacity = '0.5';
+        });
+    });
+    
+    // 复制代码块功能
+    document.querySelectorAll('.markdown-content pre').forEach(pre => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm btn-outline-secondary position-absolute';
+        button.style.top = '8px';
+        button.style.right = '8px';
+        button.innerHTML = '<i class="bi bi-clipboard"></i>';
+        button.title = '复制代码';
+        
+        pre.style.position = 'relative';
+        pre.appendChild(button);
+        
+        button.addEventListener('click', () => {
+            const code = pre.querySelector('code')?.textContent || pre.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                button.innerHTML = '<i class="bi bi-check"></i>';
+                button.className = 'btn btn-sm btn-success position-absolute';
+                setTimeout(() => {
+                    button.innerHTML = '<i class="bi bi-clipboard"></i>';
+                    button.className = 'btn btn-sm btn-outline-secondary position-absolute';
+                }, 2000);
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -3,6 +3,7 @@
 """
 跨环境任务模板管理Web应用
 用于查询、修改和插入跨环境任务模板
+支持TOML配置文件和命令行参数指定配置文件
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
@@ -10,24 +11,130 @@ import mysql.connector
 from mysql.connector import Error
 import re
 import os
+import sys
+import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
+# 尝试导入tomli（Python 3.11+内置tomllib，低版本使用tomli）
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
+def load_config(config_path=None):
+    """
+    加载配置文件，支持.env和.toml格式
+    优先级：命令行参数 > 环境变量 > 默认配置文件
+    """
+    config = {}
+    
+    # 默认配置文件路径
+    default_config_path = os.path.join(os.path.dirname(__file__), 'config', 'env.toml')
+    
+    # 确定使用的配置文件路径
+    if config_path:
+        config_file = config_path
+    elif os.getenv('CONFIG_PATH'):
+        config_file = os.getenv('CONFIG_PATH')
+    else:
+        config_file = default_config_path
+    
+    print(f"使用配置文件: {config_file}")
+    
+    # 根据文件扩展名选择加载方式
+    if config_file.endswith('.toml'):
+        # 加载TOML配置文件
+        try:
+            with open(config_file, 'rb') as f:  # 使用二进制模式读取
+                config = tomllib.load(f)
+        except tomllib.TOMLDecodeError:
+            # 如果标准TOML解析失败，尝试作为.env格式解析
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    toml_content = f.read()
+                
+                # 按行解析.env格式
+                for line in toml_content.split('\n'):
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            config[key.strip()] = value.strip().strip('"\'')  # 去掉引号
+            except Exception as e:
+                print(f"警告: 无法加载TOML配置文件 {config_file}: {e}")
+                print("将使用环境变量和默认值")
+        except Exception as e:
+            print(f"警告: 无法加载TOML配置文件 {config_file}: {e}")
+            print("将使用环境变量和默认值")
+    elif config_file.endswith('.env'):
+        # 加载.env文件
+        load_dotenv(config_file)
+    else:
+        print(f"警告: 不支持的配置文件格式: {config_file}")
+        print("将使用环境变量和默认值")
+    
+    return config
+
+def parse_arguments():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description='跨环境任务模板管理系统')
+    parser.add_argument('--config', '-c', 
+                       help='配置文件路径 (支持.env或.toml格式)',
+                       default=None)
+    parser.add_argument('--host', 
+                       help='Flask服务主机地址',
+                       default=None)
+    parser.add_argument('--port', '-p', 
+                       help='Flask服务端口',
+                       type=int,
+                       default=None)
+    parser.add_argument('--debug', '-d', 
+                       help='启用调试模式',
+                       action='store_true')
+    
+    return parser.parse_args()
+
+# 解析命令行参数
+args = parse_arguments()
+
+# 加载配置
+config = load_config(args.config)
+
+# 初始化Flask应用
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'cross_env_manager_secret_key_2026')
+
+# 从配置或环境变量获取Flask密钥
+# 注意：配置文件中flask配置在[flask]部分
+flask_config = config.get('flask', {})
+flask_secret_key = (flask_config.get('secret_key') or 
+                   os.getenv('FLASK_SECRET_KEY') or 
+                   'cross_env_manager_secret_key_2026')
+app.secret_key = flask_secret_key
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# 数据库配置 - 从环境变量读取
+# 数据库配置 - 从配置、环境变量或默认值读取
+# 注意：配置文件中数据库配置在[database]部分
+db_config = config.get('database', {})
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', 3306)),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'agv_cross_env_test'),
-    'charset': os.getenv('DB_CHARSET', 'utf8mb4')
+    'host': (db_config.get('host') or 
+            os.getenv('DB_HOST') or 
+            'localhost'),
+    'port': int(db_config.get('port') or 
+               os.getenv('DB_PORT') or 
+               3306),
+    'user': (db_config.get('user') or 
+            os.getenv('DB_USER') or 
+            'root'),
+    'password': (db_config.get('password') or 
+                os.getenv('DB_PASSWORD') or 
+                ''),
+    'database': (db_config.get('name') or 
+                os.getenv('DB_NAME') or 
+                'agv_cross_env_test'),
+    'charset': (db_config.get('charset') or 
+               os.getenv('DB_CHARSET') or 
+               'utf8mb4')
 }
 
 def get_db_connection():
@@ -75,28 +182,16 @@ def extract_id_from_code(model_process_code):
         return int(match.group(1))
     return None
 
-def get_next_available_id(base_name):
-    """获取下一个可用的ID"""
-    # 查询所有以base_name开头的记录
-    query = "SELECT model_process_code FROM fy_cross_model_process WHERE model_process_code LIKE %s"
-    params = (f"{base_name}_%",)
-    results = execute_query(query, params)
+def get_next_available_id():
+    """获取下一个可用的数据库ID（基于自增主键）"""
+    # 查询当前最大的id值
+    query = "SELECT MAX(id) as max_id FROM fy_cross_model_process"
+    result = execute_query(query)
     
-    if not results:
+    if not result or result[0]['max_id'] is None:
         return 1
     
-    # 提取所有ID
-    ids = []
-    for row in results:
-        code = row['model_process_code']
-        id_num = extract_id_from_code(code)
-        if id_num is not None:
-            ids.append(id_num)
-    
-    if not ids:
-        return 1
-    
-    return max(ids) + 1
+    return result[0]['max_id'] + 1
 
 @app.route('/')
 def index():
@@ -323,9 +418,9 @@ def copy_template(template_id):
             flash('请输入新模板的基础名称', 'error')
             return redirect(url_for('copy_template', template_id=template_id))
         
-        # 获取下一个可用ID
-        next_id = get_next_available_id(new_base_name)
-        new_model_process_code = f"{new_base_name}_{next_id}"
+        # 先插入记录，获取数据库生成的id
+        # 临时使用一个占位符作为model_process_code
+        temp_model_process_code = f"{new_base_name}_temp"
         
         # 获取原模板信息
         query = "SELECT * FROM fy_cross_model_process WHERE id = %s"
@@ -357,7 +452,7 @@ def copy_template(template_id):
                 return default
         
         params = (
-            new_model_process_code,
+            temp_model_process_code,
             form_data.get('model_process_name', original_template['model_process_name']),
             safe_int(form_data.get('enable'), original_template['enable']),
             form_data.get('request_url', original_template['request_url']),
@@ -376,6 +471,24 @@ def copy_template(template_id):
         new_template_id = execute_query(insert_query, params, fetch=False)
         
         if new_template_id:
+            # 使用实际的数据库id更新model_process_code和model_process_name
+            new_model_process_code = f"{new_base_name}_{new_template_id}"
+            
+            # 获取原model_process_name并添加后缀
+            original_name = form_data.get('model_process_name', original_template['model_process_name'])
+            # 移除原名称中可能存在的数字后缀
+            import re
+            original_name_clean = re.sub(r'_\d+$', '', original_name)
+            new_model_process_name = f"{original_name_clean}_{new_template_id}"
+            
+            update_code_query = """
+            UPDATE fy_cross_model_process 
+            SET model_process_code = %s,
+                model_process_name = %s
+            WHERE id = %s
+            """
+            execute_query(update_code_query, (new_model_process_code, new_model_process_name, new_template_id), fetch=False)
+            
             # 复制子任务
             detail_query = """
             SELECT * FROM fy_cross_model_process_detail 
@@ -408,7 +521,7 @@ def copy_template(template_id):
                     
                     execute_query(insert_detail_query, detail_params, fetch=False)
             
-            flash(f'模板复制成功！新模板代码: {new_model_process_code}', 'success')
+            flash(f'模板复制成功！新模板代码: {new_model_process_code}, 新模板名称: {new_model_process_name}', 'success')
             return redirect(url_for('view_template', template_id=new_template_id))
         else:
             flash('模板复制失败', 'error')
@@ -440,17 +553,218 @@ def search_suggestions():
     
     return jsonify(suggestions)
 
+@app.route('/api/template/<int:template_id>/details/add', methods=['POST'])
+def add_detail(template_id):
+    """添加新子任务"""
+    try:
+        data = request.get_json()
+        
+        # 获取当前最大的task_seq
+        max_seq_query = """
+        SELECT MAX(task_seq) as max_seq 
+        FROM fy_cross_model_process_detail 
+        WHERE model_process_id = %s
+        """
+        max_result = execute_query(max_seq_query, (template_id,))
+        
+        if max_result and max_result[0]['max_seq'] is not None:
+            new_seq = max_result[0]['max_seq'] + 1
+        else:
+            new_seq = 1
+        
+        # 插入新子任务
+        insert_query = """
+        INSERT INTO fy_cross_model_process_detail 
+        (model_process_id, task_seq, task_servicec, template_code, 
+         template_name, task_path, backflow_template_code, 
+         comeback_template_code, back_wait_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        params = (
+            template_id,
+            new_seq,
+            data.get('task_servicec', ''),
+            data.get('template_code', ''),
+            data.get('template_name', ''),
+            data.get('task_path', ''),
+            data.get('backflow_template_code', ''),
+            data.get('comeback_template_code', ''),
+            int(data.get('back_wait_time', 0))
+        )
+        
+        new_detail_id = execute_query(insert_query, params, fetch=False)
+        
+        if new_detail_id:
+            # 获取新创建的子任务详情
+            detail_query = "SELECT * FROM fy_cross_model_process_detail WHERE id = %s"
+            detail = execute_query(detail_query, (new_detail_id,))
+            
+            if detail:
+                return jsonify({
+                    'success': True,
+                    'message': '子任务添加成功',
+                    'detail': detail[0]
+                })
+        
+        return jsonify({
+            'success': False,
+            'message': '子任务添加失败'
+        }), 500
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/template/<int:template_id>/details/<int:detail_id>/delete', methods=['DELETE'])
+def delete_detail(template_id, detail_id):
+    """删除子任务"""
+    try:
+        # 先验证子任务属于该模板
+        verify_query = """
+        SELECT id FROM fy_cross_model_process_detail 
+        WHERE id = %s AND model_process_id = %s
+        """
+        verify_result = execute_query(verify_query, (detail_id, template_id))
+        
+        if not verify_result:
+            return jsonify({
+                'success': False,
+                'message': '子任务不存在或不属于该模板'
+            }), 404
+        
+        # 删除子任务
+        delete_query = "DELETE FROM fy_cross_model_process_detail WHERE id = %s"
+        result = execute_query(delete_query, (detail_id,), fetch=False)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'message': '子任务删除成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '子任务删除失败'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/template/<int:template_id>/details/reorder', methods=['POST'])
+def reorder_details(template_id):
+    """重新排序子任务"""
+    try:
+        data = request.get_json()
+        detail_order = data.get('order', [])  # 格式: [{"id": 1, "task_seq": 1}, ...]
+        
+        if not detail_order:
+            return jsonify({
+                'success': False,
+                'message': '未提供排序数据'
+            }), 400
+        
+        # 验证所有子任务都属于该模板
+        detail_ids = [item['id'] for item in detail_order]
+        placeholders = ', '.join(['%s'] * len(detail_ids))
+        
+        verify_query = f"""
+        SELECT COUNT(*) as count FROM fy_cross_model_process_detail 
+        WHERE id IN ({placeholders}) AND model_process_id = %s
+        """
+        verify_params = detail_ids + [template_id]
+        verify_result = execute_query(verify_query, verify_params)
+        
+        if verify_result and verify_result[0]['count'] != len(detail_ids):
+            return jsonify({
+                'success': False,
+                'message': '部分子任务不属于该模板'
+            }), 400
+        
+        # 批量更新task_seq
+        success_count = 0
+        for item in detail_order:
+            update_query = """
+            UPDATE fy_cross_model_process_detail 
+            SET task_seq = %s 
+            WHERE id = %s AND model_process_id = %s
+            """
+            update_params = (item['task_seq'], item['id'], template_id)
+            result = execute_query(update_query, update_params, fetch=False)
+            
+            if result:
+                success_count += 1
+        
+        if success_count == len(detail_order):
+            return jsonify({
+                'success': True,
+                'message': f'成功更新 {success_count} 个子任务的顺序'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'部分更新失败，成功更新 {success_count}/{len(detail_order)} 个'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/docs')
+def show_docs():
+    """显示本地README.md文档"""
+    try:
+        # 读取README.md文件
+        readme_path = os.path.join(os.path.dirname(__file__), 'README.md')
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 将Markdown转换为HTML（简单转换）
+        import markdown
+        html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
+        
+        return render_template('docs.html', content=html_content)
+    except Exception as e:
+        # 如果读取失败，返回错误信息
+        return f"无法读取文档: {str(e)}", 500
+
 if __name__ == '__main__':
     # 创建模板目录
     os.makedirs('templates', exist_ok=True)
     
-    host = os.getenv('FLASK_HOST', '0.0.0.0')
-    port = int(os.getenv('FLASK_PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    # 获取Flask运行参数（命令行参数优先，然后是配置，最后是环境变量）
+    # 注意：配置文件使用小写字段名（如 host, port），环境变量使用大写（如 FLASK_HOST, FLASK_PORT）
+    flask_config = config.get('flask', {})
+    host = (args.host or 
+           flask_config.get('host') or 
+           os.getenv('FLASK_HOST') or 
+           '0.0.0.0')
     
-    print(f"启动跨环境任务模板管理系统...")
+    port = (args.port or 
+           (flask_config.get('port') and int(flask_config.get('port'))) or 
+           (os.getenv('FLASK_PORT') and int(os.getenv('FLASK_PORT'))) or 
+           5000)
+    
+    debug = (args.debug or 
+            (flask_config.get('debug') and str(flask_config.get('debug')).lower() == 'true') or 
+            (os.getenv('FLASK_DEBUG') and os.getenv('FLASK_DEBUG').lower() == 'true') or 
+            False)
+    
+    print("=" * 60)
+    print("跨环境任务模板管理系统")
+    print("=" * 60)
+    print(f"配置文件: {args.config or '默认 (config/env.toml)'}")
     print(f"数据库: {DB_CONFIG['database']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}")
     print(f"服务地址: http://{host}:{port}")
-    print(f"调试模式: {debug}")
+    print(f"调试模式: {'是' if debug else '否'}")
+    print("=" * 60)
+    print("启动服务中...")
     
     app.run(debug=debug, host=host, port=port)
