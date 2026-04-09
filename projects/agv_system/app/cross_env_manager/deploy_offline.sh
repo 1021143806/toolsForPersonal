@@ -35,20 +35,46 @@ else
 fi
 
 echo "2. 检查离线依赖包..."
-if [ -d "vendor_packages" ] && [ "$(ls -A vendor_packages/*.whl vendor_packages/*.tar.gz 2>/dev/null | wc -l)" -gt 0 ]; then
-    echo "   ✓ 发现离线依赖包，使用离线安装模式"
-    OFFLINE_MODE=true
-    echo "   离线包数量: $(ls -1 vendor_packages/*.whl vendor_packages/*.tar.gz 2>/dev/null | wc -l)"
+# 根据Python版本选择包目录
+if [[ "$python_version" =~ ^3\.9\. ]]; then
+    echo "   Python 3.9.x 检测到，优先使用 vendor_packages3.9/"
+    VENDOR_DIR="vendor_packages3.9"
 else
-    echo "   ⚠️  未找到离线依赖包，使用在线安装模式"
+    echo "   Python 版本: $python_version，使用 vendor_packages/"
+    VENDOR_DIR="vendor_packages"
+fi
+
+if [ -d "$VENDOR_DIR" ] && [ "$(ls -A $VENDOR_DIR/*.whl $VENDOR_DIR/*.tar.gz 2>/dev/null | wc -l)" -gt 0 ]; then
+    echo "   ✓ 发现离线依赖包 ($VENDOR_DIR/)，使用离线安装模式"
+    OFFLINE_MODE=true
+    PACKAGE_COUNT=$(ls -1 $VENDOR_DIR/*.whl $VENDOR_DIR/*.tar.gz 2>/dev/null | wc -l)
+    echo "   离线包数量: $PACKAGE_COUNT"
+    
+    # 检查关键包
+    echo "   关键包检查:"
+    if ls $VENDOR_DIR/*pymysql* 2>/dev/null; then
+        echo "   ✓ 包含 pymysql (Python 3.9兼容)"
+    elif ls $VENDOR_DIR/*mysql*connector* 2>/dev/null; then
+        MYSQL_PKG=$(ls $VENDOR_DIR/*mysql*connector* 2>/dev/null | head -1)
+        echo "   ℹ️  包含 mysql-connector: $(basename "$MYSQL_PKG")"
+    else
+        echo "   ⚠️  未找到MySQL驱动包"
+    fi
+else
+    echo "   ⚠️  未找到离线依赖包 ($VENDOR_DIR/)，使用在线安装模式"
     OFFLINE_MODE=false
     
     # 检查网络连接
     if ! curl -s --connect-timeout 5 https://pypi.org > /dev/null; then
         echo "   ❌ 无法连接到PyPI，且离线依赖包不存在"
         echo "   请在有网络的环境下运行以下命令准备离线包:"
-        echo "   python3 -m pip download -r requirements.txt -d vendor_packages"
-        echo "   或手动下载以下依赖包到 vendor_packages/ 目录:"
+        if [[ "$python_version" =~ ^3\.9\. ]]; then
+            echo "   python3.9 -m pip download -r requirements.txt -d vendor_packages3.9"
+            echo "   或使用: ./create_py39_vendor.sh"
+        else
+            echo "   python3 -m pip download -r requirements.txt -d vendor_packages"
+        fi
+        echo "   或手动下载以下依赖包到 $VENDOR_DIR/ 目录:"
         cat requirements.txt
         exit 1
     else
@@ -82,24 +108,37 @@ echo "   虚拟环境Python版本: $(python --version)"
 echo "   pip版本: $(pip --version | awk '{print $2}')"
 
 if [ "$OFFLINE_MODE" = true ]; then
-    echo "   使用离线依赖包安装..."
-    echo "   安装命令: pip install --no-index --find-links=vendor_packages -r requirements.txt"
+    echo "   使用离线依赖包安装 ($VENDOR_DIR/)..."
+    echo "   安装命令: pip install --no-index --find-links=$VENDOR_DIR -r requirements.txt"
     
-    # 先检查是否有平台特定的mysql-connector包
-    MYSQL_PACKAGE=$(find vendor_packages -name "*mysql*connector*" -type f | head -1)
-    if [ -n "$MYSQL_PACKAGE" ]; then
+    # 检查MySQL驱动包
+    MYSQL_PACKAGE=$(find $VENDOR_DIR -name "*mysql*connector*" -type f | head -1)
+    PYMSQL_PACKAGE=$(find $VENDOR_DIR -name "*pymysql*" -type f | head -1)
+    
+    if [ -n "$PYMSQL_PACKAGE" ]; then
+        echo "   发现pymysql包: $(basename "$PYMSQL_PACKAGE")"
+        echo "   ✓ 使用pymysql作为MySQL驱动 (Python 3.9兼容)"
+        
+        # 检查是否需要应用pymysql补丁
+        if [[ "$python_version" =~ ^3\.9\. ]] && [ -f "app_py39_patch.py" ]; then
+            echo "   应用pymysql补丁..."
+            python3 app_py39_patch.py 2>/dev/null && echo "   ✓ pymysql补丁应用成功" || echo "   ⚠️  补丁可能已应用"
+        fi
+    elif [ -n "$MYSQL_PACKAGE" ]; then
         echo "   发现MySQL连接器包: $(basename "$MYSQL_PACKAGE")"
         
         # 检查包是否与当前Python版本兼容
         if [[ "$MYSQL_PACKAGE" =~ cp310 ]] && [[ ! "$python_version" =~ ^3\.10 ]]; then
             echo "   ⚠️  MySQL包针对Python 3.10编译，当前版本: $python_version"
-            echo "   尝试安装通用版本或使用在线安装..."
+            echo "   可能不兼容，尝试安装..."
         fi
+    else
+        echo "   ⚠️  未找到MySQL驱动包"
     fi
     
     # 尝试安装所有下载的包
     echo "   尝试离线安装..."
-    if pip install --no-index --find-links=vendor_packages -r requirements.txt; then
+    if pip install --no-index --find-links=$VENDOR_DIR -r requirements.txt; then
         echo "   ✓ 离线依赖安装成功"
     else
         echo "   ⚠️  离线依赖安装失败，尝试替代方案..."
@@ -108,18 +147,11 @@ if [ "$OFFLINE_MODE" = true ]; then
         echo "   尝试逐个安装依赖包..."
         INSTALL_SUCCESS=true
         
-        # 先安装不依赖特定平台的包
-        for package in vendor_packages/*.whl vendor_packages/*.tar.gz; do
+        for package in $VENDOR_DIR/*.whl $VENDOR_DIR/*.tar.gz; do
             if [ -f "$package" ]; then
                 package_name=$(basename "$package")
-                # 跳过可能不兼容的mysql包
-                if [[ "$package_name" =~ mysql.*connector ]] && [[ "$package_name" =~ cp310 ]] && [[ ! "$python_version" =~ ^3\.10 ]]; then
-                    echo "   跳过可能不兼容的包: $package_name"
-                    continue
-                fi
-                
                 echo "   安装: $package_name"
-                if pip install --no-index --find-links=vendor_packages "$package"; then
+                if pip install --no-index --find-links=$VENDOR_DIR "$package"; then
                     echo "   ✓ 安装成功: $package_name"
                 else
                     echo "   ❌ 安装失败: $package_name"
@@ -128,15 +160,16 @@ if [ "$OFFLINE_MODE" = true ]; then
             fi
         done
         
-        # 检查mysql-connector是否安装成功
-        if python -c "import mysql.connector" 2>/dev/null; then
-            echo "   ✓ MySQL连接器已安装"
+        # 检查MySQL驱动是否安装成功
+        if python -c "import pymysql" 2>/dev/null; then
+            echo "   ✓ pymysql已安装"
+        elif python -c "import mysql.connector" 2>/dev/null; then
+            echo "   ✓ mysql-connector已安装"
         else
-            echo "   ⚠️  MySQL连接器未安装，尝试使用在线安装或替代方案"
+            echo "   ⚠️  MySQL驱动未安装"
             echo "   可以尝试:"
-            echo "   1. 使用 pip install mysql-connector-python 在线安装"
-            echo "   2. 使用 pip install pymysql 作为替代"
-            echo "   3. 下载适合Python $python_version 的mysql-connector包"
+            echo "   1. 使用在线安装: pip install pymysql"
+            echo "   2. 或下载适合的驱动包到 $VENDOR_DIR/"
             INSTALL_SUCCESS=false
         fi
         
@@ -145,7 +178,7 @@ if [ "$OFFLINE_MODE" = true ]; then
             echo "   建议:"
             echo "   1. 在有网络的环境重新下载适合Python $python_version 的依赖包"
             echo "   2. 或使用在线安装模式"
-            echo "   3. 或手动安装缺失的依赖"
+            echo "   3. 或运行专用脚本: ./deploy_py39.sh (Python 3.9)"
             exit 1
         else
             echo "   ⚠️  依赖安装完成（可能有警告）"
@@ -160,10 +193,10 @@ else
         
         # 可选：下载依赖包供以后离线使用
         echo "   下载依赖包供离线使用..."
-        mkdir -p vendor_packages
-        if pip download -r requirements.txt -d vendor_packages; then
+        mkdir -p $VENDOR_DIR
+        if pip download -r requirements.txt -d $VENDOR_DIR; then
             echo "   ✓ 离线依赖包下载成功"
-            echo "   离线包保存到: $SCRIPT_DIR/vendor_packages/"
+            echo "   离线包保存到: $SCRIPT_DIR/$VENDOR_DIR/"
         else
             echo "   ⚠️  离线依赖包下载失败，但依赖已安装"
         fi
@@ -192,6 +225,7 @@ echo ""
 echo "安装摘要:"
 echo "- Python版本: $python_version"
 echo "- 虚拟环境: $SCRIPT_DIR/venv"
+echo "- 包目录: $VENDOR_DIR/"
 echo "- 安装模式: $(if [ "$OFFLINE_MODE" = true ]; then echo "离线安装"; else echo "在线安装"; fi)"
 echo "- 依赖包数量: $(pip list | wc -l)"
 echo ""

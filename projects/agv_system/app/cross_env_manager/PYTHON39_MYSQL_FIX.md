@@ -169,10 +169,47 @@ vendor_packages_py311/  # Python 3.11
 - 提供详细的错误信息和解决方案
 - 尝试替代安装方案
 
+## 验证修复
+
+### 运行兼容性测试
+运行测试脚本验证修复是否成功：
+
+```bash
+./test_py39_compatibility.sh
+```
+
+脚本会：
+1. 检查Python版本
+2. 测试pymysql导入
+3. 验证app.py中的数据库连接
+4. 运行简单的数据库查询测试
+
+### 运行离线安装测试
+测试Python 3.9环境下的离线安装功能：
+
+```bash
+./test_py39_offline.sh
+```
+
+脚本会：
+1. 检查Python版本是否为3.9
+2. 验证vendor_packages3.9目录和包
+3. 创建测试虚拟环境
+4. 测试离线安装
+5. 验证包导入功能
+6. 清理测试环境
+
 ## 联系支持
 如果以上方案都无法解决问题，请联系系统管理员获取进一步帮助。
 
 ---
 **最后更新**: 2026-04-09  
 **适用环境**: Python 3.9.9, Linux x86_64  
-**相关文件**: `deploy_offline.sh`, `requirements.txt`, `vendor_packages/`
+**相关文件**: 
+- `deploy_offline.sh` - 智能版本检测的部署脚本
+- `deploy_py39.sh` - Python 3.9专用部署脚本
+- `requirements.txt` - 依赖包列表
+- `vendor_packages/` - Python 3.10兼容包目录
+- `vendor_packages3.9/` - Python 3.9兼容包目录
+- `test_py39_offline.sh` - Python 3.9离线安装测试脚本
+- `test_py39_compatibility.sh` - Python 3.9兼容性测试脚本
