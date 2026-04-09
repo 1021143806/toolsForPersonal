@@ -26,44 +26,39 @@
         <h4><i class="bi bi-info-circle"></i> 模板基本信息</h4>
         
         <div class="row mb-3">
-            <div class="col-md-6">
+            <div class="col-md-3">
+                <label class="form-label">ID</label>
+                <input type="text" class="form-control" value="{{ template.id }}" readonly>
+                <div class="form-text">主键ID</div>
+            </div>
+            <div class="col-md-5">
                 <label class="form-label">模板代码</label>
                 <input type="text" class="form-control" value="{{ template.model_process_code }}" readonly>
                 <div class="form-text">模板代码不可修改</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label">模板名称</label>
                 <input type="text" class="form-control" name="model_process_name" 
                        value="{{ template.model_process_name }}" required>
+                <div class="form-text">模板显示名称</div>
             </div>
         </div>
         
         <div class="row mb-3">
             <div class="col-md-4">
-                <label class="form-label">状态</label>
+                <label class="form-label">是否启用</label>
                 <select class="form-select" name="enable">
                     <option value="0" {% if template.enable == 0 %}selected{% endif %}>禁用 (跨环境任务)</option>
                     <option value="1" {% if template.enable == 1 %}selected{% endif %}>启用 (普通任务)</option>
                 </select>
-                <div class="form-text">跨环境任务应设为禁用</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">容量管控值</label>
-                <input type="number" class="form-control" name="capacity" 
-                       value="{{ template.capacity }}">
-                <div class="form-text">-1 表示不限制</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">区域ID</label>
-                <input type="number" class="form-control" name="area_id" 
-                       value="{{ template.area_id or '' }}">
+                <div class="form-text">0=禁用任务, 1=启用任务</div>
             </div>
         </div>
     </div>
     
-    <!-- 服务器配置 -->
+    <!-- 容量管控相关配置 -->
     <div class="form-section">
-        <h4><i class="bi bi-server"></i> 服务器配置</h4>
+        <h4><i class="bi bi-speedometer2"></i> 容量管控相关配置</h4>
         
         <div class="row mb-3">
             <div class="col-md-6">
@@ -71,12 +66,13 @@
                 <input type="url" class="form-control" name="request_url" 
                        value="{{ template.request_url or '' }}" 
                        placeholder="http://10.1.80.60:5000/Api/RCS/PushJobStatus">
+                <div class="form-text">容量管控定制使用</div>
             </div>
             <div class="col-md-6">
-                <label class="form-label">目标服务器IP</label>
-                <input type="text" class="form-control" name="target_points_ip" 
-                       value="{{ template.target_points_ip or '' }}" 
-                       placeholder="http://10.68.2.32:7000">
+                <label class="form-label">容量管控值</label>
+                <input type="number" class="form-control" name="capacity" 
+                       value="{{ template.capacity }}">
+                <div class="form-text">容量管控用最大容量，-1表示不限制</div>
             </div>
         </div>
         
@@ -86,18 +82,27 @@
                 <input type="text" class="form-control" name="target_points" 
                        value="{{ template.target_points or '' }}" 
                        placeholder="CONVERT0000">
+                <div class="form-text">容量管控检测片区域点位</div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">检查回流区域</label>
-                <input type="text" class="form-control" name="check_area_name" 
-                       value="{{ template.check_area_name or '' }}">
+            <div class="col-md-3">
+                <label class="form-label">区域ID</label>
+                <input type="number" class="form-control" name="area_id" 
+                       value="{{ template.area_id or '' }}">
+                <div class="form-text">容量管控检测用</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">目标服务器IP</label>
+                <input type="text" class="form-control" name="target_points_ip" 
+                       value="{{ template.target_points_ip or '' }}" 
+                       placeholder="http://10.68.2.32:7000">
+                <div class="form-text">容量管控用检测服务器</div>
             </div>
         </div>
     </div>
     
-    <!-- 回流配置 -->
+    <!-- 其他配置 -->
     <div class="form-section">
-        <h4><i class="bi bi-arrow-repeat"></i> 回流配置</h4>
+        <h4><i class="bi bi-gear"></i> 其他配置</h4>
         
         <div class="row mb-3">
             <div class="col-md-4">
@@ -118,15 +123,22 @@
         </div>
         
         <div class="row mb-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label">换电触发电量 (%)</label>
                 <input type="number" class="form-control" name="min_power" 
                        value="{{ template.min_power or 0 }}" min="0" max="100">
+                <div class="form-text">触发换电的电量阈值</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label">空车回流等待时间 (秒)</label>
                 <input type="number" class="form-control" name="back_wait_time" 
                        value="{{ template.back_wait_time or 0 }}" min="0">
+                <div class="form-text">空车回流等待时间</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">检查回流区域</label>
+                <input type="text" class="form-control" name="check_area_name" 
+                       value="{{ template.check_area_name or '' }}">
             </div>
         </div>
     </div>
