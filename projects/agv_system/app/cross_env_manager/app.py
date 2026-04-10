@@ -322,8 +322,8 @@ def edit_template(template_id):
             form_data.get('backflow_template_code'),
             form_data.get('comeback_template_code'),
             form_data.get('change_charge_template_code'),
-            int(form_data.get('min_power', 0)),
-            int(form_data.get('back_wait_time', 0)),
+            form_data.get('min_power') if form_data.get('min_power') != '' else None,
+            form_data.get('back_wait_time') if form_data.get('back_wait_time') != '' else None,
             form_data.get('check_area_name'),
             template_id
         )
@@ -463,8 +463,8 @@ def copy_template(template_id):
             form_data.get('backflow_template_code', original_template.get('backflow_template_code')),
             form_data.get('comeback_template_code', original_template.get('comeback_template_code')),
             form_data.get('change_charge_template_code', original_template.get('change_charge_template_code')),
-            safe_int(form_data.get('min_power'), original_template.get('min_power', 0)),
-            safe_int(form_data.get('back_wait_time'), original_template.get('back_wait_time', 0)),
+            form_data.get('min_power') if form_data.get('min_power') != '' else None,
+            form_data.get('back_wait_time') if form_data.get('back_wait_time') != '' else None,
             form_data.get('check_area_name', original_template.get('check_area_name'))
         )
         
