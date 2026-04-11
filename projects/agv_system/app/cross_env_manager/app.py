@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Python 3.9兼容性修改：使用pymysql替代mysql.connector
+import pymysql
+pymysql.install_as_MySQLdb()
+
 """
 跨环境任务模板管理Web应用
 用于查询、修改和插入跨环境任务模板

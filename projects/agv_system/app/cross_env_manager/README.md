@@ -20,13 +20,26 @@
 
 ## 安装部署
 
-### 1. 克隆项目
+### 部署脚本选择
 
+项目提供了多种部署脚本以满足不同环境需求：
+
+1. **快速部署**: `./deploy.sh` - 主部署入口，交互式选择部署方式
+2. **IRAYPLEOS专用**: `./deploy_iraypleos.sh` - 专为IRAYPLEOS系统环境设计
+3. **通用环境**: `./deploy_generic.sh` - 适用于大多数Linux环境
+4. **离线部署**: `./deploy_offline.sh` - 专为无网络环境设计
+5. **Python 3.9专用**: `./deploy_py39.sh` - 使用vendor_packages3.9目录和pymysql
+
+### 推荐部署方式
+
+#### 使用主部署脚本（推荐）
 ```bash
-cd /main/app/mntc/git/toolsForPersonal/projects/agv_system/app
-git clone [项目地址] cross_env_manager
 cd cross_env_manager
+chmod +x deploy*.sh
+./deploy.sh
 ```
+
+#### 1. 手动部署（备用方案）
 
 ### 2. 创建虚拟环境
 
