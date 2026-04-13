@@ -12,7 +12,7 @@ from pymysql.cursors import DictCursor
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-# import mysql.connector  # 已由pymysql替代
+# # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
@@ -356,6 +356,7 @@ def edit_detail(detail_id):
         task_path = %s,
         backflow_template_code = %s,
         comeback_template_code = %s,
+        change_charge_template_code = %s,
         back_wait_time = %s
     WHERE id = %s
     """
@@ -368,6 +369,7 @@ def edit_detail(detail_id):
         form_data.get('task_path'),
         form_data.get('backflow_template_code'),
         form_data.get('comeback_template_code'),
+        form_data.get('change_charge_template_code'),
         int(form_data.get('back_wait_time', 0)),
         detail_id
     )
@@ -508,8 +510,8 @@ def copy_template(template_id):
                     INSERT INTO fy_cross_model_process_detail 
                     (model_process_id, task_seq, task_servicec, template_code, 
                      template_name, task_path, backflow_template_code, 
-                     comeback_template_code, back_wait_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     comeback_template_code, change_charge_template_code, back_wait_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
                     detail_params = (
@@ -521,6 +523,7 @@ def copy_template(template_id):
                         detail['task_path'],
                         detail['backflow_template_code'],
                         detail['comeback_template_code'],
+                        detail['change_charge_template_code'],
                         detail['back_wait_time']
                     )
                     
@@ -582,8 +585,8 @@ def add_detail(template_id):
         INSERT INTO fy_cross_model_process_detail 
         (model_process_id, task_seq, task_servicec, template_code, 
          template_name, task_path, backflow_template_code, 
-         comeback_template_code, back_wait_time)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+         comeback_template_code, change_charge_template_code, back_wait_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         params = (
@@ -595,6 +598,7 @@ def add_detail(template_id):
             data.get('task_path', ''),
             data.get('backflow_template_code', ''),
             data.get('comeback_template_code', ''),
+            data.get('change_charge_template_code', ''),
             int(data.get('back_wait_time', 0))
         )
         
