@@ -12,7 +12,7 @@ from pymysql.cursors import DictCursor
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-# # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
+# # # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
@@ -361,16 +361,36 @@ def edit_detail(detail_id):
     WHERE id = %s
     """
     
+    # 辅助函数：处理表单中的空值和0值
+    def get_form_value(data, key, default=None):
+        """获取表单值，处理空字符串和'0'值"""
+        value = data.get(key)
+        if value is None:
+            return default
+        str_value = str(value).strip()
+        if str_value == '' or str_value == '0':
+            return default if default is not None else None
+        return str_value
+    
+    # 对于back_wait_time需要特殊处理转换为整数
+    back_wait_time_str = form_data.get('back_wait_time', '').strip()
+    back_wait_time = None
+    if back_wait_time_str and back_wait_time_str != '':
+        try:
+            back_wait_time = int(back_wait_time_str)
+        except (ValueError, TypeError):
+            back_wait_time = None
+    
     params = (
         int(form_data.get('task_seq', 0)),
-        form_data.get('task_servicec'),
-        form_data.get('template_code'),
-        form_data.get('template_name'),
-        form_data.get('task_path'),
-        form_data.get('backflow_template_code'),
-        form_data.get('comeback_template_code'),
-        form_data.get('change_charge_template_code'),
-        int(form_data.get('back_wait_time', 0)),
+        get_form_value(form_data, 'task_servicec', ''),
+        get_form_value(form_data, 'template_code', ''),
+        get_form_value(form_data, 'template_name', ''),
+        get_form_value(form_data, 'task_path', ''),
+        get_form_value(form_data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
+        get_form_value(form_data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
+        get_form_value(form_data, 'change_charge_template_code'),  # 空字符串或'0'会变成NULL
+        back_wait_time,  # 处理后的整数值或NULL
         detail_id
     )
     
@@ -514,6 +534,38 @@ def copy_template(template_id):
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
+                    # 确保正确处理NULL值
+                    # 这些字段在数据库中可能是NULL，需要正确传递
+                    def safe_get_value(detail, key):
+                        """安全获取字典值，处理NULL和空字符串情况"""
+                        value = detail.get(key)
+                        if value is None:
+                            return None
+                        
+                        # 将字符串值转为字符串处理
+                        str_value = str(value).strip() if value is not None else ''
+                        
+                        # 处理空字符串
+                        if str_value == '':
+                            return None
+                        
+                        # 特别的：back_wait_time可能需要转换为整数
+                        if key == 'back_wait_time':
+                            try:
+                                if str_value and str_value != '':
+                                    return int(str_value)
+                                else:
+                                    return None
+                            except (ValueError, TypeError):
+                                return None
+                        
+                        # 对于模板代码字段，如果为'0'则视为NULL
+                        code_fields = ['backflow_template_code', 'comeback_template_code', 'change_charge_template_code']
+                        if key in code_fields and str_value == '0':
+                            return None
+                        
+                        return value
+                    
                     detail_params = (
                         new_template_id,
                         detail['task_seq'],
@@ -521,10 +573,10 @@ def copy_template(template_id):
                         detail['template_code'],
                         detail['template_name'],
                         detail['task_path'],
-                        detail['backflow_template_code'],
-                        detail['comeback_template_code'],
-                        detail['change_charge_template_code'],
-                        detail['back_wait_time']
+                        safe_get_value(detail, 'backflow_template_code'),
+                        safe_get_value(detail, 'comeback_template_code'),
+                        safe_get_value(detail, 'change_charge_template_code'),
+                        safe_get_value(detail, 'back_wait_time')
                     )
                     
                     execute_query(insert_detail_query, detail_params, fetch=False)
@@ -589,17 +641,37 @@ def add_detail(template_id):
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
+        # 辅助函数：处理表单中的空值和0值
+        def get_form_value(data, key, default=None):
+            """获取表单值，处理空字符串和'0'值"""
+            value = data.get(key)
+            if value is None:
+                return default
+            str_value = str(value).strip()
+            if str_value == '' or str_value == '0':
+                return default if default is not None else None
+            return str_value
+        
+        # 对于back_wait_time需要特殊处理转换为整数
+        back_wait_time_str = data.get('back_wait_time', '').strip()
+        back_wait_time = None
+        if back_wait_time_str and back_wait_time_str != '':
+            try:
+                back_wait_time = int(back_wait_time_str)
+            except (ValueError, TypeError):
+                back_wait_time = None
+        
         params = (
             template_id,
             new_seq,
-            data.get('task_servicec', ''),
-            data.get('template_code', ''),
-            data.get('template_name', ''),
-            data.get('task_path', ''),
-            data.get('backflow_template_code', ''),
-            data.get('comeback_template_code', ''),
-            data.get('change_charge_template_code', ''),
-            int(data.get('back_wait_time', 0))
+            get_form_value(data, 'task_servicec', ''),
+            get_form_value(data, 'template_code', ''),
+            get_form_value(data, 'template_name', ''),
+            get_form_value(data, 'task_path', ''),
+            get_form_value(data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
+            get_form_value(data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
+            get_form_value(data, 'change_charge_template_code'),  # 空字符串或'0'会变成NULL
+            back_wait_time  # 处理后的整数值或NULL
         )
         
         new_detail_id = execute_query(insert_query, params, fetch=False)

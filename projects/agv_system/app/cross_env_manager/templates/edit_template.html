@@ -125,14 +125,14 @@
         <div class="row mb-3">
             <div class="col-md-4">
                 <label class="form-label">换电触发电量 (%)</label>
-                <input type="number" class="form-control" name="min_power" 
-                       value="{{ template.min_power or 0 }}" min="0" max="100">
+                <input type="text" class="form-control" name="min_power" 
+                       value="{{ template.min_power or '' }}" >
                 <div class="form-text">触发换电的电量阈值</div>
             </div>
             <div class="col-md-4">
                 <label class="form-label">空车回流等待时间 (秒)</label>
-                <input type="number" class="form-control" name="back_wait_time" 
-                       value="{{ template.back_wait_time or 0 }}" min="0">
+                <input type="text" class="form-control" name="back_wait_time" 
+                       value="{{ template.back_wait_time or '' }}" >
                 <div class="form-text">空车回流等待时间</div>
             </div>
             <div class="col-md-4">
