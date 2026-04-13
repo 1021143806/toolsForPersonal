@@ -12,7 +12,7 @@ from pymysql.cursors import DictCursor
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-# # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代
+# # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
