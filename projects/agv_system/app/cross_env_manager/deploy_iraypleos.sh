@@ -37,9 +37,9 @@ else
 fi
 
 # 检查IRAYPLEOS用户
-IRAY_USER="ymks"
+IRAY_USER="ymsk"  # 修正：实际用户是ymsk，不是ymks
 echo "   当前用户: $(whoami)"
-echo "   目标用户: $IRAY_USER"
+echo "   Supervisor运行用户: $IRAY_USER"
 
 echo ""
 echo "3. 清理并创建虚拟环境..."
@@ -77,50 +77,86 @@ else
 fi
 
 echo ""
-echo "7. 应用pymysql补丁..."
-if [ -f "app_py39_patch.py" ]; then
-    python app_py39_patch.py
-    echo "   ✓ pymysql补丁已应用"
+echo "7. 应用pymysql补丁和修复mysql导入..."
+if [ -f "fix_mysql_imports.py" ]; then
+    python3 fix_mysql_imports.py
+    echo "   ✓ mysql.connector导入修复完成"
 else
-    echo "   ⚠️  补丁脚本不存在，手动添加pymysql配置"
-    sed -i '1i# Python 3.9兼容性修改\nimport pymysql\npymysql.install_as_MySQLdb()\n' app.py
-    echo "   ✓ 手动添加pymysql配置成功"
+    echo "   ⚠️  修复脚本不存在，手动修复mysql导入..."
+    # 确保有pymysql导入
+    if ! grep -q "import pymysql" app.py; then
+        sed -i '1i# Python 3.9兼容性修改：使用pymysql替代mysql.connector\nimport pymysql\nfrom pymysql.cursors import DictCursor\n' app.py
+    fi
+    
+    # 替换mysql.connector导入
+    sed -i 's/import mysql\.connector/# import mysql.connector  # 已由pymysql替代/' app.py
+    sed -i 's/from mysql\.connector import Error/# from MySQLdb import Error  # 使用pymysql.Error替代/' app.py
+    sed -i 's/mysql\.connector\.connect/pymysql.connect/g' app.py
+    sed -i 's/except Error as e:/except pymysql.Error as e:/g' app.py
+    sed -i 's/cursor(dictionary=True)/cursor(DictCursor)/g' app.py
+    
+    echo "   ✓ 手动修复mysql导入完成"
 fi
 
 echo ""
 echo "8. 安装关键依赖包..."
-echo "   安装顺序: click -> itsdangerous -> tomli -> python-dotenv -> Jinja2 -> Werkzeug -> PyMySQL -> Flask -> Markdown"
+echo "   安装顺序: click -> itsdangerous -> tomli -> blinker -> python-dotenv -> Jinja2 -> Werkzeug -> PyMySQL -> Flask -> Markdown -> importlib_metadata zipp"
 
-# 安装基础包
-for pkg in click itsdangerous tomli; do
-    echo "   安装 $pkg..."
-    wheel_file=$(find vendor_packages3.9 -name "*${pkg}*.whl" -type f | head -1)
-    if [ -f "$wheel_file" ]; then
-        pip install --no-deps "$wheel_file" 2>/dev/null && echo "   ✓ $pkg 安装成功" || echo "   ⚠️  $pkg 安装失败"
-    else
-        echo "   ❌ 未找到 $pkg wheel文件"
-    fi
-done
+# 使用requirements_py39.txt安装，但先处理可能的问题
+echo "   使用requirements_py39.txt安装（排除已知问题包）..."
 
-# 安装核心包
-for pkg in python_dotenv Jinja2 Werkzeug PyMySQL Flask Markdown; do
-    echo "   安装 $pkg..."
-    wheel_file=$(find vendor_packages3.9 -iname "*${pkg}*.whl" -type f | head -1)
-    if [ -f "$wheel_file" ]; then
-        pip install --no-deps "$wheel_file" 2>/dev/null && echo "   ✓ $pkg 安装成功" || echo "   ⚠️  $pkg 安装失败"
-    else
-        echo "   ❌ 未找到 $pkg wheel文件"
+# 创建临时requirements文件，排除有问题的包
+TEMP_REQ=$(mktemp)
+cp requirements_py39.txt "$TEMP_REQ"
+
+# 如果markupsafe已在vendor中且不兼容，从requirements中移除
+if find vendor_packages3.9 -iname "*markupsafe*.whl" -type f | head -1 | xargs basename 2>/dev/null | grep -q "cp310"; then
+    sed -i '/[Mm]arkup[sS]afe/d' "$TEMP_REQ"
+    echo "   已从requirements中移除markupsafe（已安装兼容版本）"
+fi
+
+# 安装
+if pip install --no-index --find-links=vendor_packages3.9 -r "$TEMP_REQ" 2>/dev/null; then
+    echo "   ✓ 批量依赖安装成功"
+else
+    echo "   ⚠️  批量安装失败，尝试逐个安装关键包..."
+    
+    # 逐个安装关键包
+    for pkg in click itsdangerous tomli blinker python_dotenv Jinja2 Werkzeug PyMySQL Flask Markdown; do
+        echo "   安装 $pkg..."
+        wheel_file=$(find vendor_packages3.9 -iname "*${pkg}*.whl" -type f | head -1)
+        if [ -f "$wheel_file" ]; then
+            pip install "$wheel_file" 2>/dev/null && echo "   ✓ $pkg 安装成功" || echo "   ⚠️  $pkg 安装失败"
+        else
+            echo "   ⚠️  未找到 $pkg wheel文件"
+        fi
+    done
+fi
+
+rm -f "$TEMP_REQ"
+
+# 特别处理markupsafe（已安装）和可能的importlib_metadata版本问题
+echo "   检查importlib_metadata版本兼容性..."
+if find vendor_packages3.9 -iname "*importlib_metadata*.whl" -type f | head -1 | xargs basename | grep -q "importlib_metadata"; then
+    echo "   ⚠️  importlib_metadata可能需要特定版本，尝试安装..."
+    # 尝试安装但允许失败
+    IMP_WHEEL=$(find vendor_packages3.9 -iname "*importlib_metadata*.whl" -type f | head -1)
+    if [ -f "$IMP_WHEEL" ]; then
+        pip install "$IMP_WHEEL" 2>/dev/null || echo "   ⚠️  importlib_metadata安装失败（可能版本不兼容）"
     fi
-done
+fi
 
 echo ""
 echo "9. 验证安装..."
 echo "   测试关键包导入:"
+source venv/bin/activate  # 确保在虚拟环境中
 for pkg in flask pymysql werkzeug jinja2 markupsafe; do
     if python -c "import $pkg; print('  ✓ $pkg')" 2>/dev/null; then
         echo "   ✓ $pkg导入成功"
     else
         echo "   ❌ $pkg导入失败"
+        # 显示具体错误
+        python -c "import $pkg" 2>&1 | head -2
         exit 1
     fi
 done
