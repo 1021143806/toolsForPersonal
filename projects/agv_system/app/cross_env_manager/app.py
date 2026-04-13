@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Python 3.9兼容性修改：使用pymysql替代mysql.connector
+import pymysql
+from pymysql.cursors import DictCursor
+# pymysql.install_as_MySQLdb()  # 不再使用MySQLdb兼容层
+
 """
 跨环境任务模板管理Web应用
 用于查询、修改和插入跨环境任务模板
@@ -7,8 +12,8 @@
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-import mysql.connector
-from mysql.connector import Error
+# import mysql.connector  # 已由pymysql替代
+# from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
 import sys
@@ -140,9 +145,9 @@ DB_CONFIG = {
 def get_db_connection():
     """获取数据库连接"""
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = pymysql.connect(**DB_CONFIG)
         return conn
-    except Error as e:
+    except pymysql.Error as e:
         print(f"数据库连接错误: {e}")
         return None
 
@@ -154,7 +159,7 @@ def execute_query(query, params=None, fetch=True):
     
     cursor = None
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(DictCursor)
         cursor.execute(query, params or ())
         
         if fetch and query.strip().upper().startswith('SELECT'):
@@ -164,7 +169,7 @@ def execute_query(query, params=None, fetch=True):
             result = cursor.lastrowid if query.strip().upper().startswith('INSERT') else cursor.rowcount
         
         return result
-    except Error as e:
+    except pymysql.Error as e:
         print(f"查询执行错误: {e}")
         conn.rollback()
         return None

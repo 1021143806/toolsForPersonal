@@ -1,10 +1,16 @@
 #!/bin/bash
 # 跨环境任务模板管理系统部署脚本
+# 主部署入口，根据环境选择部署方式
 
 set -e
 
 echo "========================================"
-echo "跨环境任务模板管理系统部署脚本"
+echo "跨环境任务模板管理系统 - 部署入口"
+echo "========================================"
+echo "检测系统环境..."
+echo "系统: $(uname -s)"
+echo "用户: $(whoami)"
+echo "时间: $(date)"
 echo "========================================"
 
 # 获取当前目录
@@ -17,80 +23,79 @@ if [ ! -f "app.py" ]; then
     exit 1
 fi
 
-echo "1. 检查Python环境..."
-if ! command -v python3 &> /dev/null; then
-    echo "错误: Python3未安装"
-    exit 1
-fi
+echo ""
+echo "请选择部署方式:"
+echo "1) IRAYPLEOS系统专用部署"
+echo "2) 通用Linux环境部署"
+echo "3) 离线部署模式"
+echo "4) Python 3.9专用部署"
+echo ""
+read -p "选择 (1/2/3/4, 默认2): " deploy_choice
+deploy_choice=${deploy_choice:-2}
 
-python_version=$(python3 --version | awk '{print $2}')
-echo "   Python版本: $python_version"
+case $deploy_choice in
+    1)
+        echo "运行IRAYPLEOS专用部署..."
+        if [ -f "deploy_iraypleos.sh" ]; then
+            bash deploy_iraypleos.sh
+        else
+            echo "错误: deploy_iraypleos.sh不存在"
+            exit 1
+        fi
+        ;;
+    2)
+        echo "运行通用部署..."
+        if [ -f "deploy_generic.sh" ]; then
+            bash deploy_generic.sh
+        else
+            echo "错误: deploy_generic.sh不存在"
+            exit 1
+        fi
+        ;;
+    3)
+        echo "运行离线部署..."
+        if [ -f "deploy_offline.sh" ]; then
+            bash deploy_offline.sh
+        else
+            echo "错误: deploy_offline.sh不存在"
+            exit 1
+        fi
+        ;;
+    4)
+        echo "运行Python 3.9专用部署..."
+        if [ -f "deploy_py39.sh" ]; then
+            bash deploy_py39.sh
+        else
+            echo "错误: deploy_py39.sh不存在"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "无效选择，使用通用部署..."
+        if [ -f "deploy_generic.sh" ]; then
+            bash deploy_generic.sh
+        else
+            echo "错误: deploy_generic.sh不存在"
+            exit 1
+        fi
+        ;;
+esac
 
-echo "2. 创建conda虚拟环境..."
-if conda env list | grep -q "cross_env_manager"; then
-    echo "   虚拟环境 'cross_env_manager' 已存在，跳过创建"
-else
-    echo "   创建虚拟环境 'cross_env_manager'..."
-    conda create -n cross_env_manager python=3.9 -y
-fi
-
-echo "3. 激活虚拟环境并安装依赖..."
-source /home/a1/miniconda3/etc/profile.d/conda.sh
-conda activate cross_env_manager
-
-echo "   安装Python依赖..."
-pip install -r requirements.txt
-
-echo "4. 检查数据库..."
-echo "   数据库配置:"
-echo "   - 主机: $(grep DB_HOST .env | cut -d= -f2)"
-echo "   - 数据库: $(grep DB_NAME .env | cut -d= -f2)"
-echo "   - 用户: $(grep DB_USER .env | cut -d= -f2)"
-
-echo "5. 配置supervisor..."
-SUPERVISOR_CONF="/main/app/supervisor/conf.d/cross_env_manager.conf"
-if [ -f "$SUPERVISOR_CONF" ]; then
-    echo "   supervisor配置已存在，备份原配置..."
-    cp "$SUPERVISOR_CONF" "${SUPERVISOR_CONF}.backup.$(date +%Y%m%d_%H%M%S)"
-fi
-
-echo "   复制supervisor配置文件..."
-cp cross_env_manager_supervisor.conf "$SUPERVISOR_CONF"
-
-echo "6. 更新supervisor配置..."
-supervisorctl update
-
-echo "7. 启动服务..."
-supervisorctl start cross_env_manager
-
-echo "8. 检查服务状态..."
-sleep 2
-supervisorctl status cross_env_manager
-
+echo ""
 echo "========================================"
-echo "部署完成！"
+echo "部署向导完成！"
 echo "========================================"
 echo ""
-echo "服务信息:"
-echo "- 应用URL: http://localhost:5000"
-echo "- 日志文件: /main/app/log/cross_env_manager.log"
-echo "- Supervisor配置: $SUPERVISOR_CONF"
+echo "可用脚本列表:"
+echo "- deploy.sh                 # 部署入口 (本脚本)"
+echo "- deploy_iraypleos.sh       # IRAYPLEOS系统专用"
+echo "- deploy_generic.sh         # 通用Linux环境"
+echo "- deploy_offline.sh         # 离线部署模式"
+echo "- deploy_py39.sh            # Python 3.9专用"
+echo "- start_app.sh              # 启动应用"
 echo ""
-echo "常用命令:"
-echo "- 查看状态: supervisorctl status cross_env_manager"
-echo "- 重启服务: supervisorctl restart cross_env_manager"
-echo "- 停止服务: supervisorctl stop cross_env_manager"
-echo "- 查看日志: tail -f /main/app/log/cross_env_manager.log"
+echo "快速启动:"
+echo "  ./start_app.sh"
 echo ""
-echo "首次使用建议:"
-echo "1. 访问 http://localhost:5000"
-echo "2. 使用搜索功能测试数据库连接"
-echo "3. 尝试复制一个模板测试完整功能"
-echo ""
-echo "离线部署说明:"
-echo "如果部署环境没有网络连接，请使用离线部署方案:"
-echo "1. 在有网络环境准备离线包:"
-echo "   python3 -m pip download -r requirements.txt -d vendor_packages"
-echo "2. 运行离线部署脚本: ./deploy_offline.sh"
-echo "3. 详细指南请查看 OFFLINE_DEPLOYMENT.md"
+echo "查看详细文档请参考 README.md"
 echo "========================================"
