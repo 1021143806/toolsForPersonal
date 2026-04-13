@@ -51,7 +51,8 @@ if [ -f "requirements_py39.txt" ]; then
     echo "   补充下载可能需要的纯Python包..."
     
     # 额外需要的包（Flask的依赖）
-    EXTRA_PACKAGES="blinker importlib-metadata zipp typing-extensions"
+    # 注意：Python 3.9内置importlib.metadata模块，不需要额外安装包
+    EXTRA_PACKAGES="blinker zipp"
     
     for pkg in $EXTRA_PACKAGES; do
         echo "   下载额外包: $pkg"
@@ -110,33 +111,9 @@ else
 fi
 
 echo ""
-echo "3. 确保有Python 3.9兼容的importlib-metadata..."
-# importlib-metadata在Python 3.9中可能需要特定版本
-IMPORTLIB_FILE=$(find "$TEMP_DIR" -name "*importlib_metadata*.whl" -type f | head -1)
-
-if [ -n "$IMPORTLIB_FILE" ]; then
-    FILE_NAME=$(basename "$IMPORTLIB_FILE")
-    echo "   找到importlib-metadata: $FILE_NAME"
-    
-    # 检查是否要求Python >= 3.10
-    if echo "$FILE_NAME" | grep -q "importlib_metadata" && python3 -c "
-import pkg_resources
-spec = pkg_resources.Requirement.parse('importlib-metadata')
-# 检查是否有Python版本要求
-" 2>/dev/null; then
-        echo "   检查版本兼容性..."
-    fi
-else
-    echo "   下载importlib-metadata..."
-    pip download \
-        "importlib-metadata<5.0" \
-        --platform manylinux2014_x86_64 \
-        --python-version 39 \
-        --implementation cp \
-        --only-binary=:all: \
-        --dest "$TEMP_DIR" \
-        -i https://pypi.tuna.tsinghua.edu.cn/simple
-fi
+echo "3. Python 3.9内置模块说明..."
+echo "   注意：Python 3.9内置了importlib.metadata模块"
+echo "   不需要下载额外的importlib-metadata包"
 
 echo ""
 echo "4. 复制文件到vendor_packages3.9目录..."

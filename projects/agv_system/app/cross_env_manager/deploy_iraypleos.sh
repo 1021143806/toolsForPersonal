@@ -96,7 +96,7 @@ REQUIRED_PACKAGES=(
     "PyMySQL"          # MySQL连接（替代mysql-connector-python）
     "Flask"            # Web框架
     "Markdown"         # Markdown解析
-    "importlib_metadata" # 包元数据
+    # 注意：Python 3.9内置importlib.metadata模块，不需要额外安装包
 )
 
 MISSING_PACKAGES=0
@@ -286,7 +286,7 @@ fi
 
 # 第五阶段：主框架和工具
 echo "   🅴️ 第五阶段：主框架..."
-install_package "importlib_metadata" "importlib-metadata"
+echo "   注意：Python 3.9内置了importlib.metadata，跳过importlib-metadata包安装"
 install_package "Markdown" "Markdown"
 install_package "Flask" "Flask"
 
@@ -314,13 +314,12 @@ test_import "pymysql" "PyMySQL"
 test_import "werkzeug" "Werkzeug"
 test_import "jinja2" "Jinja2"
 
-# 测试importlib_metadata，允许不同名称
-if test_import "importlib_metadata" "importlib-metadata"; then
-    echo "   ✓ importlib-metadata导入成功"
-elif test_import "importlib.metadata" "importlib.metadata"; then
+# 测试Python内置的importlib.metadata模块
+echo "   检查Python内置模块..."
+if python -c "import importlib.metadata; print('   ✓ Python 3.9内置importlib.metadata可用')" 2>/dev/null; then
     echo "   ✓ importlib.metadata导入成功"
 else
-    echo "   ⚠️  importlib-metadata导入失败，尝试跳过..."
+    echo "   ⚠️  Python 3.9内置importlib.metadata不可用，但可能不影响Flask"
 fi
 
 echo ""

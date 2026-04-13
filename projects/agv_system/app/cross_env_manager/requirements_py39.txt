@@ -16,7 +16,8 @@ tomli==2.0.1
 
 # 额外依赖（Flask的依赖）
 blinker==1.9.0
-importlib-metadata==9.0.0  # 注意：可能需要更低版本如4.8.x以兼容Python 3.9
+# Python 3.9内置importlib.metadata模块，不需要额外安装
+# importlib-metadata==9.0.0  # Python >= 3.10 only
 zipp==3.23.0
 
 # 模板引擎
