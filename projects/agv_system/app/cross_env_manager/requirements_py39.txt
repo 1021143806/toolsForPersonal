@@ -1,9 +1,24 @@
+# Python 3.9完全离线部署依赖
+# 所有包必须包含在vendor_packages3.9目录中
+
+# Flask核心依赖
 Flask==2.3.3
-pymysql==1.1.0
+PyMySQL==1.1.0           # 替代mysql-connector-python，更适合离线环境
 python-dotenv==1.0.0
 Werkzeug==2.3.7
 Jinja2==3.1.2
 click==8.1.6
 itsdangerous==2.1.2
-markdown==3.5.1
+
+# 辅助工具
+Markdown==3.5.1
 tomli==2.0.1
+
+# 额外依赖（Flask的依赖）
+blinker==1.9.0
+importlib-metadata==9.0.0  # 注意：可能需要更低版本如4.8.x以兼容Python 3.9
+zipp==3.23.0
+
+# 模板引擎
+# markupsafe - 注意：vendor目录中的版本为3.0.3-cp310，需要替换为兼容Python 3.9的版本
+# 离线部署将使用纯Python标记替代方案
