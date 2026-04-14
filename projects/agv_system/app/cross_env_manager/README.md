@@ -32,11 +32,12 @@
 
 ### 推荐部署方式
 
-#### 使用主部署脚本（推荐）
+#### 使用主部署脚本（iraypleos离线部署）
+该脚本基于 python3.9.9 以及 server/supervisor 离线部署
 ```bash
-cd cross_env_manager
-chmod +x deploy*.sh
-./deploy.sh
+cd cross_env_manager/deploy_iraypleos
+chmod +x deploy_iraypleos.sh
+./deploy_iraypleos.sh
 ```
 
 #### 1. 手动部署（备用方案）

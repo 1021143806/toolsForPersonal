@@ -302,11 +302,7 @@
                         <input type="text" class="form-control" name="comeback_template_code" 
                                value="{{ detail.comeback_template_code or '' }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">换电出发模板</label>
-                        <input type="text" class="form-control" name="change_charge_template_code" 
-                               value="{{ detail.change_charge_template_code or '' }}">
-                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">回流等待时间 (秒)</label>
                         <input type="number" class="form-control" name="back_wait_time" 
@@ -363,11 +359,7 @@
                         <input type="text" class="form-control" id="new_comeback_template_code" 
                                name="comeback_template_code">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">换电出发模板</label>
-                        <input type="text" class="form-control" id="new_change_charge_template_code" 
-                               name="change_charge_template_code">
-                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">回流等待时间 (秒)</label>
                         <input type="text" class="form-control" id="new_back_wait_time" 
@@ -491,7 +483,6 @@
                     task_path: document.getElementById('new_task_path').value,
                     backflow_template_code: document.getElementById('new_backflow_template_code').value,
                     comeback_template_code: document.getElementById('new_comeback_template_code').value,
-                    change_charge_template_code: document.getElementById('new_change_charge_template_code').value,
                     back_wait_time: document.getElementById('new_back_wait_time').value
                 };
                 

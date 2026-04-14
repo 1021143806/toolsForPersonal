@@ -12,7 +12,7 @@ from pymysql.cursors import DictCursor
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-# # # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
+# # # # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
@@ -356,7 +356,6 @@ def edit_detail(detail_id):
         task_path = %s,
         backflow_template_code = %s,
         comeback_template_code = %s,
-        change_charge_template_code = %s,
         back_wait_time = %s
     WHERE id = %s
     """
@@ -389,7 +388,6 @@ def edit_detail(detail_id):
         get_form_value(form_data, 'task_path', ''),
         get_form_value(form_data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
         get_form_value(form_data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
-        get_form_value(form_data, 'change_charge_template_code'),  # 空字符串或'0'会变成NULL
         back_wait_time,  # 处理后的整数值或NULL
         detail_id
     )
@@ -530,8 +528,8 @@ def copy_template(template_id):
                     INSERT INTO fy_cross_model_process_detail 
                     (model_process_id, task_seq, task_servicec, template_code, 
                      template_name, task_path, backflow_template_code, 
-                     comeback_template_code, change_charge_template_code, back_wait_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     comeback_template_code, back_wait_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
                     # 确保正确处理NULL值
@@ -560,7 +558,7 @@ def copy_template(template_id):
                                 return None
                         
                         # 对于模板代码字段，如果为'0'则视为NULL
-                        code_fields = ['backflow_template_code', 'comeback_template_code', 'change_charge_template_code']
+                        code_fields = ['backflow_template_code', 'comeback_template_code']
                         if key in code_fields and str_value == '0':
                             return None
                         
@@ -575,7 +573,6 @@ def copy_template(template_id):
                         detail['task_path'],
                         safe_get_value(detail, 'backflow_template_code'),
                         safe_get_value(detail, 'comeback_template_code'),
-                        safe_get_value(detail, 'change_charge_template_code'),
                         safe_get_value(detail, 'back_wait_time')
                     )
                     
@@ -637,8 +634,8 @@ def add_detail(template_id):
         INSERT INTO fy_cross_model_process_detail 
         (model_process_id, task_seq, task_servicec, template_code, 
          template_name, task_path, backflow_template_code, 
-         comeback_template_code, change_charge_template_code, back_wait_time)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+         comeback_template_code, back_wait_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         # 辅助函数：处理表单中的空值和0值
@@ -670,7 +667,6 @@ def add_detail(template_id):
             get_form_value(data, 'task_path', ''),
             get_form_value(data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
             get_form_value(data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
-            get_form_value(data, 'change_charge_template_code'),  # 空字符串或'0'会变成NULL
             back_wait_time  # 处理后的整数值或NULL
         )
         
