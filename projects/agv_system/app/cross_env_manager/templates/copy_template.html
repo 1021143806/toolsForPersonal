@@ -168,7 +168,13 @@
                                                     <td>{{ detail.task_seq }}</td>
                                                     <td><code>{{ detail.template_code|default('未设置') }}</code></td>
                                                     <td>{{ detail.template_name|default('未设置') }}</td>
-                                                    <td class="small">{{ detail.task_servicec|default('')|truncate(20) }}</td>
+                                                    <td class="small">
+                            {% if detail.task_servicec %}
+                                {{ detail.task_servicec|truncate(20) }}
+                            {% else %}
+                                未设置
+                            {% endif %}
+                        </td>
                                                 </tr>
                                             {% endfor %}
                                             {% if details|length > 5 %}
@@ -261,7 +267,13 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>目标服务器</span>
-                        <code class="small">{{ template.target_points_ip|default('未设置')|truncate(15) }}</code>
+                        <code class="small">
+                            {% if template.target_points_ip %}
+                                {{ template.target_points_ip|truncate(15) }}
+                            {% else %}
+                                未设置
+                            {% endif %}
+                        </code>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>子任务数</span>

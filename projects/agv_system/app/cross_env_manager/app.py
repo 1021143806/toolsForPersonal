@@ -6,8 +6,9 @@ from pymysql.cursors import DictCursor
 # pymysql.install_as_MySQLdb()  # 不再使用MySQLdb兼容层
 
 """
-跨环境任务模板管理Web应用
-用于查询、修改和插入跨环境任务模板
+跨环境任务模板管理Web应用 - 增强版
+整合了agv-task-query的查询功能，提供完整的AGV任务管理平台
+用于查询、修改和插入跨环境任务模板，以及各种AGV相关查询
 支持TOML配置文件和命令行参数指定配置文件
 """
 
@@ -26,6 +27,22 @@ try:
     import tomllib
 except ImportError:
     import tomli as tomllib
+
+# 导入查询功能模块
+sys.path.append(os.path.dirname(__file__))
+try:
+    from modules.query.task_query import find_task_by_id, find_cross_task_by_id, check_cross_model
+    from modules.query.device_validation import validate_devices
+    from modules.query.cross_model_query import query_cross_model
+    from modules.query.join_point_query import query_join_point
+    from modules.query.shelf_model_query import query_shelf_model
+    from modules.query.shelf_query import query_shelf
+    from modules.query.agv_status import show_agv_info_one_area
+    QUERY_MODULES_AVAILABLE = True
+except ImportError as e:
+    print(f"警告: 查询功能模块导入失败: {e}")
+    print("查询功能将不可用，请确保模块文件存在")
+    QUERY_MODULES_AVAILABLE = False
 
 def load_config(config_path=None):
     """
@@ -478,13 +495,13 @@ def copy_template(template_id):
         
         params = (
             temp_model_process_code,
-            form_data.get('model_process_name', original_template['model_process_name']),
-            safe_int(form_data.get('enable'), original_template['enable']),
-            form_data.get('request_url', original_template['request_url']),
-            safe_int(form_data.get('capacity'), original_template['capacity']),
-            form_data.get('target_points', original_template['target_points']),
-            safe_int(form_data.get('area_id'), original_template['area_id']),
-            form_data.get('target_points_ip', original_template['target_points_ip']),
+            form_data.get('model_process_name', original_template.get('model_process_name', '')),
+            safe_int(form_data.get('enable'), original_template.get('enable', 0)),
+            form_data.get('request_url', original_template.get('request_url', '')),
+            safe_int(form_data.get('capacity'), original_template.get('capacity', 0)),
+            form_data.get('target_points', original_template.get('target_points')),
+            safe_int(form_data.get('area_id'), original_template.get('area_id', 0)),
+            form_data.get('target_points_ip', original_template.get('target_points_ip')),
             form_data.get('backflow_template_code', original_template.get('backflow_template_code')),
             form_data.get('comeback_template_code', original_template.get('comeback_template_code')),
             form_data.get('change_charge_template_code', original_template.get('change_charge_template_code')),

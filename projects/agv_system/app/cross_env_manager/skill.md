@@ -42,7 +42,7 @@ password = "Qq13235202993"
 name = "ds"
 charset = "utf8mb4"
 ```
-时，可以进行数据库插入和编辑操作。
+时，可以进行数据库插入和编辑操作。同时这个数据也可以作为你的测试数据库，可以自由操作及创建表和数据，但请勿修改其他配置文件以确保数据安全和环境隔离。
 
 **重要**：该地址数据库为测试用数据库，其他配置文件则不允许操作，以确保数据安全和环境隔离。
 
@@ -69,8 +69,11 @@ cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
 1. 搜索功能
 2. 模板详情查看
 3. 编辑功能
-4. 添加子任务
-5. 删除子任务
+4. 复制模版功能
+5. 添加子任务
+6. 删除子任务
+
+检查日志：/main/app/log/cross_env_manager.log，确认没有错误日志输出。
 
 ### 测试报告
 详细的测试报告见：`test/DEPLOYMENT_TEST_REPORT.md`
