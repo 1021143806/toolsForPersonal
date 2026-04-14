@@ -12,7 +12,7 @@ from pymysql.cursors import DictCursor
 """
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-# # # # # # # # # import mysql.connector  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代  # 已由pymysql替代
+# import mysql.connector  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
 import os
@@ -650,11 +650,14 @@ def add_detail(template_id):
             return str_value
         
         # 对于back_wait_time需要特殊处理转换为整数
-        back_wait_time_str = data.get('back_wait_time', '').strip()
+        back_wait_time_value = data.get('back_wait_time', '')
         back_wait_time = None
-        if back_wait_time_str and back_wait_time_str != '':
+        if back_wait_time_value is not None:
             try:
-                back_wait_time = int(back_wait_time_str)
+                # 先转换为字符串再去除空格
+                back_wait_time_str = str(back_wait_time_value).strip()
+                if back_wait_time_str and back_wait_time_str != '':
+                    back_wait_time = int(back_wait_time_str)
             except (ValueError, TypeError):
                 back_wait_time = None
         

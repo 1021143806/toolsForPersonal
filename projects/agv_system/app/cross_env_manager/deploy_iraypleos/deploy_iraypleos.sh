@@ -82,13 +82,17 @@ echo "   虚拟环境Python: $(python --version 2>&1)"
 
 echo ""
 echo "5. 检查mysql.connector导入..."
-if grep -q "mysql.connector" app.py; then
-    echo "   ⚠️  app.py中仍有mysql.connector引用，手动修复..."
-    sed -i 's/import mysql\.connector/# import mysql.connector  # 已由pymysql替代/' app.py
+# 检查是否有未注释的mysql.connector导入
+if grep -q "^[[:space:]]*import mysql\.connector" app.py || grep -q "^[[:space:]]*from mysql\.connector" app.py; then
+    echo "   ⚠️  app.py中仍有未注释的mysql.connector引用，手动修复..."
+    # 注释掉import mysql.connector
+    sed -i '/^[[:space:]]*import mysql\.connector/s/^/# /' app.py
+    sed -i '/^[[:space:]]*from mysql\.connector/s/^/# /' app.py
+    # 替换mysql.connector.connect为pymysql.connect
     sed -i 's/mysql\.connector\.connect/pymysql.connect/g' app.py
     echo "   ✅ 手动修复完成"
 else
-    echo "   ✅ app.py中无mysql.connector引用"
+    echo "   ✅ app.py中无未注释的mysql.connector引用"
 fi
 
 echo ""
@@ -110,6 +114,7 @@ tomli==2.0.1
 blinker==1.9.0
 markupsafe==2.1.3
 zipp==3.23.0
+importlib_metadata==8.7.1
 EOF
 
 echo "   依赖列表:"
@@ -121,7 +126,7 @@ if pip install --no-index --find-links="$VENDOR_DIR" -r "$TEMP_REQ" 2>/dev/null;
 else
     echo "   ⚠️  批量安装失败，尝试逐个安装..."
     # 逐个安装关键包
-    for pkg in click itsdangerous tomli zipp blinker python_dotenv PyMySQL Werkzeug Jinja2 markupsafe Markdown Flask; do
+    for pkg in click itsdangerous tomli zipp blinker python_dotenv PyMySQL Werkzeug Jinja2 markupsafe Markdown Flask importlib_metadata; do
         wheel_file=$(find "$VENDOR_DIR" -type f -iname "*${pkg}*.whl" | head -1)
         if [ -f "$wheel_file" ]; then
             if pip install --no-index --no-deps "$wheel_file" 2>/dev/null; then
@@ -153,6 +158,7 @@ test_import_simple pymysql
 test_import_simple werkzeug
 test_import_simple jinja2
 test_import_simple markupsafe
+test_import_simple importlib_metadata
 
 echo ""
 echo "8. 配置Supervisor..."
