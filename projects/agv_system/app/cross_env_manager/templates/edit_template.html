@@ -71,7 +71,7 @@
             <div class="col-md-6">
                 <label class="form-label">容量管控值</label>
                 <input type="number" class="form-control" name="capacity" 
-                       value="{{ template.capacity }}">
+                       value="{{ template.capacity or '' }}">
                 <div class="form-text">容量管控用最大容量，-1表示不限制</div>
             </div>
         </div>
@@ -187,22 +187,22 @@
                                 <td>
                                     <input type="text" class="form-control form-control-sm" 
                                            name="detail_{{ detail.id }}_template_code" 
-                                           value="{{ detail.template_code }}">
+                                           value="{{ detail.template_code|default('') }}">
                                 </td>
                                 <td>
                                     <input type="text" class="form-control form-control-sm" 
                                            name="detail_{{ detail.id }}_template_name" 
-                                           value="{{ detail.template_name }}">
+value="{{ detail.template_name|default('') }}">
                                 </td>
                                 <td>
                                     <input type="text" class="form-control form-control-sm" 
                                            name="detail_{{ detail.id }}_task_servicec" 
-                                           value="{{ detail.task_servicec }}">
+value="{{ detail.task_servicec|default('') }}">
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control form-control-sm" 
-                                           name="detail_{{ detail.id }}_task_path" 
-                                           value="{{ detail.task_path }}">
+<input type="text" class="form-control form-control-sm" 
+                                            name="detail_{{ detail.id }}_task_path" 
+                                            value="{{ detail.task_path|default('') }}">
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
@@ -274,23 +274,23 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">模板代码</label>
-                        <input type="text" class="form-control" name="template_code" 
-                               value="{{ detail.template_code }}" required>
+<input type="text" class="form-control" name="template_code" 
+                                value="{{ detail.template_code|default('') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">模板名称</label>
-                        <input type="text" class="form-control" name="template_name" 
-                               value="{{ detail.template_name }}">
+<input type="text" class="form-control" name="template_name" 
+                                value="{{ detail.template_name|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">服务器地址</label>
-                        <input type="text" class="form-control" name="task_servicec" 
-                               value="{{ detail.task_servicec }}">
+<input type="text" class="form-control" name="task_servicec" 
+                                value="{{ detail.task_servicec|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">目标点标识</label>
-                        <input type="text" class="form-control" name="task_path" 
-                               value="{{ detail.task_path }}">
+<input type="text" class="form-control" name="task_path" 
+                                value="{{ detail.task_path|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">货架回流模板</label>

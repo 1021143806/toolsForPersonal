@@ -45,7 +45,9 @@
                             {% endif %}
                         </p>
                         <p><strong>容量管控:</strong> 
-                            {% if template.capacity == -1 %}
+                            {% if template.capacity is none %}
+                                <span class="badge bg-secondary">未设置</span>
+                            {% elif template.capacity == -1 %}
                                 <span class="badge bg-secondary">不限制</span>
                             {% else %}
                                 <span class="badge bg-primary">{{ template.capacity }}</span>
@@ -95,7 +97,7 @@
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0">
                     <i class="bi bi-list-task"></i> 子任务列表
-                    <span class="badge bg-light text-dark ms-2">{{ details|length }} 个子任务</span>
+                    <span class="badge bg-light text-dark ms-2">{{ details|default([])|length }} 个子任务</span>
                 </h5>
             </div>
             <div class="card-body">
@@ -120,10 +122,10 @@
                                         <td>
                                             <span class="badge bg-secondary">#{{ detail.task_seq }}</span>
                                         </td>
-                                        <td><code>{{ detail.template_code }}</code></td>
-                                        <td>{{ detail.template_name }}</td>
+                                        <td><code>{{ detail.template_code|default('未设置') }}</code></td>
+                                        <td>{{ detail.template_name|default('未设置') }}</td>
                                         <td>
-                                            <code class="small">{{ detail.task_servicec }}</code>
+                                            <code class="small">{{ detail.task_servicec|default('未设置') }}</code>
                                         </td>
                                         <td>
                                             {% if detail.task_path and detail.task_path != '-' %}
@@ -153,7 +155,7 @@
                                                 <div class="row">
                                                     <div class="col-md-6">
                                                         <p><strong>ID:</strong> {{ detail.id }}</p>
-                                                        <p><strong>关联模板ID:</strong> {{ detail.model_process_id }}</p>
+                                                        <p><strong>关联模板ID:</strong> {{ detail.model_process_id|default('未设置') }}</p>
                                                         <p><strong>货架回流模板:</strong> {{ detail.backflow_template_code or '未设置' }}</p>
                                                     </div>
                                                     <div class="col-md-6">
@@ -202,7 +204,7 @@
                             data-bs-target="#jsonModal">
                         <i class="bi bi-code-slash"></i> 查看JSON数据
                     </button>
-                    <a href="{{ url_for('search') }}?search_term={{ template.model_process_code.split('_')[0] }}" 
+<a href="{{ url_for('search') }}?search_term={% if template.model_process_code %}{{ template.model_process_code.split('_')[0] }}{% endif %}"
                        class="btn btn-outline-primary">
                         <i class="bi bi-search"></i> 搜索相关模板
                     </a>
@@ -254,7 +256,7 @@
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>子任务数量</span>
-                        <span class="badge bg-primary rounded-pill">{{ details|length }}</span>
+                        <span class="badge bg-primary rounded-pill">{{ details|default([])|length }}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span>容量管控值</span>
@@ -286,13 +288,13 @@
                 
                 {% if details %}
                     <h6 class="mt-3">子任务数据:</h6>
-                    <pre class="bg-light p-3 rounded">{{ details|tojson(indent=2) }}</pre>
+                    <pre class="bg-light p-3 rounded">{{ details|default([])|tojson(indent=2) }}</pre>
                 {% endif %}
                 
                 <!-- 隐藏的JSON数据供JavaScript使用 -->
                 <div id="templateJsonData" style="display: none;">{{ template|tojson }}</div>
                 {% if details %}
-                    <div id="detailsJsonData" style="display: none;">{{ details|tojson }}</div>
+                    <div id="detailsJsonData" style="display: none;">{{ details|default([])|tojson }}</div>
                 {% endif %}
             </div>
             <div class="modal-footer">
@@ -324,17 +326,17 @@
                     <div class="mb-3">
                         <label class="form-label">模板代码</label>
                         <input type="text" class="form-control" name="template_code" 
-                               value="{{ detail.template_code }}" required>
+                               value="{{ detail.template_code|default('') }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">模板名称</label>
                         <input type="text" class="form-control" name="template_name" 
-                               value="{{ detail.template_name }}">
+                               value="{{ detail.template_name|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">服务器地址</label>
                         <input type="text" class="form-control" name="task_servicec" 
-                               value="{{ detail.task_servicec }}">
+                               value="{{ detail.task_servicec|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">目标点标识</label>

@@ -166,14 +166,13 @@ SUPERVISOR_CONF="/main/server/supervisor/cross_env_manager.conf"
 LOG_DIR="/main/app/log"
 
 if [ -f "$SUPERVISOR_CONF" ]; then
-    echo "   Supervisor配置已存在，备份..."
-    cp "$SUPERVISOR_CONF" "${SUPERVISOR_CONF}.backup.$(date +%Y%m%d_%H%M%S)"
-fi
+    echo "   ✅ Supervisor配置文件已存在: $SUPERVISOR_CONF"
+    echo "   ℹ️  跳过创建步骤，将直接重启服务"
+else
+    echo "   配置文件不存在，开始创建..."
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
 
-echo "   创建Supervisor配置..."
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-
-cat > "$SUPERVISOR_CONF" << EOF
+    cat > "$SUPERVISOR_CONF" << EOF
 [program:cross_env_manager]
 command=$PROJECT_DIR/venv/bin/python3 $PROJECT_DIR/app.py
 directory=$PROJECT_DIR
@@ -192,19 +191,26 @@ stderr_logfile_backups=0
 environment=PYTHONPATH="$PROJECT_DIR"
 EOF
 
-echo "   ✅ Supervisor配置创建完成"
+    echo "   ✅ Supervisor配置文件创建完成"
+fi
 
 echo ""
 echo "9. 启动服务..."
 if command -v supervisorctl >/dev/null 2>&1; then
+    # 重读配置（如果新增了配置则生效，已存在也无影响）
     supervisorctl reread 2>/dev/null || echo "   ⚠️  配置重读失败"
     supervisorctl update 2>/dev/null || echo "   ⚠️  配置更新失败"
     
-    echo "   启动cross_env_manager..."
-    supervisorctl start cross_env_manager 2>/dev/null || supervisorctl restart cross_env_manager 2>/dev/null
+    echo "   重启服务..."
+    supervisorctl restart cross_env_manager 2>/dev/null || {
+        echo "   ⚠️  重启失败，尝试直接启动..."
+        supervisorctl start cross_env_manager 2>/dev/null
+    }
+    
     sleep 3
     
-    if supervisorctl status cross_env_manager 2>/dev/null; then
+    # 验证服务状态
+    if supervisorctl status cross_env_manager 2>/dev/null | grep -q "RUNNING"; then
         echo "   ✅ 服务已在Supervisor中运行"
     else
         echo "   ⚠️  服务未在Supervisor中运行，尝试直接启动..."

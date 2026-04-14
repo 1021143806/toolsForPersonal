@@ -43,7 +43,9 @@
                     <div class="col-md-6">
                         <p><strong>回调URL:</strong> <code class="small">{{ template.request_url or '未设置' }}</code></p>
                         <p><strong>容量管控:</strong> 
-                            {% if template.capacity == -1 %}
+                            {% if template.capacity is none %}
+                                <span class="badge bg-secondary">未设置</span>
+                            {% elif template.capacity == -1 %}
                                 <span class="badge bg-secondary">不限制</span>
                             {% else %}
                                 <span class="badge bg-primary">{{ template.capacity }}</span>
@@ -61,7 +63,7 @@
                 <!-- 子任务列表 -->
                 {% if template.details %}
                     <h6 class="mt-4 mb-3">
-                        <i class="bi bi-list-task"></i> 子任务列表 ({{ template.details|length }} 个)
+                        <i class="bi bi-list-task"></i> 子任务列表 ({{ template.details|default([])|length }} 个)
                     </h6>
                     <div class="row">
                         {% for detail in template.details %}
@@ -71,13 +73,13 @@
                                         <div>
                                             <h6 class="mb-1">
                                                 <span class="badge bg-secondary me-2">#{{ detail.task_seq }}</span>
-                                                {{ detail.template_name }}
+                                                {{ detail.template_name|default('未设置') }}
                                             </h6>
                                             <p class="mb-1 small">
-                                                <code>{{ detail.template_code }}</code>
+                                                <code>{{ detail.template_code|default('未设置') }}</code>
                                             </p>
                                             <p class="mb-1 small">
-                                                <strong>服务器:</strong> <code class="small">{{ detail.task_servicec }}</code>
+                                                <strong>服务器:</strong> <code class="small">{{ detail.task_servicec|default('未设置') }}</code>
                                             </p>
                                             {% if detail.task_path and detail.task_path != '-' %}
                                                 <p class="mb-0 small">

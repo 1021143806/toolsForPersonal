@@ -44,9 +44,12 @@ python main.py
 ```
 
 ### 2. AGV设备管理系统
-**位置**: `projects/agv_system/main/`
+**位置**: `projects/agv_system/`
 
-AGV（自动导引车）设备管理和统计系统：
+AGV（自动导引车）设备管理和统计系统，包含多个子项目：
+
+#### 2.1 主管理系统
+**位置**: `projects/agv_system/main/`
 - 📊 多服务器设备统计
 - 📈 设备状态监控
 - 📋 任务管理
@@ -56,6 +59,42 @@ AGV（自动导引车）设备管理和统计系统：
 - 设备信息查询和统计
 - 任务分配和跟踪
 - 跨服务器数据整合
+
+#### 2.2 跨环境任务模板管理系统
+**位置**: `projects/agv_system/app/cross_env_manager/`
+
+一个基于Python Flask的Web应用，用于管理AGV跨环境任务模板：
+
+**核心功能**:
+- 🔍 **智能搜索**: 支持模糊搜索任务模板代码和名称
+- 📋 **模板详情查看**: 显示模板完整信息及子任务列表
+- ✏️ **模板编辑**: 修改模板配置信息
+- 📝 **子任务管理**: 编辑子任务详细信息
+- 📋 **模板复制**: 基于现有模板创建新模板，自动生成ID后缀
+- 📊 **数据统计**: 模板分布、增长趋势等统计分析
+- 🎨 **用户友好界面**: 响应式设计，操作直观
+
+**技术特性**:
+- 🐍 **Python 3.9.9兼容**: 专门优化支持Python 3.9环境
+- 🗄️ **数据库支持**: 使用PyMySQL连接MySQL数据库
+- 📁 **配置管理**: 支持TOML配置文件格式
+- 🔄 **离线部署**: 提供完整的离线部署解决方案
+- 🚀 **Supervisor集成**: 支持进程管理和自动重启
+
+**部署方式**:
+1. **在线部署**: 使用标准Python虚拟环境部署
+2. **离线部署**: 使用`deploy_iraypleos/`目录中的离线部署脚本
+   ```bash
+   cd projects/agv_system/app/cross_env_manager
+   ./deploy_iraypleos/deploy_iraypleos.sh
+   ```
+
+**关键文件**:
+- `app.py` - 主应用文件
+- `deploy_iraypleos/deploy_iraypleos.sh` - 离线部署脚本
+- `vendor_packages3.9/` - Python 3.9兼容的离线依赖包
+- `config/env.toml` - 配置文件模板
+- `test/DEPLOYMENT_TEST_REPORT.md` - 部署测试报告
 
 ### 3. 文件上传系统
 **位置**: `projects/file_upload/`
@@ -161,5 +200,5 @@ cd scripts/powershell_scripts
 
 ---
 
-**最后更新**: 2025-11-21  
-**版本**: 2.0.0 (目录重构版本)
+**最后更新**: 2026-04-14  
+**版本**: 2.1.0 (新增跨环境任务模板管理系统)
