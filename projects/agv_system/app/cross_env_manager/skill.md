@@ -19,7 +19,7 @@ description: 该cross_env_manager项目相关指导操作
 ## 离线部署相关
 
 ### 部署脚本位置
-`deploy_iraypleos/deploy_iraypleos.sh` - 作为离线部署脚本
+`deploy_iraypleos/deploy_iraypleos.sh` - 作为离线部署脚本,同时用于更新后续的部署测试验证。
 
 ### 重要更新（2026-04-14）
 1. **依赖包修复**：添加了缺失的 `importlib_metadata==8.7.1` 依赖包
