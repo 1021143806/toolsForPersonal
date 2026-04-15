@@ -62,7 +62,7 @@ def get_db_connection(config=None):
         if config is None:
             config = get_db_config()
         
-        conn = pymysql.connect(**config)
+        conn = pymysql.connect(**config, cursorclass=DictCursor)
         return conn
     except pymysql.Error as e:
         print(f"数据库连接错误: {e}")
@@ -86,8 +86,12 @@ def execute_query(query, params=None, fetch=True, config=None):
         cursor = conn.cursor(DictCursor)
         cursor.execute(query, params or ())
         
-        if fetch and query.strip().upper().startswith('SELECT'):
-            result = cursor.fetchall()
+        if fetch:
+            if query.strip().upper().startswith('SELECT'):
+                result = cursor.fetchall()
+            else:
+                # 对于非SELECT查询但需要fetch的情况，返回空列表
+                result = []
         else:
             conn.commit()
             result = cursor.lastrowid if query.strip().upper().startswith('INSERT') else cursor.rowcount
@@ -111,9 +115,9 @@ def get_production_db_config():
     return {
         'host': '10.68.2.32',
         'port': 3306,
-        'user': 'root',
-        'password': 'Qq13235202993',
-        'database': 'ds',
+        'user': 'wms',
+        'password': 'CCshenda889',
+        'database': 'wms',
         'charset': 'utf8mb4'
     }
 

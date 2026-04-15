@@ -31,7 +31,8 @@ try:
         shelf_model_query,
         shelf_query,
         agv_status,
-        join_qr_node_query
+        join_qr_node_query,
+        task_query_extended
     )
     QUERY_MODULES_AVAILABLE = True
 except ImportError as e:
@@ -50,6 +51,7 @@ except ImportError as e:
     shelf_query = EmptyModule()
     agv_status = EmptyModule()
     join_qr_node_query = EmptyModule()
+    task_query_extended = EmptyModule()
 
 # 尝试导入tomli（Python 3.11+内置tomllib，低版本使用tomli）
 try:
@@ -1448,6 +1450,110 @@ def query_all_agv_status():
     except Exception as e:
         flash(f'查询失败: {str(e)}', 'error')
         return redirect(url_for('query_agv_status'))
+
+# ============================================================================
+# 1.3项目功能整合 - 任务查询路由
+# ============================================================================
+
+@app.route('/task_query')
+def task_query_home():
+    """任务查询主页 - 对应1.3项目的home.html功能"""
+    return render_template('task_query_home.html')
+
+@app.route('/task_query/result')
+def task_query_result():
+    """任务单号查询结果 - 对应FindTheTask.php功能"""
+    order_id = request.args.get('order_id', '').strip()
+    server_ip = request.args.get('server_ip', '').strip()
+    
+    if not order_id:
+        flash('请输入任务单号', 'warning')
+        return redirect(url_for('task_query_home'))
+    
+    try:
+        # 处理服务器IP格式（支持简写如"31"或完整IP）
+        if server_ip and len(server_ip) < 4:
+            server_ip = f"10.68.2.{server_ip}"
+        
+        result = task_query_extended.get_task_info_by_order_id(order_id, server_ip)
+        
+        if 'error' in result:
+            flash(result['error'], 'error')
+            return redirect(url_for('task_query_home'))
+        
+        return render_template('task_query_result.html', result=result)
+        
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('task_query_home'))
+
+@app.route('/task_query/cross_task_by_template')
+def cross_task_by_template():
+    """跨环境任务模板查询 - 对应Kua.php功能"""
+    template_code = request.args.get('template_code', '').strip()
+    
+    if not template_code:
+        flash('请输入跨环境任务模板', 'warning')
+        return redirect(url_for('task_query_home'))
+    
+    try:
+        result = task_query_extended.search_tasks_by_template(template_code)
+        
+        if 'error' in result:
+            flash(result['error'], 'error')
+            return redirect(url_for('task_query_home'))
+        
+        return render_template('cross_task_by_template.html', 
+                             result=result, 
+                             template_code=template_code)
+        
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('task_query_home'))
+
+@app.route('/task_query/cross_model_process_info')
+def cross_model_process_info():
+    """跨环境任务模板详情 - 对应Chech_Kua_model_process.php功能"""
+    template_code = request.args.get('template_code', '').strip()
+    
+    if not template_code:
+        flash('请输入跨环境任务模板', 'warning')
+        return redirect(url_for('task_query_home'))
+    
+    try:
+        result = task_query_extended.get_cross_model_process_info(template_code)
+        
+        if 'error' in result:
+            flash(result['error'], 'error')
+            return redirect(url_for('task_query_home'))
+        
+        return render_template('cross_model_process_info.html', result=result)
+        
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('task_query_home'))
+
+@app.route('/task_query/cross_task_info')
+def cross_task_info():
+    """跨环境任务详情 - 对应FindTheTaskKua.php功能"""
+    order_id = request.args.get('order_id', '').strip()
+    
+    if not order_id:
+        flash('请输入跨环境任务编号', 'warning')
+        return redirect(url_for('task_query_home'))
+    
+    try:
+        result = task_query_extended.get_cross_task_info(order_id)
+        
+        if 'error' in result:
+            flash(result['error'], 'error')
+            return redirect(url_for('task_query_home'))
+        
+        return render_template('cross_task_info.html', result=result)
+        
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('task_query_home'))
 
 # ============================================================================
 # join_qr_node_info 相关路由

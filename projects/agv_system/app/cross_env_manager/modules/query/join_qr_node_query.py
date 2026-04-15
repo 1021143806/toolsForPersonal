@@ -75,7 +75,10 @@ def get_join_qr_node_by_id(node_id):
     FROM join_qr_node_info
     WHERE id = %s
     """
-    return execute_wms_query(query, (node_id,))
+    result = execute_wms_query(query, (node_id,))
+    if result and isinstance(result, list) and len(result) > 0:
+        return result[0]  # 返回第一个（也是唯一一个）记录
+    return None
 
 def get_join_qr_nodes_by_area(area_id):
     """根据区域ID获取join_qr_node_info记录"""
@@ -180,27 +183,42 @@ def get_join_qr_node_stats():
     # 总记录数
     query = "SELECT COUNT(*) as total FROM join_qr_node_info"
     result = execute_wms_query(query)
-    stats['total'] = result[0]['total'] if result else 0
+    if result and isinstance(result, list) and len(result) > 0:
+        stats['total'] = result[0]['total']
+    else:
+        stats['total'] = 0
     
     # 按类型统计
     query = "SELECT type, COUNT(*) as count FROM join_qr_node_info GROUP BY type"
     result = execute_wms_query(query)
-    stats['by_type'] = {row['type']: row['count'] for row in result} if result else {}
+    if result and isinstance(result, list):
+        stats['by_type'] = {row['type']: row['count'] for row in result}
+    else:
+        stats['by_type'] = {}
     
     # 按区域统计
     query = "SELECT area_id, COUNT(*) as count FROM join_qr_node_info GROUP BY area_id"
     result = execute_wms_query(query)
-    stats['by_area'] = {row['area_id']: row['count'] for row in result} if result else {}
+    if result and isinstance(result, list):
+        stats['by_area'] = {row['area_id']: row['count'] for row in result}
+    else:
+        stats['by_area'] = {}
     
     # 按IP统计
     query = "SELECT environment_ip, COUNT(*) as count FROM join_qr_node_info GROUP BY environment_ip"
     result = execute_wms_query(query)
-    stats['by_ip'] = {row['environment_ip']: row['count'] for row in result} if result else {}
+    if result and isinstance(result, list):
+        stats['by_ip'] = {row['environment_ip']: row['count'] for row in result}
+    else:
+        stats['by_ip'] = {}
     
     # 启用/禁用统计
     query = "SELECT enable, COUNT(*) as count FROM join_qr_node_info GROUP BY enable"
     result = execute_wms_query(query)
-    stats['by_enable'] = {row['enable']: row['count'] for row in result} if result else {}
+    if result and isinstance(result, list):
+        stats['by_enable'] = {row['enable']: row['count'] for row in result}
+    else:
+        stats['by_enable'] = {}
     
     return stats
 
@@ -210,13 +228,18 @@ if __name__ == "__main__":
     
     # 测试获取所有记录
     nodes = get_all_join_qr_nodes()
-    print(f"总记录数: {len(nodes) if nodes else 0}")
+    if nodes and isinstance(nodes, list):
+        print(f"总记录数: {len(nodes)}")
+    else:
+        print("总记录数: 0")
     
     # 测试统计信息
     stats = get_join_qr_node_stats()
     print(f"统计信息: {stats}")
     
     # 测试搜索
-    if nodes:
-        search_result = search_join_qr_nodes("55301540")
-        print(f"搜索'55301540'结果数: {len(search_result) if search_result else 0}")
+    search_result = search_join_qr_nodes("55301540")
+    if search_result and isinstance(search_result, list):
+        print(f"搜索'55301540'结果数: {len(search_result)}")
+    else:
+        print("搜索'55301540'结果数: 0")

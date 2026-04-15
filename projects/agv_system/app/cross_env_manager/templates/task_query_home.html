@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV任务查询系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .query-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0d6efd;
+        }
+        .query-section h2 {
+            color: #0d6efd;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">AGV任务查询系统</h1>
+        
+        <!-- 按照任务单号查询 -->
+        <div class="query-section">
+            <h2>按照任务单号查询</h2>
+            <form action="{{ url_for('task_query_result') }}" method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label for="order_id" class="form-label">任务单号:</label>
+                    <input type="text" class="form-control" id="order_id" name="order_id" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="server_ip" class="form-label">服务器IP:</label>
+                    <input type="text" class="form-control" id="server_ip" name="server_ip" placeholder="例如: 31 (10.68.2.31)">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">查询</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 跨环境按照任务模版查询当前执行中或占用容量的任务 -->
+        <div class="query-section">
+            <h2>跨环境任务模板查询</h2>
+            <form action="{{ url_for('cross_task_by_template') }}" method="get" class="row g-3">
+                <div class="col-md-10">
+                    <label for="template_code" class="form-label">跨环境任务模板:</label>
+                    <input type="text" class="form-control" id="template_code" name="template_code" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">查询</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 输入跨环境任务模版查看子任务模板信息 -->
+        <div class="query-section">
+            <h2>跨环境任务模板详情</h2>
+            <form action="{{ url_for('cross_model_process_info') }}" method="get" class="row g-3">
+                <div class="col-md-10">
+                    <label for="template_code_detail" class="form-label">跨环境任务模板:</label>
+                    <input type="text" class="form-control" id="template_code_detail" name="template_code" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">查询</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 输入跨环境任务编号查询所有子任务及当前执行中或占用容量的任务 -->
+        <div class="query-section">
+            <h2>跨环境任务详情查询</h2>
+            <form action="{{ url_for('cross_task_info') }}" method="get" class="row g-3">
+                <div class="col-md-10">
+                    <label for="cross_order_id" class="form-label">跨环境任务编号:</label>
+                    <input type="text" class="form-control" id="cross_order_id" name="order_id" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">查询</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 导航链接 -->
+        <div class="text-center mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-2">返回模板管理</a>
+            <a href="{{ url_for('show_docs') }}" class="btn btn-outline-info">查看文档</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

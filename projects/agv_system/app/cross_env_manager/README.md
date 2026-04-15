@@ -20,15 +20,10 @@
 
 ## 安装部署
 
-### 部署脚本选择
+### 部署脚本
 
-项目提供了多种部署脚本以满足不同环境需求：
+ **IRAYPLEOS专用**: `./deploy_iraypleos.sh` - 专为IRAYPLEOS系统环境设计，一键部署
 
-1. **快速部署**: `./deploy.sh` - 主部署入口，交互式选择部署方式
-2. **IRAYPLEOS专用**: `./deploy_iraypleos.sh` - 专为IRAYPLEOS系统环境设计
-3. **通用环境**: `./deploy_generic.sh` - 适用于大多数Linux环境
-4. **离线部署**: `./deploy_offline.sh` - 专为无网络环境设计
-5. **Python 3.9专用**: `./deploy_py39.sh` - 使用vendor_packages3.9目录和pymysql
 
 ### 推荐部署方式
 
@@ -315,13 +310,21 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
 ```ini
 [program:cross_env_manager]
-command=/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/cross_env_manager/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 app:app
-directory=/main/app/mntc/git/toolsForPersonal/projects/agv_system/app/cross_env_manager
-user=a1
+command=/main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager/venv/bin/python3 /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager/app.py
+directory=/main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
+user=ymsk
 autostart=true
 autorestart=true
+startsecs=10
+startretries=3
 redirect_stderr=true
 stdout_logfile=/main/app/log/cross_env_manager.log
+stdout_logfile_maxbytes=5MB
+stdout_logfile_backups=0
+stderr_logfile=/main/app/log/cross_env_manager_error.log
+stderr_logfile_maxbytes=5MB
+stderr_logfile_backups=0
+environment=PYTHONPATH="/main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager"
 ```
 
 ### Nginx反向代理
@@ -343,11 +346,47 @@ server {
 
 本项目基于MIT许可证开源。
 
+## 1.3项目功能整合
+
+本项目已成功整合了1.3项目的AGV任务查询功能，提供以下新增功能：
+
+### 新增功能模块
+
+1. **任务单号查询** (`/task_query`)
+   - 根据任务订单ID查询任务详细信息
+   - 支持指定服务器IP（支持简写格式）
+   - 显示任务状态、设备信息、时间信息等
+
+2. **跨环境任务模板查询** (`/task_query/cross_task_by_template`)
+   - 根据跨环境任务模板代码查询当前执行中的任务
+   - 统计任务数量并显示任务列表
+
+3. **跨环境任务模板详情** (`/task_query/cross_model_process_info`)
+   - 查看跨环境任务模板的完整信息
+   - 显示主模板配置和子任务列表
+
+4. **跨环境任务详情** (`/task_query/cross_task_info`)
+   - 根据跨环境任务编号查询所有子任务信息
+   - 显示当前执行中或占用容量的任务
+
+### 技术特点
+
+- **统一界面**: 与现有Web应用保持一致的UI风格
+- **模块化设计**: 新增功能采用独立的Python模块实现
+- **生产环境支持**: 支持连接生产环境数据库进行查询
+- **错误处理**: 完善的错误处理和用户提示
+
+### 访问方式
+
+- 主页: 点击"任务查询系统"按钮进入
+- 直接访问: `/task_query`
+- 集成导航: 在主页查询功能区域可见
+
 ## 联系方式
 
 如有问题或建议，请联系系统管理员。
 
 ---
-**版本**: 1.0  
-**最后更新**: 2026-04-03  
+**版本**: 1.1 (整合1.3项目功能)  
+**最后更新**: 2026-04-15  
 **基于文档**: 《跨环境配置及实施说明书》

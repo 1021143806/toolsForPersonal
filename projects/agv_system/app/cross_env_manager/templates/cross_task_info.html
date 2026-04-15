@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨环境任务详情</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">跨环境任务详情</h1>
+        
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">查询失败</h4>
+                <p>{{ error }}</p>
+            </div>
+        {% else %}
+            <!-- 跨环境任务详情 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>跨环境任务详情</h3>
+                </div>
+                <div class="card-body">
+                    {% if result.cross_task_details %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>子任务ID</th>
+                                        <th>订单ID</th>
+                                        <th>子订单ID</th>
+                                        <th>服务URL</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detail in result.cross_task_details %}
+                                        <tr>
+                                            <td>{{ detail.id }}</td>
+                                            <td>{{ detail.order_id }}</td>
+                                            <td>{{ detail.sub_order_id }}</td>
+                                            <td>{{ detail.service_url }}</td>
+                                            <td>{{ detail.create_time }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">未找到跨环境任务详情</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 模板信息 -->
+            {% if result.model_process_code %}
+                <div class="alert alert-info" role="alert">
+                    <h4>模板信息</h4>
+                    <p><strong>模板代码:</strong> {{ result.model_process_code }}</p>
+                    <p><strong>当前正在执行的任务数:</strong> {{ result.active_task_count }}</p>
+                </div>
+            {% endif %}
+
+            <!-- 相关任务 -->
+            {% if result.related_tasks %}
+                <div class="card">
+                    <div class="card-header">
+                        <h3>相关任务列表</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>任务ID</th>
+                                        <th>订单ID</th>
+                                        <th>任务状态</th>
+                                        <th>创建时间</th>
+                                        <th>开始时间</th>
+                                        <th>结束时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in result.related_tasks %}
+                                        <tr>
+                                            <td>{{ task.id }}</td>
+                                            <td>{{ task.orderId }}</td>
+                                            <td>{{ task.task_status }}</td>
+                                            <td>{{ task.create_time }}</td>
+                                            <td>{{ task.start_time }}</td>
+                                            <td>{{ task.end_time }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('task_query_home') }}" class="btn btn-primary me-2">返回查询页面</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">返回模板管理</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

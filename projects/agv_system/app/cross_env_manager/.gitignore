@@ -2,3 +2,4 @@ config/*.toml
 config/old/*
 test_*
 test/*
+*.sql

@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Join QR节点详情 - {{ node.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="bi bi-qr-code text-primary"></i> Join QR节点详情
+        </h2>
+        <p class="text-muted">
+            节点ID: {{ node.id }} | QR内容: <code>{{ node.qr_content }}</code>
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('list_join_qr_nodes') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+        <a href="{{ url_for('edit_join_qr_node', node_id=node.id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> 编辑
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> 基本信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th style="width: 40%">节点ID:</th>
+                                <td>{{ node.id }}</td>
+                            </tr>
+                            <tr>
+                                <th>区域ID:</th>
+                                <td>{{ node.area_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>类型:</th>
+                                <td>
+                                    {% if node.type == 0 %}
+                                        <span class="badge bg-info">类型0</span>
+                                    {% elif node.type == 1 %}
+                                        <span class="badge bg-warning">类型1</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ node.type }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>QR内容:</th>
+                                <td><code>{{ node.qr_content }}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th style="width: 40%">环境IP:</th>
+                                <td><code>{{ node.environment_ip }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>状态:</th>
+                                <td>
+                                    {% if node.enable == 1 %}
+                                        <span class="badge bg-success">启用</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">禁用</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>连接区域:</th>
+                                <td>{{ node.join_area or '未设置' }}</td>
+                            </tr>
+                            <tr>
+                                <th>最后使用时间:</th>
+                                <td>{{ node.last_using_time or '未记录' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 其他配置 -->
+        {% if node.other_config %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear"></i> 其他配置
+                </h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded">{{ node.other_config }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- 操作面板 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> 快速操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('edit_join_qr_node', node_id=node.id) }}" 
+                       class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> 编辑节点
+                    </a>
+                    <button class="btn btn-outline-danger" 
+                            onclick="deleteNode({{ node.id }}, '{{ node.qr_content }}')">
+                        <i class="bi bi-trash"></i> 删除节点
+                    </button>
+                </div>
+                
+                <hr>
+                
+                <h6>节点信息</h6>
+                <ul class="list-unstyled small">
+                    <li><strong>创建时间:</strong> 系统自动记录</li>
+                    <li><strong>数据来源:</strong> wms数据库</li>
+                    <li><strong>表名:</strong> join_qr_node_info</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 状态信息 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up"></i> 状态信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    {% if node.enable == 1 %}
+                        <i class="bi bi-check-circle display-4 text-success"></i>
+                        <h5 class="mt-2">节点正常</h5>
+                        <p class="text-muted">该节点已启用并可用</p>
+                    {% else %}
+                        <i class="bi bi-x-circle display-4 text-danger"></i>
+                        <h5 class="mt-2">节点禁用</h5>
+                        <p class="text-muted">该节点当前被禁用</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deleteNode(nodeId, nodeContent) {
+        if (confirm(`确定要删除节点 ${nodeContent} (ID: ${nodeId}) 吗？此操作不可恢复。`)) {
+            fetch(`/api/join_qr_nodes/${nodeId}/delete`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('节点删除成功');
+                    window.location.href = '/join_qr_nodes';
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('删除错误:', error);
+                alert('删除过程中发生错误');
+            });
+        }
+    }
+</script>
+{% endblock %}
