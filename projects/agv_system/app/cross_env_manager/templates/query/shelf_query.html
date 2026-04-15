@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>货架查询 - AGV任务管理平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: white !important;
+        }
+        .container {
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .form-control {
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .table {
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+        }
+        .table td {
+            vertical-align: middle;
+        }
+        .status-active {
+            color: #28a745;
+            font-weight: 500;
+        }
+        .status-inactive {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        .status-maintenance {
+            color: #ffc107;
+            font-weight: 500;
+        }
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .alert {
+            border-radius: 5px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">AGV任务管理平台</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/query">查询功能</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/cross_env">跨环境模板</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 返回链接 -->
+        <div class="mb-3">
+            <a href="/query" class="back-link">← 返回查询功能主页</a>
+        </div>
+
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-3">货架查询</h2>
+                <p class="text-muted">查询货架信息，包括货架状态、位置、所属模型等</p>
+            </div>
+        </div>
+
+        <!-- 查询表单 -->
+        <div class="card">
+            <div class="card-header">
+                查询条件
+            </div>
+            <div class="card-body">
+                <form method="GET" action="/query/shelf">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="shelf_id" class="form-label">货架ID</label>
+                            <input type="text" class="form-control" id="shelf_id" name="shelf_id" 
+                                   placeholder="输入货架ID" value="{{ request.args.get('shelf_id', '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="shelf_code" class="form-label">货架编码</label>
+                            <input type="text" class="form-control" id="shelf_code" name="shelf_code" 
+                                   placeholder="输入货架编码" value="{{ request.args.get('shelf_code', '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="shelf_model_id" class="form-label">货架模型ID</label>
+                            <input type="text" class="form-control" id="shelf_model_id" name="shelf_model_id" 
+                                   placeholder="输入货架模型ID" value="{{ request.args.get('shelf_model_id', '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">货架状态</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">全部状态</option>
+                                <option value="1" {% if request.args.get('status') == '1' %}selected{% endif %}>正常</option>
+                                <option value="2" {% if request.args.get('status') == '2' %}selected{% endif %}>维修中</option>
+                                <option value="3" {% if request.args.get('status') == '3' %}selected{% endif %}>停用</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="location" class="form-label">位置</label>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                   placeholder="输入位置信息" value="{{ request.args.get('location', '') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="limit" class="form-label">显示数量</label>
+                            <select class="form-select" id="limit" name="limit">
+                                <option value="50" {% if request.args.get('limit', '50') == '50' %}selected{% endif %}>50条</option>
+                                <option value="100" {% if request.args.get('limit', '50') == '100' %}selected{% endif %}>100条</option>
+                                <option value="200" {% if request.args.get('limit', '50') == '200' %}selected{% endif %}>200条</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> 查询货架
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                                    <i class="fas fa-redo"></i> 重置条件
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 查询结果 -->
+        {% if shelves %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>查询结果 (共 {{ shelves|length }} 条记录)</span>
+                <span class="badge bg-primary">{{ shelves|length }} 条</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>货架ID</th>
+                                <th>货架编码</th>
+                                <th>货架模型ID</th>
+                                <th>状态</th>
+                                <th>位置</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shelf in shelves %}
+                            <tr>
+                                <td>{{ shelf.id }}</td>
+                                <td><strong>{{ shelf.shelf_code }}</strong></td>
+                                <td>{{ shelf.shelf_model_id }}</td>
+                                <td>
+                                    {% if shelf.status == 1 %}
+                                        <span class="status-active">正常</span>
+                                    {% elif shelf.status == 2 %}
+                                        <span class="status-maintenance">维修中</span>
+                                    {% elif shelf.status == 3 %}
+                                        <span class="status-inactive">停用</span>
+                                    {% else %}
+                                        <span class="text-muted">未知</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ shelf.location or '未设置' }}</td>
+                                <td>{{ shelf.create_time.strftime('%Y-%m-%d %H:%M:%S') if shelf.create_time else 'N/A' }}</td>
+                                <td>{{ shelf.update_time.strftime('%Y-%m-%d %H:%M:%S') if shelf.update_time else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% elif request.method == 'GET' and request.args %}
+        <div class="alert alert-info mt-4">
+            <i class="fas fa-info-circle"></i> 未找到符合条件的货架记录。
+        </div>
+        {% endif %}
+
+        <!-- 使用说明 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                使用说明
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> <strong>货架ID</strong>：货架的唯一标识符</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> <strong>货架编码</strong>：货架的业务编码，用于识别</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> <strong>货架模型ID</strong>：关联的货架模型ID</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> <strong>状态</strong>：1=正常，2=维修中，3=停用</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> <strong>位置</strong>：货架当前所在位置</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success"></i> 支持模糊查询，可输入部分信息进行搜索</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Font Awesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    
+    <script>
+        function resetForm() {
+            document.getElementById('shelf_id').value = '';
+            document.getElementById('shelf_code').value = '';
+            document.getElementById('shelf_model_id').value = '';
+            document.getElementById('status').value = '';
+            document.getElementById('location').value = '';
+            document.getElementById('limit').value = '50';
+        }
+        
+        // 页面加载时检查是否有查询参数
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.toString()) {
+                // 有查询参数，显示结果区域
+                console.log('有查询参数，显示结果');
+            }
+        });
+    </script>
+</body>
+</html>

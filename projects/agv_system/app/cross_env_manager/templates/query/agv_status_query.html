@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV状态查询 - AGV任务查询系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        .form-card {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        .btn-view-all {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-view-all:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        .agv-example {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .agv-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .agv-item:hover {
+            background-color: #e9ecef;
+        }
+        .agv-item:last-child {
+            border-bottom: none;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-online {
+            background-color: #4CAF50;
+        }
+        .status-offline {
+            background-color: #f44336;
+        }
+        .status-warning {
+            background-color: #FF9800;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-robot"></i> AGV任务管理系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-house"></i> 主页
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle active" href="#" id="queryDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-search"></i> 查询功能
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('query_task') }}">任务查询</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_device') }}">设备验证</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_cross_model') }}">跨环境模板</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_join_point') }}">交接点查询</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_shelf_model') }}">货架模型查询</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_shelf') }}">货架查询</a></li>
+                            <li><a class="dropdown-item active" href="{{ url_for('query_agv_status') }}">AGV状态查询</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('query_all_agv_status') }}">所有AGV状态</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href=""/search }}">
+                            <i class="bi bi-folder"></i> 模板管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href=""/stats }}">
+                            <i class="bi bi-bar-chart"></i> 统计
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href=""/docs }}">
+                            <i class="bi bi-file-text"></i> 文档
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面头部 -->
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold">
+                        <i class="bi bi-robot"></i> AGV状态查询
+                    </h1>
+                    <p class="lead mb-0">查询AGV运行状态、电池信息和任务记录</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('query_index') }}" class="btn btn-light">
+                        <i class="bi bi-arrow-left"></i> 返回查询主页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div class="container">
+        <!-- 查询表单 -->
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card form-card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">
+                            <i class="bi bi-search"></i> AGV状态查询
+                        </h3>
+                        
+                        <!-- 消息提示 -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <form method="POST" action="{{ url_for('query_agv_status') }}">
+                            <!-- AGV代码输入 -->
+                            <div class="mb-4">
+                                <label for="agv_code" class="form-label fw-bold">
+                                    <i class="bi bi-robot"></i> AGV代码
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="agv_code" 
+                                       name="agv_code" 
+                                       placeholder="请输入AGV代码，如：AGV001"
+                                       required
+                                       autofocus>
+                                <div class="form-text">
+                                    请输入AGV代码查询状态信息
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-search"></i> 查询状态
+                                </button>
+                                <a href="{{ url_for('query_all_agv_status') }}" class="btn btn-view-all btn-lg">
+                                    <i class="bi bi-grid-1x2"></i> 查看所有AGV状态
+                                </a>
+                            </div>
+                        </form>
+                        
+                        <!-- 查询示例 -->
+                        <div class="mt-4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-lightbulb"></i> AGV代码示例
+                            </h5>
+                            <div class="agv-example">
+                                <div class="agv-item" data-code="AGV001">
+                                    <span class="status-indicator status-online"></span>
+                                    <strong>AGV001</strong> - 在线状态
+                                </div>
+                                <div class="agv-item" data-code="AGV002">
+                                    <span class="status-indicator status-online"></span>
+                                    <strong>AGV002</strong> - 在线状态
+                                </div>
+                                <div class="agv-item" data-code="AGV003">
+                                    <span class="status-indicator status-warning"></span>
+                                    <strong>AGV003</strong> - 低电量警告
+                                </div>
+                                <div class="agv-item" data-code="AGV004">
+                                    <span class="status-indicator status-offline"></span>
+                                    <strong>AGV004</strong> - 离线状态
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能说明 -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <i class="bi bi-info-circle"></i> 功能说明
+                        </h4>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="me-3">
+                                        <i class="bi bi-power text-success" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6>在线状态</h6>
+                                        <p class="text-muted mb-0">查看AGV在线/离线状态</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="me-3">
+                                        <i class="bi bi-battery-full text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6>电池信息</h6>
+                                        <p class="text-muted mb-0">查看电池电量和健康状态</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="me-3">
+                                        <i class="bi bi-clock-history text-warning" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6>任务记录</h6>
+                                        <p class="text-muted mb-0">查看最近执行的任务</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="me-3">
+                                        <i class="bi bi-tools text-info" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6>维护信息</h6>
+                                        <p class="text-muted mb-0">查看维护记录和状态</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div class="container mt-4">
+        <div class="text-center text-muted">
+            <p class="mb-0">
+                <i class="bi bi-c-circle"></i> 2024 AGV任务管理系统 | AGV状态查询功能
+            </p>
+            <p class="mb-0">
+                <small>如需帮助，请联系系统管理员</small>
+            </p>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 自动聚焦到输入框
+            const agvInput = document.getElementById('agv_code');
+            if (agvInput) {
+                agvInput.focus();
+            }
+            
+            // 表单提交验证
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const agvCode = agvInput.value.trim();
+                    if (!agvCode) {
+                        e.preventDefault();
+                        alert('请输入AGV代码');
+                        agvInput.focus();
+                    }
+                });
+            }
+            
+            // 示例点击填充
+            const examples = document.querySelectorAll('.agv-item');
+            examples.forEach(example => {
+                example.addEventListener('click', function() {
+                    const code = this.getAttribute('data-code');
+                    if (code && agvInput) {
+                        agvInput.value = code;
+                        agvInput.focus();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

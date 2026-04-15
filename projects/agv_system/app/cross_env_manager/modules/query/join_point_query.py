@@ -2,113 +2,102 @@
 # -*- coding: utf-8 -*-
 """
 交接点查询模块
-基于agv-task-query的query-join-point.php功能
 """
 
-import pymysql
-from typing import Dict, List, Optional, Any
-from ..database.connection import connect_to_server, execute_query_on_server
-from ..database.helpers import parse_server_ips, safe_int, safe_str
+from ..database.helpers import fetch_all, fetch_one
 
-def query_join_point(join_point_id: str = '', qr_content: str = '', 
-                    cross_model: str = '', server_ips_str: str = '') -> Dict[str, Any]:
+def query_join_point_by_code(join_point_code, use_production=False):
     """
-    查询交接点配置信息
-    
-    Args:
-        join_point_id: 交接点ID
-        qr_content: 二维码内容
-        cross_model: 跨环境大任务模板
-        server_ips_str: 服务器IP字符串
-        
-    Returns:
-        查询结果字典
+    根据交接点代码查询交接点信息
     """
-    result = {
-        'success': False,
-        'join_point_id': join_point_id,
-        'qr_content': qr_content,
-        'cross_model': cross_model,
-        'server_ips': [],
-        'data': {},
-        'error': None
-    }
+    query = """
+    SELECT 
+        jp.*,
+        a.area_name,
+        z.zone_name,
+        lt.location_type_name
+    FROM join_point jp
+    LEFT JOIN area a ON jp.area_id = a.id
+    LEFT JOIN zone z ON jp.zone_id = z.id
+    LEFT JOIN location_type lt ON jp.location_type_id = lt.id
+    WHERE jp.join_point_code = %s
+    LIMIT 1
+    """
     
-    # 确定要检查的服务器IP列表
-    server_ips = []
-    if server_ips_str:
-        server_ips = parse_server_ips(server_ips_str)
-    elif cross_model:
-        # 从跨环境模板获取服务器IP
-        from .cross_model_query import get_server_ips_from_cross_model
-        server_ips = get_server_ips_from_cross_model(cross_model)
-    else:
-        # 默认使用所有已知环境IP
-        server_ips = ['31', '32', '17']
-    
-    result['server_ips'] = server_ips
-    
-    # 对每个服务器IP进行查询
-    for ip in server_ips:
-        ip_result = query_join_point_on_server(ip, join_point_id, qr_content, cross_model)
-        result['data'][ip] = ip_result
-    
-    result['success'] = True
-    return result
+    return fetch_one(query, (join_point_code,), use_production)
 
-def query_join_point_on_server(ip_suffix: str, join_point_id: str = '', 
-                              qr_content: str = '', cross_model: str = '') -> Dict[str, Any]:
+def query_join_points_by_area(area_id, use_production=False):
     """
-    在特定服务器上查询交接点信息
-    
-    Args:
-        ip_suffix: 服务器IP后缀
-        join_point_id: 交接点ID
-        qr_content: 二维码内容
-        cross_model: 跨环境大任务模板
-        
-    Returns:
-        查询结果
+    根据区域查询交接点
     """
-    result = {
-        'server_ip': f'10.68.2.{ip_suffix}',
-        'success': False,
-        'data': None,
-        'error': None
-    }
+    query = """
+    SELECT 
+        jp.*,
+        a.area_name,
+        z.zone_name
+    FROM join_point jp
+    LEFT JOIN area a ON jp.area_id = a.id
+    LEFT JOIN zone z ON jp.zone_id = z.id
+    WHERE jp.area_id = %s
+    ORDER BY jp.join_point_code
+    """
     
-    # 连接数据库
-    conn = connect_to_server(ip_suffix)
-    if not conn:
-        result['error'] = f'无法连接到服务器 10.68.2.{ip_suffix}'
-        return result
+    return fetch_all(query, (area_id,), use_production)
+
+def query_join_points_by_zone(zone_id, use_production=False):
+    """
+    根据区域查询交接点
+    """
+    query = """
+    SELECT 
+        jp.*,
+        a.area_name,
+        z.zone_name
+    FROM join_point jp
+    LEFT JOIN area a ON jp.area_id = a.id
+    LEFT JOIN zone z ON jp.zone_id = z.id
+    WHERE jp.zone_id = %s
+    ORDER BY jp.join_point_code
+    """
     
-    try:
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        
-        # 构建查询条件
-        conditions = []
-        if join_point_id:
-            conditions.append(f"id = {safe_int(join_point_id)}")
-        if qr_content:
-            conditions.append(f"qr_content LIKE '%{pymysql.converters.escape_string(qr_content)}%'")
-        if cross_model:
-            conditions.append(f"cross_model LIKE '%{pymysql.converters.escape_string(cross_model)}%'")
-        
-        where_clause = " AND ".join(conditions) if conditions else "1=1"
-        
-        # 查询交接点信息
-        sql = f"SELECT * FROM join_qr_node_info WHERE {where_clause} ORDER BY id"
-        cursor.execute(sql)
-        join_points = cursor.fetchall()
-        
-        result['success'] = True
-        result['data'] = join_points
-        result['count'] = len(join_points)
-        
-    except pymysql.Error as e:
-        result['error'] = f'数据库查询错误: {str(e)}'
-    finally:
-        conn.close()
+    return fetch_all(query, (zone_id,), use_production)
+
+def search_join_points(search_term, limit=100, use_production=False):
+    """
+    搜索交接点
+    """
+    query = """
+    SELECT 
+        jp.*,
+        a.area_name,
+        z.zone_name
+    FROM join_point jp
+    LEFT JOIN area a ON jp.area_id = a.id
+    LEFT JOIN zone z ON jp.zone_id = z.id
+    WHERE jp.join_point_code LIKE %s 
+       OR jp.join_point_name LIKE %s
+       OR jp.description LIKE %s
+    ORDER BY jp.join_point_code
+    LIMIT %s
+    """
     
-    return result
+    search_pattern = f"%{search_term}%"
+    return fetch_all(query, (search_pattern, search_pattern, search_pattern, limit), use_production)
+
+def get_join_point_statistics(use_production=False):
+    """
+    获取交接点统计信息
+    """
+    query = """
+    SELECT 
+        COUNT(*) as total_join_points,
+        COUNT(DISTINCT area_id) as areas_with_join_points,
+        COUNT(DISTINCT zone_id) as zones_with_join_points,
+        AVG(x_coordinate) as avg_x,
+        AVG(y_coordinate) as avg_y,
+        MIN(create_time) as first_created,
+        MAX(create_time) as last_created
+    FROM join_point
+    """
+    
+    return fetch_one(query, use_production=use_production)

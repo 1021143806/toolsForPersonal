@@ -29,7 +29,7 @@ description: 该cross_env_manager项目相关指导操作
 ### 部署流程
 1. 新增依赖时，需要同时更新离线依赖包（vendor_packages3.9目录）
 2. 在部署脚本中添加相应的安装步骤
-3. 更新requirements_py39_fixed.txt文件
+3. 更新requirements.txt文件
 
 ### 配置文件验证
 确认 `config/env.toml` 中内容为：
@@ -59,6 +59,7 @@ charset = "utf8mb4"
 ```
 
 ### 测试验证
+
 在确认可以进行操作后，执行离线部署脚本进行测试：
 ```bash
 cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager

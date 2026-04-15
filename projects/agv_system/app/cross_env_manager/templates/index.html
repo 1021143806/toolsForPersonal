@@ -46,6 +46,50 @@
                             </a>
                         </div>
                     </div>
+                    
+                    <!-- 查询功能入口 -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h5 class="mb-3">
+                            <i class="bi bi-search-heart text-primary"></i> AGV查询功能
+                        </h5>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <a href="/query/task" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-list-task"></i> 任务查询
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="/query/device" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-phone"></i> 设备验证
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="/query/cross_model" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-diagram-3"></i> 模板查询
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="/query/agv_status" class="btn btn-outline-info w-100 mb-2">
+                                    <i class="bi bi-robot"></i> AGV状态
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="/query/join_point" class="btn btn-outline-secondary w-100 mb-2">
+                                    <i class="bi bi-signpost"></i> 交接点
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="/query/shelf_model" class="btn btn-outline-secondary w-100 mb-2">
+                                    <i class="bi bi-box"></i> 货架模型
+                                </a>
+                            </div>
+                            <div class="col-12">
+                                <a href="/query" class="btn btn-primary w-100 mt-2">
+                                    <i class="bi bi-grid-3x3-gap"></i> 所有查询功能
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,6 +117,15 @@
                             <li class="list-group-item">
                                 <i class="bi bi-check-circle text-success"></i> 子任务管理
                             </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> AGV任务查询
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> 设备验证
+                            </li>
+                            <li class="list-group-item">
+                                <i class="bi bi-check-circle text-success"></i> AGV状态监控
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -96,6 +149,9 @@
                             <span class="badge bg-secondary">join_qr_node_info</span>
                             <span class="badge bg-secondary">agv_robot</span>
                             <span class="badge bg-secondary">agv_robot_ext</span>
+                            <span class="badge bg-info">shelf</span>
+                            <span class="badge bg-info">shelf_model</span>
+                            <span class="badge bg-info">fy_cross_task</span>
                         </div>
                         <div class="mt-3">
                             <a href="#" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#dbInfoModal">
@@ -158,6 +214,27 @@
                                 <p>在模板详情页面点击"编辑"按钮，进入编辑页面。</p>
                                 <p>修改完成后点击"保存"，系统会提示确认修改。</p>
                                 <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> 注意：修改操作会直接更新数据库，请谨慎操作。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+                                4. AGV查询功能
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <p>系统提供完整的AGV任务查询功能：</p>
+                                <ul>
+                                    <li><strong>任务查询</strong>：查询AGV任务执行状态</li>
+                                    <li><strong>设备验证</strong>：验证AGV设备配置和状态</li>
+                                    <li><strong>模板查询</strong>：查询跨环境任务模板</li>
+                                    <li><strong>AGV状态</strong>：监控AGV实时运行状态</li>
+                                    <li><strong>交接点查询</strong>：查询AGV交接点信息</li>
+                                    <li><strong>货架模型查询</strong>：查询货架模型配置</li>
+                                </ul>
+                                <p>点击上方查询功能按钮或访问 <a href="/query">查询功能主页</a> 使用所有功能。</p>
                             </div>
                         </div>
                     </div>

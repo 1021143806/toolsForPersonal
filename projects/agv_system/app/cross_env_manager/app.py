@@ -6,9 +6,8 @@ from pymysql.cursors import DictCursor
 # pymysql.install_as_MySQLdb()  # 不再使用MySQLdb兼容层
 
 """
-跨环境任务模板管理Web应用 - 增强版
-整合了agv-task-query的查询功能，提供完整的AGV任务管理平台
-用于查询、修改和插入跨环境任务模板，以及各种AGV相关查询
+跨环境任务模板管理Web应用
+用于查询、修改和插入跨环境任务模板
 支持TOML配置文件和命令行参数指定配置文件
 """
 
@@ -22,27 +21,47 @@ import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-# 尝试导入tomli（Python 3.11+内置tomllib，低版本使用tomli）
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
-
 # 导入查询功能模块
-sys.path.append(os.path.dirname(__file__))
 try:
-    from modules.query.task_query import find_task_by_id, find_cross_task_by_id, check_cross_model
-    from modules.query.device_validation import validate_devices
-    from modules.query.cross_model_query import query_cross_model
-    from modules.query.join_point_query import query_join_point
-    from modules.query.shelf_model_query import query_shelf_model
-    from modules.query.shelf_query import query_shelf
-    from modules.query.agv_status import show_agv_info_one_area
+    from modules.query import (
+        task_query,
+        device_validation,
+        cross_model_query,
+        join_point_query,
+        shelf_model_query,
+        shelf_query,
+        agv_status,
+        join_qr_node_query
+    )
     QUERY_MODULES_AVAILABLE = True
 except ImportError as e:
     print(f"警告: 查询功能模块导入失败: {e}")
-    print("查询功能将不可用，请确保模块文件存在")
+    print("查询功能将不可用")
     QUERY_MODULES_AVAILABLE = False
+    # 创建空模块占位符
+    class EmptyModule:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+    task_query = EmptyModule()
+    device_validation = EmptyModule()
+    cross_model_query = EmptyModule()
+    join_point_query = EmptyModule()
+    shelf_model_query = EmptyModule()
+    shelf_query = EmptyModule()
+    agv_status = EmptyModule()
+    join_qr_node_query = EmptyModule()
+
+# 尝试导入tomli（Python 3.11+内置tomllib，低版本使用tomli）
+try:
+    # 先尝试导入tomli（第三方库，支持Python 3.7+）
+    import tomli as tomllib
+except ImportError:
+    try:
+        # Python 3.11+ 有内置的tomllib
+        import tomllib
+    except ImportError:
+        print("错误: 需要安装tomli库 (pip install tomli)")
+        raise
 
 def load_config(config_path=None):
     """
@@ -333,13 +352,22 @@ def edit_template(template_id):
         WHERE id = %s
         """
         
+        # 辅助函数：安全地将值转换为整数，处理空字符串
+        def safe_int(value, default=0):
+            if value is None or value == '':
+                return default
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return default
+        
         params = (
             form_data.get('model_process_name'),
-            int(form_data.get('enable', 0)),
+            safe_int(form_data.get('enable'), 0),
             form_data.get('request_url'),
-            int(form_data.get('capacity', -1)),
+            safe_int(form_data.get('capacity'), -1),
             form_data.get('target_points'),
-            int(form_data.get('area_id', 0)),
+            safe_int(form_data.get('area_id'), 0),
             form_data.get('target_points_ip'),
             form_data.get('backflow_template_code'),
             form_data.get('comeback_template_code'),
@@ -495,13 +523,13 @@ def copy_template(template_id):
         
         params = (
             temp_model_process_code,
-            form_data.get('model_process_name', original_template.get('model_process_name', '')),
-            safe_int(form_data.get('enable'), original_template.get('enable', 0)),
-            form_data.get('request_url', original_template.get('request_url', '')),
-            safe_int(form_data.get('capacity'), original_template.get('capacity', 0)),
-            form_data.get('target_points', original_template.get('target_points')),
-            safe_int(form_data.get('area_id'), original_template.get('area_id', 0)),
-            form_data.get('target_points_ip', original_template.get('target_points_ip')),
+            form_data.get('model_process_name', original_template['model_process_name']),
+            safe_int(form_data.get('enable'), original_template['enable']),
+            form_data.get('request_url', original_template['request_url']),
+            safe_int(form_data.get('capacity'), original_template['capacity']),
+            form_data.get('target_points', original_template['target_points']),
+            safe_int(form_data.get('area_id'), original_template['area_id']),
+            form_data.get('target_points_ip', original_template['target_points_ip']),
             form_data.get('backflow_template_code', original_template.get('backflow_template_code')),
             form_data.get('comeback_template_code', original_template.get('comeback_template_code')),
             form_data.get('change_charge_template_code', original_template.get('change_charge_template_code')),
@@ -1015,7 +1043,7 @@ def get_template_growth():
             COUNT(*) as count,
             GROUP_CONCAT(id ORDER BY id SEPARATOR ',') as ids
         FROM fy_cross_model_process
-        GROUP BY FLOOR((id - 1) / 10)
+        GROUP BY range_start, range_end
         ORDER BY range_start
         """
         results = execute_query(query)
@@ -1115,6 +1143,311 @@ def get_detailed_analysis():
             'success': False,
             'message': f'服务器错误: {str(e)}'
         }), 500
+
+# ============================================================================
+# 查询功能路由
+# ============================================================================
+
+@app.route('/query')
+def query_index():
+    """查询功能主页"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能模块未正确加载，请检查模块配置', 'error')
+        return redirect(url_for('index'))
+    
+    return render_template('query/index.html')
+
+@app.route('/query/task', methods=['GET', 'POST'])
+def query_task():
+    """任务查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        task_number = request.form.get('task_number', '').strip()
+        if not task_number:
+            flash('请输入任务单号', 'warning')
+            return render_template('query/task_query.html')
+        
+        try:
+            # 使用测试数据库进行查询
+            task_info = task_query.query_task_by_number(task_number, use_production=False)
+            
+            if task_info:
+                return render_template('query/task_result.html', 
+                                     task_info=task_info,
+                                     task_number=task_number)
+            else:
+                flash(f'未找到任务单号: {task_number}', 'info')
+                return render_template('query/task_query.html')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            return render_template('query/task_query.html')
+    
+    return render_template('query/task_query.html')
+
+@app.route('/query/device', methods=['GET', 'POST'])
+def query_device():
+    """设备验证"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        device_sn = request.form.get('device_sn', '').strip()
+        device_type = request.form.get('device_type', 'agv').strip()
+        
+        if not device_sn:
+            flash('请输入设备序列号', 'warning')
+            return render_template('query/device_validation.html')
+        
+        try:
+            if device_type == 'agv':
+                device_info = device_validation.validate_agv_device(device_sn, use_production=False)
+            elif device_type == 'shelf':
+                device_info = device_validation.validate_shelf_device(device_sn, use_production=False)
+            elif device_type == 'rfid':
+                device_info = device_validation.validate_rfid_device(device_sn, use_production=False)
+            else:
+                flash(f'不支持的设备类型: {device_type}', 'error')
+                return render_template('query/device_validation.html')
+            
+            if device_info:
+                return render_template('query/device_result.html',
+                                     device_info=device_info,
+                                     device_sn=device_sn,
+                                     device_type=device_type)
+            else:
+                flash(f'未找到设备: {device_sn}', 'info')
+                return render_template('query/device_validation.html')
+                
+        except Exception as e:
+            flash(f'验证失败: {str(e)}', 'error')
+            return render_template('query/device_validation.html')
+    
+    return render_template('query/device_validation.html')
+
+@app.route('/query/cross_model', methods=['GET', 'POST'])
+def query_cross_model():
+    """跨环境模板查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        model_code = request.form.get('model_code', '').strip()
+        
+        if not model_code:
+            flash('请输入模板代码', 'warning')
+            return render_template('query/cross_model_query.html')
+        
+        try:
+            model_info = cross_model_query.query_cross_model_by_code(model_code, use_production=False)
+            
+            if model_info:
+                # 获取模板详细信息
+                details = cross_model_query.query_cross_model_details(model_info['id'], use_production=False)
+                model_info['details'] = details
+                
+                return render_template('query/cross_model_result.html',
+                                     model_info=model_info,
+                                     model_code=model_code)
+            else:
+                flash(f'未找到模板代码: {model_code}', 'info')
+                return render_template('query/cross_model_query.html')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            return render_template('query/cross_model_query.html')
+    
+    return render_template('query/cross_model_query.html')
+
+@app.route('/query/join_point', methods=['GET', 'POST'])
+def query_join_point():
+    """交接点查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        join_point_code = request.form.get('join_point_code', '').strip()
+        
+        if not join_point_code:
+            flash('请输入交接点代码', 'warning')
+            return render_template('query/join_point_query.html')
+        
+        try:
+            join_point_info = join_point_query.query_join_point_by_code(join_point_code, use_production=False)
+            
+            if join_point_info:
+                return render_template('query/join_point_result.html',
+                                     join_point_info=join_point_info,
+                                     join_point_code=join_point_code)
+            else:
+                flash(f'未找到交接点代码: {join_point_code}', 'info')
+                return render_template('query/join_point_query.html')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            return render_template('query/join_point_query.html')
+    
+    return render_template('query/join_point_query.html')
+
+@app.route('/query/shelf_model', methods=['GET', 'POST'])
+def query_shelf_model():
+    """货架模型查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        model_code = request.form.get('model_code', '').strip()
+        
+        if not model_code:
+            flash('请输入货架模型代码', 'warning')
+            return render_template('query/shelf_model_query.html')
+        
+        try:
+            model_info = shelf_model_query.query_shelf_model_by_code(model_code, use_production=False)
+            
+            if model_info:
+                return render_template('query/shelf_model_result.html',
+                                     model_info=model_info,
+                                     model_code=model_code)
+            else:
+                flash(f'未找到货架模型代码: {model_code}', 'info')
+                return render_template('query/shelf_model_query.html')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            return render_template('query/shelf_model_query.html')
+    
+    return render_template('query/shelf_model_query.html')
+
+@app.route('/query/shelf', methods=['GET', 'POST'])
+def query_shelf():
+    """货架查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    shelves = []
+    
+    if request.method == 'GET' and request.args:
+        # GET请求处理查询参数
+        shelf_id = request.args.get('shelf_id', '').strip()
+        shelf_code = request.args.get('shelf_code', '').strip()
+        shelf_model_id = request.args.get('shelf_model_id', '').strip()
+        status = request.args.get('status', '').strip()
+        location = request.args.get('location', '').strip()
+        limit = int(request.args.get('limit', '50'))
+        
+        try:
+            # 构建查询条件
+            conditions = []
+            params = []
+            
+            if shelf_id:
+                conditions.append("s.id = %s")
+                params.append(shelf_id)
+            
+            if shelf_code:
+                conditions.append("s.shelf_code LIKE %s")
+                params.append(f"%{shelf_code}%")
+            
+            if shelf_model_id:
+                conditions.append("s.shelf_model_id = %s")
+                params.append(shelf_model_id)
+            
+            if status:
+                conditions.append("s.status = %s")
+                params.append(status)
+            
+            if location:
+                conditions.append("s.location LIKE %s")
+                params.append(f"%{location}%")
+            
+            # 构建查询SQL
+            query = """
+            SELECT 
+                s.*,
+                sm.model_name,
+                sm.model_code as shelf_model_code
+            FROM shelf s
+            LEFT JOIN shelf_model sm ON s.shelf_model_id = sm.id
+            """
+            
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+            
+            query += " ORDER BY s.id DESC LIMIT %s"
+            params.append(limit)
+            
+            # 执行查询
+            from modules.database.helpers import fetch_all
+            shelves = fetch_all(query, tuple(params), use_production=False)
+            
+            if not shelves:
+                flash('未找到符合条件的货架记录', 'info')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            print(f"货架查询错误: {e}")
+    
+    return render_template('query/shelf_query.html', shelves=shelves)
+
+@app.route('/query/agv_status', methods=['GET', 'POST'])
+def query_agv_status():
+    """AGV状态查询"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    if request.method == 'POST':
+        agv_code = request.form.get('agv_code', '').strip()
+        
+        if not agv_code:
+            flash('请输入AGV代码', 'warning')
+            return render_template('query/agv_status_query.html')
+        
+        try:
+            agv_info = agv_status.query_agv_status_by_code(agv_code, use_production=False)
+            
+            if agv_info:
+                # 获取AGV的最近任务
+                tasks = agv_status.query_agv_tasks(agv_info['id'], limit=10, use_production=False)
+                agv_info['recent_tasks'] = tasks
+                
+                # 获取电池信息
+                battery_info = agv_status.query_agv_battery_info(agv_info['id'], use_production=False)
+                agv_info['battery_info'] = battery_info
+                
+                return render_template('query/agv_status_result.html',
+                                     agv_info=agv_info,
+                                     agv_code=agv_code)
+            else:
+                flash(f'未找到AGV代码: {agv_code}', 'info')
+                return render_template('query/agv_status_query.html')
+                
+        except Exception as e:
+            flash(f'查询失败: {str(e)}', 'error')
+            return render_template('query/agv_status_query.html')
+    
+    return render_template('query/agv_status_query.html')
+
+@app.route('/query/agv_status/all')
+def query_all_agv_status():
+    """查询所有AGV状态"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    try:
+        all_agvs = agv_status.query_all_agv_status(limit=100, use_production=False)
+        online_agvs = agv_status.query_online_agvs(use_production=False)
+        statistics = agv_status.get_agv_statistics(use_production=False)
+        
+        return render_template('query/all_agv_status.html',
+                             all_agvs=all_agvs,
+                             online_agvs=online_agvs,
+                             statistics=statistics)
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('query_agv_status'))
 
 if __name__ == '__main__':
     # 创建模板目录
