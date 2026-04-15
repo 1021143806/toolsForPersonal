@@ -1449,6 +1449,166 @@ def query_all_agv_status():
         flash(f'查询失败: {str(e)}', 'error')
         return redirect(url_for('query_agv_status'))
 
+# ============================================================================
+# join_qr_node_info 相关路由
+# ============================================================================
+
+@app.route('/join_qr_nodes')
+def list_join_qr_nodes():
+    """显示所有join_qr_node_info记录"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能不可用', 'error')
+        return render_template('join_qr_nodes.html', nodes=[])
+    
+    try:
+        nodes = join_qr_node_query.get_all_join_qr_nodes()
+        stats = join_qr_node_query.get_join_qr_node_stats()
+        
+        return render_template('join_qr_nodes.html', 
+                             nodes=nodes or [], 
+                             stats=stats or {})
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return render_template('join_qr_nodes.html', nodes=[], stats={})
+
+@app.route('/join_qr_nodes/search')
+def search_join_qr_nodes():
+    """搜索join_qr_node_info记录"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    search_term = request.args.get('search_term', '').strip()
+    if not search_term:
+        return jsonify({'success': False, 'message': '请输入搜索关键词'}), 400
+    
+    try:
+        nodes = join_qr_node_query.search_join_qr_nodes(search_term)
+        return jsonify({
+            'success': True,
+            'nodes': nodes or [],
+            'count': len(nodes) if nodes else 0
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'搜索失败: {str(e)}'}), 500
+
+@app.route('/join_qr_nodes/<int:node_id>')
+def view_join_qr_node(node_id):
+    """查看join_qr_node_info记录详情"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能不可用', 'error')
+        return redirect(url_for('list_join_qr_nodes'))
+    
+    try:
+        node = join_qr_node_query.get_join_qr_node_by_id(node_id)
+        if not node:
+            flash(f'未找到ID为 {node_id} 的记录', 'error')
+            return redirect(url_for('list_join_qr_nodes'))
+        
+        return render_template('join_qr_node_detail.html', node=node)
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('list_join_qr_nodes'))
+
+@app.route('/join_qr_nodes/<int:node_id>/edit', methods=['GET', 'POST'])
+def edit_join_qr_node(node_id):
+    """编辑join_qr_node_info记录"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能不可用', 'error')
+        return redirect(url_for('list_join_qr_nodes'))
+    
+    if request.method == 'POST':
+        try:
+            node_data = {
+                'area_id': request.form.get('area_id'),
+                'type': request.form.get('type'),
+                'qr_content': request.form.get('qr_content'),
+                'environment_ip': request.form.get('environment_ip'),
+                'enable': request.form.get('enable', 1),
+                'join_area': request.form.get('join_area'),
+                'other_config': request.form.get('other_config'),
+                'last_using_time': request.form.get('last_using_time')
+            }
+            
+            result = join_qr_node_query.update_join_qr_node(node_id, node_data)
+            if result:
+                flash('记录更新成功', 'success')
+            else:
+                flash('记录更新失败', 'error')
+            
+            return redirect(url_for('view_join_qr_node', node_id=node_id))
+        except Exception as e:
+            flash(f'更新失败: {str(e)}', 'error')
+            return redirect(url_for('edit_join_qr_node', node_id=node_id))
+    
+    try:
+        node = join_qr_node_query.get_join_qr_node_by_id(node_id)
+        if not node:
+            flash(f'未找到ID为 {node_id} 的记录', 'error')
+            return redirect(url_for('list_join_qr_nodes'))
+        
+        return render_template('edit_join_qr_node.html', node=node)
+    except Exception as e:
+        flash(f'查询失败: {str(e)}', 'error')
+        return redirect(url_for('list_join_qr_nodes'))
+
+@app.route('/join_qr_nodes/add', methods=['GET', 'POST'])
+def add_join_qr_node():
+    """添加新的join_qr_node_info记录"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能不可用', 'error')
+        return redirect(url_for('list_join_qr_nodes'))
+    
+    if request.method == 'POST':
+        try:
+            node_data = {
+                'area_id': request.form.get('area_id'),
+                'type': request.form.get('type'),
+                'qr_content': request.form.get('qr_content'),
+                'environment_ip': request.form.get('environment_ip'),
+                'enable': request.form.get('enable', 1),
+                'join_area': request.form.get('join_area'),
+                'other_config': request.form.get('other_config'),
+                'last_using_time': request.form.get('last_using_time')
+            }
+            
+            result = join_qr_node_query.insert_join_qr_node(node_data)
+            if result:
+                flash('记录添加成功', 'success')
+                return redirect(url_for('list_join_qr_nodes'))
+            else:
+                flash('记录添加失败', 'error')
+        except Exception as e:
+            flash(f'添加失败: {str(e)}', 'error')
+    
+    return render_template('add_join_qr_node.html')
+
+@app.route('/api/join_qr_nodes/<int:node_id>/delete', methods=['DELETE'])
+def delete_join_qr_node(node_id):
+    """删除join_qr_node_info记录"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    try:
+        result = join_qr_node_query.delete_join_qr_node(node_id)
+        if result:
+            return jsonify({'success': True, 'message': '记录删除成功'})
+        else:
+            return jsonify({'success': False, 'message': '记录删除失败'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
+
+@app.route('/api/join_qr_nodes/stats')
+def get_join_qr_node_stats_api():
+    """获取join_qr_node_info统计信息API"""
+    if not QUERY_MODULES_AVAILABLE:
+        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+    
+    try:
+        stats = join_qr_node_query.get_join_qr_node_stats()
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取统计信息失败: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # 创建模板目录
     os.makedirs('templates', exist_ok=True)
