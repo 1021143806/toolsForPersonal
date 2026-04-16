@@ -136,6 +136,121 @@
         .version-badge {
             font-size: 0.8rem;
         }
+        
+        /* 代码编辑器样式 */
+        .code-editor-container {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            overflow: hidden;
+        }
+        
+        .code-editor-toolbar {
+            background: var(--bg-color);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .code-editor {
+            display: flex;
+            min-height: 400px;
+            max-height: 600px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .line-numbers {
+            background: var(--bg-color);
+            padding: 10px 8px;
+            border-right: 1px solid var(--border-color);
+            text-align: right;
+            color: var(--text-color);
+            opacity: 0.7;
+            user-select: none;
+            min-width: 50px;
+        }
+        
+        .line-number {
+            padding: 0 4px;
+            height: 20px;
+            line-height: 20px;
+        }
+        
+        .code-content {
+            flex: 1;
+            margin: 0;
+            padding: 10px;
+            background: var(--input-bg);
+            color: var(--input-color);
+            white-space: pre;
+            overflow-x: auto;
+            outline: none;
+            tab-size: 4;
+        }
+        
+        /* JSON语法高亮 */
+        .json-key {
+            color: #d73a49;
+            font-weight: bold;
+        }
+        
+        .json-string {
+            color: #032f62;
+        }
+        
+        .json-number {
+            color: #005cc5;
+        }
+        
+        .json-boolean {
+            color: #6f42c1;
+        }
+        
+        .json-null {
+            color: #6a737d;
+        }
+        
+        .json-comment {
+            color: #6a737d;
+            font-style: italic;
+        }
+        
+        .json-punctuation {
+            color: #24292e;
+        }
+        
+        [data-bs-theme="dark"] .json-key {
+            color: #ff7b72;
+        }
+        
+        [data-bs-theme="dark"] .json-string {
+            color: #a5d6ff;
+        }
+        
+        [data-bs-theme="dark"] .json-number {
+            color: #79c0ff;
+        }
+        
+        [data-bs-theme="dark"] .json-boolean {
+            color: #d2a8ff;
+        }
+        
+        [data-bs-theme="dark"] .json-null {
+            color: #8b949e;
+        }
+        
+        [data-bs-theme="dark"] .json-comment {
+            color: #8b949e;
+        }
+        
+        [data-bs-theme="dark"] .json-punctuation {
+            color: #c9d1d9;
+        }
     </style>
 </head>
 <body>
@@ -192,8 +307,36 @@
             <!-- 源文件编辑器 -->
             <div class="editor-content" id="source-editor">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">配置文件内容 (config.js)</label>
-                    <textarea class="form-control config-textarea" id="config-content" rows="25" 
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold mb-0">配置文件内容 (config.js)</label>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" id="toggle-highlight">
+                                <i class="bi bi-code-square me-1"></i>语法高亮
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" id="copy-code">
+                                <i class="bi bi-clipboard me-1"></i>复制
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 代码编辑器容器 -->
+                    <div class="code-editor-container" id="code-editor-container">
+                        <div class="code-editor-toolbar">
+                            <span class="badge bg-primary">JavaScript</span>
+                            <span class="badge bg-secondary" id="line-count">行数: 0</span>
+                        </div>
+                        <div class="code-editor" id="code-editor">
+                            <div class="line-numbers" id="line-numbers">
+                                <div class="line-number">1</div>
+                            </div>
+                            <pre class="code-content" id="code-content" contenteditable="true" 
+                                 spellcheck="false" autocorrect="off" autocapitalize="off">
+                            </pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 备用文本区域（隐藏） -->
+                    <textarea class="form-control config-textarea d-none" id="config-content" rows="25" 
                               placeholder="请输入配置文件内容..."></textarea>
                     <div class="json-error" id="json-error"></div>
                 </div>
@@ -272,6 +415,7 @@
         // 全局变量
         let currentConfig = '';
         let backups = [];
+        let highlightEnabled = true;
         
         // DOM元素
         const configContent = document.getElementById('config-content');
@@ -279,6 +423,11 @@
         const backupList = document.getElementById('backup-list');
         const statusMessage = document.getElementById('status-message');
         const statusText = document.getElementById('status-text');
+        const codeContent = document.getElementById('code-content');
+        const lineNumbers = document.getElementById('line-numbers');
+        const lineCount = document.getElementById('line-count');
+        const toggleHighlight = document.getElementById('toggle-highlight');
+        const copyCode = document.getElementById('copy-code');
         
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -308,11 +457,30 @@
             document.getElementById('export-config').addEventListener('click', exportConfig);
             document.getElementById('import-config').addEventListener('click', showImportModal);
             document.getElementById('confirm-import').addEventListener('click', importConfig);
+            document.getElementById('toggle-highlight').addEventListener('click', toggleSyntaxHighlight);
+            document.getElementById('copy-code').addEventListener('click', copyCodeToClipboard);
             
             // 配置文件变化事件
             configContent.addEventListener('input', function() {
                 clearError();
+                syncCodeEditor();
             });
+            
+            // 代码编辑器事件
+            codeContent.addEventListener('input', function() {
+                updateLineNumbers();
+                syncTextArea();
+                if (highlightEnabled) {
+                    highlightSyntax();
+                }
+            });
+            
+            codeContent.addEventListener('scroll', function() {
+                lineNumbers.scrollTop = codeContent.scrollTop;
+            });
+            
+            // 初始化代码编辑器
+            initCodeEditor();
         }
         
         // 切换标签页
@@ -341,8 +509,15 @@
                 const response = await fetch('/addtask/config');
                 if (response.ok) {
                     const content = await response.text();
-                    // 直接使用文件内容
+                    // 更新文本区域和代码编辑器
                     configContent.value = content;
+                    syncCodeEditor();
+                    updateLineNumbers();
+                    
+                    if (highlightEnabled) {
+                        highlightSyntax();
+                    }
+                    
                     showStatus('配置加载成功', 'success');
                 } else {
                     throw new Error('无法加载配置');
@@ -485,6 +660,13 @@
                         
                         const formattedJson = JSON.stringify(JSON.parse(jsonContent, (key, value) => value), null, 2);
                         configContent.value = `const config = ${formattedJson};`;
+                        syncCodeEditor();
+                        updateLineNumbers();
+                        
+                        if (highlightEnabled) {
+                            highlightSyntax();
+                        }
+                        
                         showStatus('格式化完成（已兼容注释）', 'success');
                     }
                 } catch (error) {
@@ -731,6 +913,109 @@
                 themeIcon.className = 'bi bi-moon-stars me-2';
                 themeText.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
             }
+        }
+        
+        // 初始化代码编辑器
+        function initCodeEditor() {
+            // 同步文本区域内容到代码编辑器
+            syncCodeEditor();
+            updateLineNumbers();
+            
+            if (highlightEnabled) {
+                highlightSyntax();
+            }
+        }
+        
+        // 同步文本区域到代码编辑器
+        function syncCodeEditor() {
+            codeContent.textContent = configContent.value;
+        }
+        
+        // 同步代码编辑器到文本区域
+        function syncTextArea() {
+            configContent.value = codeContent.textContent;
+        }
+        
+        // 更新行号
+        function updateLineNumbers() {
+            const lines = codeContent.textContent.split('\\n').length;
+            lineCount.textContent = `行数: ${lines}`;
+            
+            // 更新行号显示
+            lineNumbers.innerHTML = '';
+            for (let i = 1; i <= lines; i++) {
+                const lineNumber = document.createElement('div');
+                lineNumber.className = 'line-number';
+                lineNumber.textContent = i;
+                lineNumbers.appendChild(lineNumber);
+            }
+        }
+        
+        // 语法高亮
+        function highlightSyntax() {
+            if (!highlightEnabled) return;
+            
+            const text = codeContent.textContent;
+            let highlighted = text;
+            
+            // JSON键名（双引号包围的字符串后跟冒号）
+            highlighted = highlighted.replace(/"([^"\\]|\\.)*"\s*:/g, '<span class="json-key">$&</span>');
+            
+            // 字符串值
+            highlighted = highlighted.replace(/"([^"\\]|\\.)*"/g, function(match) {
+                // 跳过已经是键名的字符串
+                if (match.endsWith('":')) {
+                    return match;
+                }
+                return '<span class="json-string">' + match + '</span>';
+            });
+            
+            // 数字
+            highlighted = highlighted.replace(/\b\d+\.?\d*\b/g, '<span class="json-number">$&</span>');
+            
+            // 布尔值
+            highlighted = highlighted.replace(/\b(true|false)\b/g, '<span class="json-boolean">$&</span>');
+            
+            // null值
+            highlighted = highlighted.replace(/\bnull\b/g, '<span class="json-null">$&</span>');
+            
+            // 注释
+            highlighted = highlighted.replace(/\/\/.*$/gm, '<span class="json-comment">$&</span>');
+            highlighted = highlighted.replace(/\/\*[\\s\\S]*?\*\//g, '<span class="json-comment">$&</span>');
+            
+            // 标点符号
+            highlighted = highlighted.replace(/[{}\[\],:]/g, '<span class="json-punctuation">$&</span>');
+            
+            // 设置高亮内容
+            codeContent.innerHTML = highlighted;
+        }
+        
+        // 切换语法高亮
+        function toggleSyntaxHighlight() {
+            highlightEnabled = !highlightEnabled;
+            
+            const button = document.getElementById('toggle-highlight');
+            if (highlightEnabled) {
+                button.innerHTML = '<i class="bi bi-code-square me-1"></i>关闭高亮';
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                highlightSyntax();
+            } else {
+                button.innerHTML = '<i class="bi bi-code-square me-1"></i>语法高亮';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+                codeContent.innerHTML = codeContent.textContent;
+            }
+        }
+        
+        // 复制代码到剪贴板
+        function copyCodeToClipboard() {
+            const text = configContent.value;
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('代码已复制到剪贴板', 'success');
+            }).catch(err => {
+                showStatus('复制失败: ' + err.message, 'error');
+            });
         }
         
         // 显示状态信息
