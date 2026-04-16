@@ -12,11 +12,30 @@
             --success-color: #28a745;
             --warning-color: #ffc107;
             --danger-color: #dc3545;
+            
+            /* 亮色主题变量 */
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --input-bg: #ffffff;
+            --input-color: #212529;
+        }
+        
+        [data-bs-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e9ecef;
+            --border-color: #495057;
+            --input-bg: #2d2d2d;
+            --input-color: #e9ecef;
         }
         
         body {
-            background-color: #f8f9fa;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .header {
@@ -28,11 +47,12 @@
         }
         
         .editor-container {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 2rem;
             margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
         }
         
         .editor-tabs {
@@ -67,13 +87,30 @@
             font-family: 'Courier New', monospace;
             font-size: 14px;
             line-height: 1.4;
+            background-color: var(--input-bg);
+            color: var(--input-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .form-control {
+            background-color: var(--input-bg);
+            color: var(--input-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .form-control:focus {
+            background-color: var(--input-bg);
+            color: var(--input-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(74, 108, 247, 0.25);
         }
         
         .form-section {
-            background: #f8f9fa;
+            background: var(--bg-color);
             padding: 1.5rem;
             border-radius: 8px;
             margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
         }
         
         .backup-list {
@@ -85,8 +122,9 @@
             border-left: 4px solid var(--primary-color);
             padding: 0.75rem;
             margin-bottom: 0.5rem;
-            background: white;
+            background: var(--card-bg);
             border-radius: 4px;
+            border: 1px solid var(--border-color);
         }
         
         .json-error {
@@ -116,6 +154,9 @@
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-info" id="refresh-btn">
                     <i class="bi bi-arrow-clockwise me-2"></i>刷新
+                </button>
+                <button class="btn btn-outline-secondary" id="theme-toggle">
+                    <i class="bi bi-moon-stars me-2"></i>暗黑模式
                 </button>
                 <button class="btn btn-outline-secondary" id="help-btn">
                     <i class="bi bi-question-circle me-2"></i>帮助
@@ -241,6 +282,7 @@
         
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
             loadConfig();
             loadBackups();
             setupEventListeners();
@@ -261,6 +303,7 @@
             document.getElementById('validate-btn').addEventListener('click', validateConfig);
             document.getElementById('format-btn').addEventListener('click', formatConfig);
             document.getElementById('refresh-btn').addEventListener('click', refreshPage);
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
             document.getElementById('create-backup').addEventListener('click', createManualBackup);
             document.getElementById('export-config').addEventListener('click', exportConfig);
             document.getElementById('import-config').addEventListener('click', showImportModal);
@@ -357,8 +400,43 @@
                     throw new Error('找不到配置对象');
                 }
                 
-                JSON.parse(jsonMatch[1]);
-                showStatus('JSON格式正确', 'success');
+                // 移除注释以兼容带注释的JSON
+                let jsonContent = jsonMatch[1];
+                
+                // 更精确的注释移除方法：逐行处理
+                const lines = jsonContent.split('\\n');
+                const cleanedLines = [];
+                
+                for (let line of lines) {
+                    // 检查是否是真正的注释行（不在字符串内）
+                    if (line.trim().startsWith('//') && !line.includes('http://') && !line.includes('https://')) {
+                        // 跳过注释行
+                        continue;
+                    }
+                    // 移除行内的注释（但保留URL）
+                    line = line.replace(/\/\/.*?(?=\\n|$)/g, function(match) {
+                        if (match.includes('http://') || match.includes('https://')) {
+                            return match;
+                        }
+                        return '';
+                    });
+                    cleanedLines.push(line);
+                }
+                
+                jsonContent = cleanedLines.join('\\n');
+                
+                // 移除多行注释
+                jsonContent = jsonContent.replace(/\/\*[\s\S]*?\*\//g, '');
+                // 移除控制字符和无效字符
+                jsonContent = jsonContent.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
+                // 移除空行和多余空格
+                jsonContent = jsonContent.replace(/^\s*\n/gm, '').trim();
+                
+                JSON.parse(jsonContent, (key, value) => {
+                    // 宽松的JSON解析，忽略控制字符错误
+                    return value;
+                });
+                showStatus('JSON格式正确（已兼容注释）', 'success');
                 return true;
             } catch (error) {
                 showError('JSON格式错误: ' + error.message);
@@ -373,9 +451,41 @@
                     const configText = configContent.value;
                     const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
                     if (jsonMatch) {
-                        const formattedJson = JSON.stringify(JSON.parse(jsonMatch[1]), null, 2);
+                        // 移除注释以兼容带注释的JSON
+                        let jsonContent = jsonMatch[1];
+                        
+                        // 更精确的注释移除方法：逐行处理
+                        const lines = jsonContent.split('\\n');
+                        const cleanedLines = [];
+                        
+                        for (let line of lines) {
+                            // 检查是否是真正的注释行（不在字符串内）
+                            if (line.trim().startsWith('//') && !line.includes('http://') && !line.includes('https://')) {
+                                // 跳过注释行
+                                continue;
+                            }
+                            // 移除行内的注释（但保留URL）
+                            line = line.replace(/\/\/.*?(?=\\n|$)/g, function(match) {
+                                if (match.includes('http://') || match.includes('https://')) {
+                                    return match;
+                                }
+                                return '';
+                            });
+                            cleanedLines.push(line);
+                        }
+                        
+                        jsonContent = cleanedLines.join('\\n');
+                        
+                        // 移除多行注释
+                        jsonContent = jsonContent.replace(/\/\*[\s\S]*?\*\//g, '');
+                        // 移除控制字符和无效字符
+                        jsonContent = jsonContent.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
+                        // 移除空行和多余空格
+                        jsonContent = jsonContent.replace(/^\s*\n/gm, '').trim();
+                        
+                        const formattedJson = JSON.stringify(JSON.parse(jsonContent, (key, value) => value), null, 2);
                         configContent.value = `const config = ${formattedJson};`;
-                        showStatus('格式化完成', 'success');
+                        showStatus('格式化完成（已兼容注释）', 'success');
                     }
                 } catch (error) {
                     showError('格式化失败: ' + error.message);
@@ -582,6 +692,45 @@
         function refreshPage() {
             loadConfig();
             loadBackups();
+        }
+        
+        // 切换主题
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('config-editor-theme', newTheme);
+            
+            // 更新按钮图标和文本
+            const themeIcon = document.querySelector('#theme-toggle i');
+            const themeText = document.querySelector('#theme-toggle');
+            
+            if (newTheme === 'dark') {
+                themeIcon.className = 'bi bi-sun me-2';
+                themeText.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
+            } else {
+                themeIcon.className = 'bi bi-moon-stars me-2';
+                themeText.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
+            }
+        }
+        
+        // 初始化主题
+        function initTheme() {
+            const savedTheme = localStorage.getItem('config-editor-theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            
+            // 更新按钮状态
+            const themeIcon = document.querySelector('#theme-toggle i');
+            const themeText = document.querySelector('#theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                themeIcon.className = 'bi bi-sun me-2';
+                themeText.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
+            } else {
+                themeIcon.className = 'bi bi-moon-stars me-2';
+                themeText.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
+            }
         }
         
         // 显示状态信息
