@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AGV任务配置管理</title>
+    <title>AGV任务配置管理 - 可视化编辑器</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
@@ -12,8 +12,6 @@
             --success-color: #28a745;
             --warning-color: #ffc107;
             --danger-color: #dc3545;
-            
-            /* 亮色主题变量 */
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #212529;
@@ -50,14 +48,14 @@
             background: var(--card-bg);
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
+            padding: 1.5rem;
             margin-bottom: 2rem;
             border: 1px solid var(--border-color);
         }
         
         .editor-tabs {
             border-bottom: 1px solid #dee2e6;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
         
         .tab-btn {
@@ -84,36 +82,112 @@
             display: block;
         }
         
-        .config-textarea {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            background-color: var(--input-bg);
-            color: var(--input-color);
-            border: 1px solid var(--border-color);
-            resize: vertical;
-            tab-size: 4;
+        /* 左侧区域列表 */
+        .area-tree {
+            max-height: 500px;
+            overflow-y: auto;
         }
         
-        .form-control {
-            background-color: var(--input-bg);
-            color: var(--input-color);
-            border: 1px solid var(--border-color);
+        .area-item {
+            padding: 0.5rem 0.75rem;
+            margin: 0.25rem 0;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid transparent;
+            transition: all 0.2s;
         }
         
-        .form-control:focus {
-            background-color: var(--input-bg);
-            color: var(--input-color);
+        .area-item:hover {
+            background-color: rgba(74, 108, 247, 0.1);
+        }
+        
+        .area-item.active {
+            background-color: var(--primary-color);
+            color: white;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(74, 108, 247, 0.25);
         }
         
+        .area-actions {
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .area-item:hover .area-actions {
+            opacity: 1;
+        }
+        
+        /* 任务列表 */
+        .task-list {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            background-color: var(--bg-color);
+        }
+        
+        .task-item {
+            padding: 0.5rem 0.75rem;
+            margin: 0.25rem 0;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            background-color: var(--card-bg);
+        }
+        
+        .task-item:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(74, 108, 247, 0.05);
+        }
+        
+        .task-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .task-item.active .text-muted {
+            color: rgba(255,255,255,0.7) !important;
+        }
+        
+        /* 表单样式 */
         .form-section {
             background: var(--bg-color);
             padding: 1.5rem;
             border-radius: 8px;
             margin-bottom: 1rem;
             border: 1px solid var(--border-color);
+        }
+        
+        .path-options-table {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .path-options-table th {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .config-textarea {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background-color: var(--input-bg);
+            color: var(--input-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .json-error, .url-error {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
         }
         
         .backup-list {
@@ -130,86 +204,13 @@
             border: 1px solid var(--border-color);
         }
         
-        .json-error {
-            color: var(--danger-color);
-            font-size: 14px;
-            margin-top: 5px;
-        }
-        
         .version-badge {
             font-size: 0.8rem;
         }
         
-        /* 纯文本编辑器样式 */
-        .text-editor-container {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--card-bg);
-            overflow: hidden;
-        }
-        
-        .text-editor-toolbar {
-            background: var(--bg-color);
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .text-editor-wrapper {
-            display: flex;
-            min-height: 400px;
-            max-height: 600px;
-            overflow: hidden;
-        }
-        
-        .line-numbers {
-            background: var(--bg-color);
-            padding: 10px 8px;
-            border-right: 1px solid var(--border-color);
-            text-align: right;
-            color: var(--text-color);
-            opacity: 0.7;
-            user-select: none;
-            min-width: 50px;
-            overflow-y: hidden;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        
-        .line-number {
-            padding: 0 4px;
-            height: 21px;  /* 与textarea行高匹配 */
-            line-height: 21px;
-        }
-        
-        .editor-textarea {
-            flex: 1;
-            margin: 0;
-            padding: 10px;
-            background: var(--input-bg);
-            color: var(--input-color);
-            border: none;
-            outline: none;
-            resize: none;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            tab-size: 4;
-            white-space: pre;
-            overflow-x: auto;
-            overflow-y: scroll;
-        }
-        
-        /* 同步滚动 */
-        .text-editor-wrapper {
-            position: relative;
-        }
-        
-        .line-numbers {
-            overflow: hidden;
+        .btn-icon {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
         }
     </style>
 </head>
@@ -218,7 +219,7 @@
         <!-- 页头 -->
         <div class="header text-center">
             <h1><i class="bi bi-gear me-2"></i>AGV任务配置管理系统</h1>
-            <p class="mb-0">可视化配置编辑与版本管理</p>
+            <p class="mb-0">可视化配置编辑 · 版本管理 · URL校验</p>
         </div>
         
         <!-- 导航 -->
@@ -228,13 +229,10 @@
             </a>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-info" id="refresh-btn">
-                    <i class="bi bi-arrow-clockwise me-2"></i>刷新
+                    <i class="bi bi-arrow-clockwise me-2"></i>重置演示数据
                 </button>
                 <button class="btn btn-outline-secondary" id="theme-toggle">
                     <i class="bi bi-moon-stars me-2"></i>暗黑模式
-                </button>
-                <button class="btn btn-outline-secondary" id="help-btn">
-                    <i class="bi bi-question-circle me-2"></i>帮助
                 </button>
             </div>
         </div>
@@ -253,58 +251,148 @@
             
             <!-- 可视化编辑器 -->
             <div class="editor-content active" id="visual-editor">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    可视化编辑器正在开发中，当前请使用源文件编辑模式
+                <div class="row g-3">
+                    <!-- 左侧区域导航 -->
+                    <div class="col-md-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>区域列表</h5>
+                            <button class="btn btn-sm btn-outline-primary" id="add-area-btn">
+                                <i class="bi bi-plus-lg"></i> 新增区域
+                            </button>
+                        </div>
+                        <div class="area-tree" id="area-tree">
+                            <!-- 动态渲染区域 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧任务与表单 -->
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0" id="current-area-title">请选择一个区域</h5>
+                            <button class="btn btn-sm btn-outline-success" id="add-task-btn" disabled>
+                                <i class="bi bi-plus-lg"></i> 新增任务
+                            </button>
+                        </div>
+                        
+                        <!-- 任务列表 -->
+                        <div class="task-list mb-3" id="task-list">
+                            <div class="text-center py-3 text-muted">
+                                <i class="bi bi-arrow-left me-2"></i>请先选择左侧区域
+                            </div>
+                        </div>
+                        
+                        <!-- 任务编辑表单 -->
+                        <div class="form-section" id="task-form-container" style="display: none;">
+                            <h6 class="mb-3"><i class="bi bi-pencil-square me-2"></i>编辑任务</h6>
+                            <form id="task-form">
+                                <input type="hidden" id="task-original-name">
+                                <div class="mb-3">
+                                    <label class="form-label">任务名称</label>
+                                    <input type="text" class="form-control" id="task-name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Base URL</label>
+                                    <input type="text" class="form-control" id="task-base-url" required placeholder="http://...">
+                                    <div class="url-error" id="url-error"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Code</label>
+                                    <input type="text" class="form-control" id="task-code" required>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="task-requires-shelf">
+                                            <label class="form-check-label" for="task-requires-shelf">需要货架</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="task-requires-path">
+                                            <label class="form-check-label" for="task-requires-path">需要指定路径</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 容量字段优化：可手动启用 -->
+                                <div class="mb-3 border rounded p-3 bg-light bg-opacity-10">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable-capacity">
+                                        <label class="form-check-label" for="enable-capacity">启用容量限制 (capacity)</label>
+                                    </div>
+                                    <div id="capacity-input-wrapper" style="display: none; margin-top: 10px;">
+                                        <label class="form-label">容量值</label>
+                                        <input type="number" class="form-control" id="task-capacity" placeholder="例如: 10">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" id="path-options-section">
+                                    <label class="form-label">路径选项</label>
+                                    <div class="path-options-table">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Value</th>
+                                                    <th>Label</th>
+                                                    <th style="width: 50px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="path-options-body">
+                                                <!-- 动态行 -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-path-option">
+                                        <i class="bi bi-plus"></i> 添加选项
+                                    </button>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-lg me-2"></i>保存任务
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" id="delete-task-btn">
+                                        <i class="bi bi-trash me-2"></i>删除任务
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="cancel-task-btn">
+                                        取消
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-center py-4">
-                    <button class="btn btn-primary" onclick="switchToSource()">
-                        <i class="bi bi-code-slash me-2"></i>切换到源文件编辑
+                
+                <!-- 全局操作栏 -->
+                <hr class="my-4">
+                <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-success" id="save-config-btn">
+                        <i class="bi bi-check-circle me-2"></i>保存配置到源文件
+                    </button>
+                    <button class="btn btn-outline-info" id="export-config-btn">
+                        <i class="bi bi-download me-2"></i>导出 config.js
                     </button>
                 </div>
             </div>
             
-            <!-- 源文件编辑器（纯文本模式） -->
+            <!-- 源文件编辑器 -->
             <div class="editor-content" id="source-editor">
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label fw-bold mb-0">配置文件内容 (config.js)</label>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-info" id="copy-code">
-                                <i class="bi bi-clipboard me-1"></i>复制
-                            </button>
-                        </div>
+                        <button class="btn btn-sm btn-outline-info" id="copy-code-btn">
+                            <i class="bi bi-clipboard me-1"></i>复制
+                        </button>
                     </div>
-                    
-                    <!-- 纯文本编辑器容器 -->
-                    <div class="text-editor-container">
-                        <div class="text-editor-toolbar">
-                            <span class="badge bg-primary">JavaScript</span>
-                            <span class="badge bg-secondary" id="line-count">行数: 0</span>
-                        </div>
-                        <div class="text-editor-wrapper">
-                            <div class="line-numbers" id="line-numbers">
-                                <div class="line-number">1</div>
-                            </div>
-                            <textarea class="editor-textarea" id="code-editor" wrap="off" 
-                                      spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- 用于程序操作的隐藏文本域（保持数据同步） -->
-                    <textarea class="form-control config-textarea d-none" id="config-content" rows="25" 
-                              placeholder="请输入配置文件内容..."></textarea>
+                    <textarea class="form-control config-textarea" id="config-content" rows="20" 
+                              placeholder="请输入配置文件内容..." style="font-family: monospace;"></textarea>
                     <div class="json-error" id="json-error"></div>
                 </div>
-                
                 <div class="d-flex gap-2">
-                    <button class="btn btn-primary" id="save-btn">
-                        <i class="bi bi-check-circle me-2"></i>保存配置
+                    <button class="btn btn-primary" id="apply-source-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>应用到可视化编辑器
                     </button>
-                    <button class="btn btn-success" id="validate-btn">
-                        <i class="bi bi-check-lg me-2"></i>验证JSON
-                    </button>
-                    <button class="btn btn-outline-secondary" id="format-btn">
+                    <button class="btn btn-outline-secondary" id="format-source-btn">
                         <i class="bi bi-arrow-clockwise me-2"></i>格式化
                     </button>
                 </div>
@@ -325,15 +413,16 @@
                 <div class="col-md-4">
                     <div class="form-section">
                         <h6>备份操作</h6>
-                        <button class="btn btn-outline-primary w-100 mb-2" id="create-backup">
+                        <button class="btn btn-outline-primary w-100 mb-2" id="create-backup-btn">
                             <i class="bi bi-plus-circle me-2"></i>创建手动备份
                         </button>
-                        <button class="btn btn-outline-info w-100 mb-2" id="export-config">
-                            <i class="bi bi-download me-2"></i>导出配置
+                        <button class="btn btn-outline-info w-100 mb-2" id="export-config-backup-btn">
+                            <i class="bi bi-download me-2"></i>导出当前配置
                         </button>
-                        <button class="btn btn-outline-warning w-100" id="import-config">
-                            <i class="bi bi-upload me-2"></i>导入配置
+                        <button class="btn btn-outline-warning w-100" id="import-config-backup-btn">
+                            <i class="bi bi-upload me-2"></i>导入配置文件
                         </button>
+                        <input type="file" id="backup-file-input" accept=".js,.json" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -346,21 +435,37 @@
         </div>
     </div>
 
-    <!-- 导入配置模态框 -->
-    <div class="modal fade" id="import-modal">
+    <!-- 模态框：新增/重命名区域 -->
+    <div class="modal fade" id="area-modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">导入配置</h5>
+                    <h5 class="modal-title" id="area-modal-title">新增区域</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="file" class="form-control" id="config-file" accept=".js,.json">
-                    <div class="form-text">支持 .js 或 .json 格式的配置文件</div>
+                    <label class="form-label">区域名称</label>
+                    <input type="text" class="form-control" id="area-name-input" placeholder="例如：A1-1 PCBA">
+                    <input type="hidden" id="area-old-name">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="confirm-import">导入</button>
+                    <button type="button" class="btn btn-primary" id="area-modal-confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框：查看备份内容 -->
+    <div class="modal fade" id="view-backup-modal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">备份内容</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre id="backup-content-view" style="max-height: 500px; overflow: auto; background: var(--bg-color); padding: 1rem; border-radius: 8px;"></pre>
                 </div>
             </div>
         </div>
@@ -368,521 +473,739 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 全局变量
-        let currentConfig = '';
-        let backups = [];
-        
-        // DOM元素
-        const configContent = document.getElementById('config-content');
-        const jsonError = document.getElementById('json-error');
-        const backupList = document.getElementById('backup-list');
-        const statusMessage = document.getElementById('status-message');
-        const statusText = document.getElementById('status-text');
-        const codeEditor = document.getElementById('code-editor');
-        const lineNumbers = document.getElementById('line-numbers');
-        const lineCount = document.getElementById('line-count');
-        const copyCode = document.getElementById('copy-code');
-        
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            initTheme();
-            loadConfig();
-            loadBackups();
-            setupEventListeners();
-        });
-        
-        // 设置事件监听器
-        function setupEventListeners() {
-            // 标签页切换
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const tab = this.dataset.tab;
-                    switchTab(tab);
-                });
-            });
-            
-            // 按钮事件
-            document.getElementById('save-btn').addEventListener('click', saveConfig);
-            document.getElementById('validate-btn').addEventListener('click', validateConfig);
-            document.getElementById('format-btn').addEventListener('click', formatConfig);
-            document.getElementById('refresh-btn').addEventListener('click', refreshPage);
-            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-            document.getElementById('create-backup').addEventListener('click', createManualBackup);
-            document.getElementById('export-config').addEventListener('click', exportConfig);
-            document.getElementById('import-config').addEventListener('click', showImportModal);
-            document.getElementById('confirm-import').addEventListener('click', importConfig);
-            document.getElementById('copy-code').addEventListener('click', copyCodeToClipboard);
-            
-            // 文本编辑器事件
-            codeEditor.addEventListener('input', function() {
-                syncTextArea();
-                updateLineNumbers();
-            });
-            
-            codeEditor.addEventListener('scroll', function() {
-                // 同步行号滚动
-                lineNumbers.scrollTop = codeEditor.scrollTop;
-            });
-            
-            // 配置文件变化事件（来自隐藏域）
-            configContent.addEventListener('input', function() {
-                clearError();
-                syncCodeEditor();
-            });
-            
-            // 初始化编辑器
-            updateLineNumbers();
-        }
-        
-        // 切换标签页
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-            
-            document.querySelectorAll('.editor-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tab}-editor`).classList.add('active');
-        }
-        
-        // 切换到源文件编辑
-        function switchToSource() {
-            switchTab('source');
-        }
-        
-        // 加载配置
-        async function loadConfig() {
-            try {
-                const response = await fetch('/addtask/config');
-                if (response.ok) {
-                    const content = await response.text();
-                    configContent.value = content;
-                    syncCodeEditor();
-                    updateLineNumbers();
-                    showStatus('配置加载成功', 'success');
-                } else {
-                    throw new Error('无法加载配置');
-                }
-            } catch (error) {
-                showStatus('配置加载失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 保存配置
-        async function saveConfig() {
-            if (!validateConfig()) {
-                return;
-            }
-            
-            try {
-                const configText = configContent.value;
-                const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
-                if (!jsonMatch) {
-                    throw new Error('配置文件格式错误');
-                }
-                
-                const configJson = JSON.parse(jsonMatch[1]);
-                
-                const response = await fetch('/addtask/config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(configJson)
-                });
-                
-                if (response.ok) {
-                    showStatus('配置保存成功', 'success');
-                    await createBackup('manual');
-                    loadBackups();
-                } else {
-                    throw new Error('保存失败');
-                }
-            } catch (error) {
-                showStatus('保存失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 验证配置
-        function validateConfig() {
-            clearError();
-            try {
-                const configText = configContent.value;
-                const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
-                if (!jsonMatch) {
-                    throw new Error('找不到配置对象');
-                }
-                
-                let jsonContent = jsonMatch[1];
-                
-                // 移除注释（简化处理）
-                const lines = jsonContent.split('\n');
-                const cleanedLines = [];
-                
-                for (let line of lines) {
-                    if (line.trim().startsWith('//') && !line.includes('http://') && !line.includes('https://')) {
-                        continue;
-                    }
-                    line = line.replace(/\/\/.*?(?=\n|$)/g, function(match) {
-                        if (match.includes('http://') || match.includes('https://')) {
-                            return match;
-                        }
-                        return '';
-                    });
-                    cleanedLines.push(line);
-                }
-                
-                jsonContent = cleanedLines.join('\n');
-                jsonContent = jsonContent.replace(/\/\*[\s\S]*?\*\//g, '');
-                jsonContent = jsonContent.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
-                jsonContent = jsonContent.replace(/^\s*\n/gm, '').trim();
-                
-                JSON.parse(jsonContent);
-                showStatus('JSON格式正确（已兼容注释）', 'success');
-                return true;
-            } catch (error) {
-                showError('JSON格式错误: ' + error.message);
-                return false;
-            }
-        }
-        
-        // 格式化配置
-        function formatConfig() {
-            if (validateConfig()) {
-                try {
-                    const configText = configContent.value;
-                    const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
-                    if (jsonMatch) {
-                        let jsonContent = jsonMatch[1];
-                        
-                        const lines = jsonContent.split('\n');
-                        const cleanedLines = [];
-                        
-                        for (let line of lines) {
-                            if (line.trim().startsWith('//') && !line.includes('http://') && !line.includes('https://')) {
-                                continue;
+        (function(){
+            "use strict";
+
+            // ---------- 初始配置数据（简化演示版，实际可替换完整数据）----------
+            const initialConfig = {
+                "general": {
+                    "title": "AGV 跨环境任务下发系统 v1.5.1.4",
+                    "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+                },
+                "areas": {
+                    "A1-1 PCBA": {
+                        "tasks": {
+                            "送满A1pcba1F去A2华昱欣3F": {
+                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
+                                "requires_shelf": true,
+                                "requires_task_path": false,
+                                "task_path_options": []
+                            },
+                            "回空A1pcba1F去A2华昱欣3F": {
+                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_back",
+                                "requires_shelf": true,
+                                "requires_task_path": false,
+                                "task_path_options": []
                             }
-                            line = line.replace(/\/\/.*?(?=\n|$)/g, function(match) {
-                                if (match.includes('http://') || match.includes('https://')) {
-                                    return match;
-                                }
-                                return '';
-                            });
-                            cleanedLines.push(line);
                         }
-                        
-                        jsonContent = cleanedLines.join('\n');
-                        jsonContent = jsonContent.replace(/\/\*[\s\S]*?\*\//g, '');
-                        jsonContent = jsonContent.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
-                        jsonContent = jsonContent.replace(/^\s*\n/gm, '').trim();
-                        
-                        const formattedJson = JSON.stringify(JSON.parse(jsonContent), null, 2);
-                        configContent.value = `const config = ${formattedJson};`;
-                        syncCodeEditor();
-                        updateLineNumbers();
-                        
-                        showStatus('格式化完成', 'success');
-                    }
-                } catch (error) {
-                    showError('格式化失败: ' + error.message);
-                }
-            }
-        }
-        
-        // 加载备份列表
-        async function loadBackups() {
-            try {
-                const response = await fetch('/addtask/config/backups');
-                if (response.ok) {
-                    backups = await response.json();
-                    renderBackupList();
-                }
-            } catch (error) {
-                console.error('加载备份列表失败:', error);
-            }
-        }
-        
-        // 渲染备份列表
-        function renderBackupList() {
-            if (backups.length === 0) {
-                backupList.innerHTML = `
-                    <div class="text-center py-3 text-muted">
-                        <i class="bi bi-inbox me-2"></i>暂无备份文件
-                    </div>
-                `;
-                return;
-            }
-            
-            backupList.innerHTML = backups.map(backup => `
-                <div class="backup-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>${backup.name}</strong>
-                            <span class="badge bg-secondary version-badge ms-2">v${backup.version}</span>
-                            <div class="text-muted small">${new Date(backup.timestamp).toLocaleString()}</div>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-sm btn-outline-primary" onclick="restoreBackup('${backup.name}')">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info" onclick="viewBackup('${backup.name}')">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${backup.name}')">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // 创建手动备份
-        async function createManualBackup() {
-            await createBackup('manual');
-            loadBackups();
-        }
-        
-        // 创建备份
-        async function createBackup(type) {
-            try {
-                const response = await fetch('/addtask/config/backup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ type: type })
-                });
-                
-                if (response.ok) {
-                    showStatus('备份创建成功', 'success');
-                } else {
-                    throw new Error('备份创建失败');
-                }
-            } catch (error) {
-                showStatus('备份创建失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 恢复备份
-        async function restoreBackup(backupName) {
-            if (!confirm(`确定要恢复备份 ${backupName} 吗？当前配置将被覆盖。`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}/restore`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    showStatus('备份恢复成功', 'success');
-                    loadConfig();
-                } else {
-                    throw new Error('恢复失败');
-                }
-            } catch (error) {
-                showStatus('恢复失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 查看备份
-        async function viewBackup(backupName) {
-            try {
-                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}`);
-                if (response.ok) {
-                    const content = await response.text();
-                    const newWindow = window.open('', '_blank');
-                    newWindow.document.write(`
-                        <html>
-                            <head><title>备份内容 - ${backupName}</title></head>
-                            <body>
-                                <pre>${content}</pre>
-                            </body>
-                        </html>
-                    `);
-                }
-            } catch (error) {
-                showStatus('查看备份失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 删除备份
-        async function deleteBackup(backupName) {
-            if (!confirm(`确定要删除备份 ${backupName} 吗？此操作不可恢复。`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    showStatus('备份删除成功', 'success');
-                    loadBackups();
-                } else {
-                    throw new Error('删除失败');
-                }
-            } catch (error) {
-                showStatus('删除失败: ' + error.message, 'error');
-            }
-        }
-        
-        // 导出配置
-        function exportConfig() {
-            const configText = configContent.value;
-            const blob = new Blob([configText], { type: 'application/javascript' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `config_backup_${new Date().toISOString().split('T')[0]}.js`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showStatus('配置导出成功', 'success');
-        }
-        
-        // 显示导入模态框
-        function showImportModal() {
-            const modal = new bootstrap.Modal(document.getElementById('import-modal'));
-            modal.show();
-        }
-        
-        // 导入配置
-        function importConfig() {
-            const fileInput = document.getElementById('config-file');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                showStatus('请选择要导入的文件', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const content = e.target.result;
-                    const jsonMatch = content.match(/const config = ([\s\S]*?);/);
-                    if (!jsonMatch) {
-                        throw new Error('无效的配置文件格式');
+                    "A1-2 电装工厂": {
+                        "tasks": {
+                            "314空车A1电装2F去A2华消1F": {
+                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                "code": "K_31A1DZ1F_to_19A2HX1F_go",
+                                "requires_shelf": false,
+                                "requires_task_path": false,
+                                "task_path_options": []
+                            }
+                        }
+                    },
+                    "A2-2 存储备料": {
+                        "tasks": {
+                            "上架任务": {
+                                "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                                "code": "shangjiafangxia",
+                                "requires_shelf": true,
+                                "requires_task_path": true,
+                                "task_path_options": [
+                                    { "value": "33254836", "label": "（33254836）" },
+                                    { "value": "33254835", "label": "（33254835）" }
+                                ],
+                                "capacity": 10
+                            }
+                        }
                     }
-                    JSON.parse(jsonMatch[1]);
-                    
-                    configContent.value = content;
-                    syncCodeEditor();
-                    updateLineNumbers();
-                    
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('import-modal'));
-                    modal.hide();
-                    
-                    showStatus('配置导入成功，请点击保存应用更改', 'success');
-                } catch (error) {
-                    showStatus('导入失败: ' + error.message, 'error');
                 }
             };
-            reader.readAsText(file);
-        }
-        
-        // 刷新页面
-        function refreshPage() {
-            loadConfig();
-            loadBackups();
-        }
-        
-        // 切换主题
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            // 当前工作配置对象
+            let configData = JSON.parse(JSON.stringify(initialConfig));
+
+            // UI状态
+            let currentAreaName = null;
+            let currentTaskName = null;
+            let areaModalMode = 'add';
+            let areaModal = null;
+            let viewBackupModal = null;
+
+            // 模拟备份数据（实际应从后端获取）
+            let backups = [];
+
+            // DOM元素
+            const areaTreeEl = document.getElementById('area-tree');
+            const taskListEl = document.getElementById('task-list');
+            const currentAreaTitle = document.getElementById('current-area-title');
+            const addTaskBtn = document.getElementById('add-task-btn');
+            const taskFormContainer = document.getElementById('task-form-container');
+            const taskForm = document.getElementById('task-form');
+            const taskNameInput = document.getElementById('task-name');
+            const taskBaseUrlInput = document.getElementById('task-base-url');
+            const taskCodeInput = document.getElementById('task-code');
+            const taskRequiresShelf = document.getElementById('task-requires-shelf');
+            const taskRequiresPath = document.getElementById('task-requires-path');
+            const enableCapacityCheck = document.getElementById('enable-capacity');
+            const capacityInputWrapper = document.getElementById('capacity-input-wrapper');
+            const taskCapacity = document.getElementById('task-capacity');
+            const pathOptionsBody = document.getElementById('path-options-body');
+            const pathOptionsSection = document.getElementById('path-options-section');
+            const taskOriginalName = document.getElementById('task-original-name');
+            const deleteTaskBtn = document.getElementById('delete-task-btn');
+            const cancelTaskBtn = document.getElementById('cancel-task-btn');
+            const configContent = document.getElementById('config-content');
+            const jsonError = document.getElementById('json-error');
+            const urlError = document.getElementById('url-error');
+            const statusMessage = document.getElementById('status-message');
+            const statusText = document.getElementById('status-text');
+            const backupListEl = document.getElementById('backup-list');
+
+            // 模态框
+            const areaModalEl = document.getElementById('area-modal');
+            const areaModalTitle = document.getElementById('area-modal-title');
+            const areaNameInput = document.getElementById('area-name-input');
+            const areaOldName = document.getElementById('area-old-name');
+            const areaModalConfirm = document.getElementById('area-modal-confirm');
             
-            document.documentElement.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('config-editor-theme', newTheme);
-            
-            const themeIcon = document.querySelector('#theme-toggle i');
-            const themeText = document.querySelector('#theme-toggle');
-            
-            if (newTheme === 'dark') {
-                themeIcon.className = 'bi bi-sun me-2';
-                themeText.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
-            } else {
-                themeIcon.className = 'bi bi-moon-stars me-2';
-                themeText.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
+            if (areaModalEl) areaModal = new bootstrap.Modal(areaModalEl);
+            const viewBackupModalEl = document.getElementById('view-backup-modal');
+            if (viewBackupModalEl) viewBackupModal = new bootstrap.Modal(viewBackupModalEl);
+
+            // ---------- 辅助函数 ----------
+            function showStatus(msg, type = 'info') {
+                statusText.textContent = msg;
+                statusMessage.className = `alert alert-${type === 'error' ? 'danger' : (type === 'success' ? 'success' : 'info')}`;
+                statusMessage.style.display = 'block';
+                setTimeout(() => { statusMessage.style.display = 'none'; }, 4000);
             }
-        }
-        
-        // 初始化主题
-        function initTheme() {
-            const savedTheme = localStorage.getItem('config-editor-theme') || 'light';
-            document.documentElement.setAttribute('data-bs-theme', savedTheme);
-            
-            const themeIcon = document.querySelector('#theme-toggle i');
-            const themeText = document.querySelector('#theme-toggle');
-            
-            if (savedTheme === 'dark') {
-                themeIcon.className = 'bi bi-sun me-2';
-                themeText.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
-            } else {
-                themeIcon.className = 'bi bi-moon-stars me-2';
-                themeText.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
+
+            function clearUrlError() { urlError.textContent = ''; }
+            function showUrlError(msg) { urlError.textContent = msg; }
+            function clearJsonError() { jsonError.textContent = ''; }
+            function showJsonError(msg) { jsonError.textContent = msg; }
+
+            // URL 校验函数
+            function isValidUrl(url) {
+                try {
+                    const parsed = new URL(url);
+                    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+                } catch {
+                    return false;
+                }
             }
-        }
-        
-        // 同步隐藏域 -> 编辑器
-        function syncCodeEditor() {
-            codeEditor.value = configContent.value;
-            updateLineNumbers();
-        }
-        
-        // 同步编辑器 -> 隐藏域
-        function syncTextArea() {
-            configContent.value = codeEditor.value;
-        }
-        
-        // 更新行号
-        function updateLineNumbers() {
-            const lines = codeEditor.value.split('\n').length;
-            lineCount.textContent = `行数: ${lines}`;
-            
-            let html = '';
-            for (let i = 1; i <= lines; i++) {
-                html += `<div class="line-number">${i}</div>`;
+
+            // 同步配置对象到源文件文本域
+            function syncConfigToTextarea() {
+                const configStr = `// config.js - AGV跨环境任务下发系统配置文件
+// 所有区域、任务模板、URL、路径选项等均在此定义
+const config = ${JSON.stringify(configData, null, 4)};`;
+                configContent.value = configStr;
             }
-            lineNumbers.innerHTML = html;
-        }
-        
-        // 复制代码到剪贴板
-        function copyCodeToClipboard() {
-            const text = configContent.value;
-            navigator.clipboard.writeText(text).then(() => {
-                showStatus('代码已复制到剪贴板', 'success');
-            }).catch(err => {
-                showStatus('复制失败: ' + err.message, 'error');
-            });
-        }
-        
-        // 显示状态信息
-        function showStatus(message, type) {
-            statusText.textContent = message;
-            statusMessage.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
-            statusMessage.style.display = 'block';
-            
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        }
-        
-        // 显示错误信息
-        function showError(message) {
-            jsonError.textContent = message;
-            jsonError.style.display = 'block';
-        }
-        
-        // 清除错误信息
-        function clearError() {
-            jsonError.textContent = '';
-            jsonError.style.display = 'none';
-        }
+
+            // 从文本域解析配置
+            function parseConfigFromTextarea() {
+                try {
+                    const text = configContent.value;
+                    const match = text.match(/const config = ([\s\S]*?);/);
+                    if (!match) throw new Error('找不到 config 对象');
+                    const parsed = JSON.parse(match[1]);
+                    if (!parsed.areas || typeof parsed.areas !== 'object') throw new Error('缺少 areas 字段');
+                    configData = parsed;
+                    renderAreaTree();
+                    if (currentAreaName && !configData.areas[currentAreaName]) {
+                        currentAreaName = null;
+                        currentTaskName = null;
+                    }
+                    updateRightPanel();
+                    showStatus('配置已从源文件加载', 'success');
+                    clearJsonError();
+                } catch (e) {
+                    showJsonError('解析失败: ' + e.message);
+                }
+            }
+
+            // ---------- 渲染左侧区域树 ----------
+            function renderAreaTree() {
+                const areas = configData.areas || {};
+                const areaNames = Object.keys(areas).sort();
+                let html = '';
+                areaNames.forEach(name => {
+                    const activeClass = (name === currentAreaName) ? 'active' : '';
+                    html += `
+                        <div class="area-item ${activeClass}" data-area-name="${name}">
+                            <span class="area-name-text" style="flex:1; cursor:pointer;">${name}</span>
+                            <div class="area-actions">
+                                <button class="btn btn-sm btn-outline-secondary border-0 btn-icon rename-area-btn" data-area="${name}" title="重命名">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger border-0 btn-icon delete-area-btn" data-area="${name}" title="删除">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                areaTreeEl.innerHTML = html || '<div class="text-muted text-center py-3">暂无区域，请新增</div>';
+                
+                document.querySelectorAll('.area-item .area-name-text').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        const areaDiv = e.target.closest('.area-item');
+                        selectArea(areaDiv.dataset.areaName);
+                    });
+                });
+                document.querySelectorAll('.rename-area-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openAreaModal('rename', btn.dataset.area);
+                    });
+                });
+                document.querySelectorAll('.delete-area-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteArea(btn.dataset.area);
+                    });
+                });
+            }
+
+            function selectArea(areaName) {
+                currentAreaName = areaName;
+                currentTaskName = null;
+                updateRightPanel();
+                renderAreaTree();
+            }
+
+            function updateRightPanel() {
+                if (!currentAreaName || !configData.areas[currentAreaName]) {
+                    currentAreaTitle.textContent = '请选择一个区域';
+                    addTaskBtn.disabled = true;
+                    taskListEl.innerHTML = '<div class="text-center py-3 text-muted"><i class="bi bi-arrow-left me-2"></i>请先选择左侧区域</div>';
+                    taskFormContainer.style.display = 'none';
+                    return;
+                }
+                currentAreaTitle.textContent = `当前区域：${currentAreaName}`;
+                addTaskBtn.disabled = false;
+                
+                const tasks = configData.areas[currentAreaName].tasks || {};
+                const taskNames = Object.keys(tasks).sort();
+                let tasksHtml = '';
+                taskNames.forEach(taskName => {
+                    const activeClass = (taskName === currentTaskName) ? 'active' : '';
+                    tasksHtml += `
+                        <div class="task-item ${activeClass}" data-task-name="${taskName}">
+                            <span class="task-name-text" style="flex:1;">${taskName}</span>
+                            <span class="text-muted small me-2">${tasks[taskName].requires_shelf ? '📦' : ''}</span>
+                        </div>
+                    `;
+                });
+                taskListEl.innerHTML = tasksHtml || '<div class="text-center py-3 text-muted">暂无任务，请新增</div>';
+                
+                document.querySelectorAll('.task-item .task-name-text').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        const taskDiv = e.target.closest('.task-item');
+                        selectTask(taskDiv.dataset.taskName);
+                    });
+                });
+                
+                if (currentTaskName && !tasks[currentTaskName]) {
+                    currentTaskName = null;
+                    taskFormContainer.style.display = 'none';
+                } else if (currentTaskName) {
+                    loadTaskToForm(currentTaskName);
+                } else {
+                    taskFormContainer.style.display = 'none';
+                }
+            }
+
+            function selectTask(taskName) {
+                currentTaskName = taskName;
+                loadTaskToForm(taskName);
+                updateRightPanel();
+            }
+
+            function loadTaskToForm(taskName) {
+                if (!currentAreaName) return;
+                const task = configData.areas[currentAreaName].tasks[taskName];
+                if (!task) return;
+                
+                taskOriginalName.value = taskName;
+                taskNameInput.value = taskName;
+                taskBaseUrlInput.value = task.base_url || '';
+                taskCodeInput.value = task.code || '';
+                taskRequiresShelf.checked = task.requires_shelf || false;
+                taskRequiresPath.checked = task.requires_task_path || false;
+                
+                // 容量字段动态显示优化
+                const hasCapacity = task.hasOwnProperty('capacity');
+                enableCapacityCheck.checked = hasCapacity;
+                capacityInputWrapper.style.display = hasCapacity ? 'block' : 'none';
+                if (hasCapacity) {
+                    taskCapacity.value = task.capacity;
+                } else {
+                    taskCapacity.value = '';
+                }
+                
+                pathOptionsSection.style.display = task.requires_task_path ? 'block' : 'none';
+                renderPathOptions(task.task_path_options || []);
+                taskFormContainer.style.display = 'block';
+                clearUrlError();
+            }
+
+            function renderPathOptions(options) {
+                let html = '';
+                options.forEach((opt, index) => {
+                    html += `
+                        <tr>
+                            <td><input type="text" class="form-control form-control-sm path-value" value="${opt.value || ''}" data-index="${index}"></td>
+                            <td><input type="text" class="form-control form-control-sm path-label" value="${opt.label || ''}" data-index="${index}"></td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger remove-path-btn" data-index="${index}"><i class="bi bi-trash"></i></button></td>
+                        </tr>
+                    `;
+                });
+                pathOptionsBody.innerHTML = html || '<tr><td colspan="3" class="text-muted text-center">暂无路径选项</td></tr>';
+                
+                document.querySelectorAll('.remove-path-btn').forEach(btn => {
+                    btn.addEventListener('click', () => removePathOption(btn.dataset.index));
+                });
+            }
+
+            function getPathOptionsFromForm() {
+                const rows = pathOptionsBody.querySelectorAll('tr');
+                const options = [];
+                rows.forEach(row => {
+                    const valueInput = row.querySelector('.path-value');
+                    const labelInput = row.querySelector('.path-label');
+                    if (valueInput && labelInput) {
+                        options.push({ value: valueInput.value, label: labelInput.value });
+                    }
+                });
+                return options;
+            }
+
+            function addPathOption() {
+                if (!currentTaskName) return;
+                const options = getPathOptionsFromForm();
+                options.push({ value: '', label: '' });
+                renderPathOptions(options);
+            }
+
+            function removePathOption(index) {
+                if (!currentTaskName) return;
+                const options = getPathOptionsFromForm();
+                options.splice(index, 1);
+                renderPathOptions(options);
+            }
+
+            // 保存任务（带URL校验）
+            function saveTaskForm() {
+                if (!currentAreaName) return;
+                
+                // URL校验
+                const url = taskBaseUrlInput.value.trim();
+                if (!isValidUrl(url)) {
+                    showUrlError('请输入有效的 HTTP/HTTPS URL');
+                    return;
+                }
+                clearUrlError();
+                
+                const newTaskName = taskNameInput.value.trim();
+                if (!newTaskName) {
+                    alert('任务名称不能为空');
+                    return;
+                }
+                
+                const area = configData.areas[currentAreaName];
+                const oldName = taskOriginalName.value;
+                
+                const taskData = {
+                    base_url: url,
+                    code: taskCodeInput.value.trim(),
+                    requires_shelf: taskRequiresShelf.checked,
+                    requires_task_path: taskRequiresPath.checked,
+                    task_path_options: taskRequiresPath.checked ? getPathOptionsFromForm() : []
+                };
+                
+                // 处理容量字段
+                if (enableCapacityCheck.checked) {
+                    const cap = parseFloat(taskCapacity.value);
+                    if (!isNaN(cap)) taskData.capacity = cap;
+                    else taskData.capacity = 0;
+                }
+                
+                if (oldName && oldName !== newTaskName) {
+                    delete area.tasks[oldName];
+                }
+                area.tasks[newTaskName] = taskData;
+                
+                currentTaskName = newTaskName;
+                updateRightPanel();
+                showStatus('任务已保存', 'success');
+            }
+
+            function deleteCurrentTask() {
+                if (!currentAreaName || !currentTaskName) return;
+                if (!confirm(`确定删除任务 "${currentTaskName}" 吗？`)) return;
+                delete configData.areas[currentAreaName].tasks[currentTaskName];
+                currentTaskName = null;
+                updateRightPanel();
+                showStatus('任务已删除', 'success');
+            }
+
+            function createNewTask() {
+                if (!currentAreaName) return;
+                const baseName = '新任务';
+                let newName = baseName;
+                let counter = 1;
+                const tasks = configData.areas[currentAreaName].tasks;
+                while (tasks.hasOwnProperty(newName)) {
+                    newName = `${baseName}${counter}`;
+                    counter++;
+                }
+                tasks[newName] = {
+                    base_url: '',
+                    code: '',
+                    requires_shelf: false,
+                    requires_task_path: false,
+                    task_path_options: []
+                };
+                currentTaskName = newName;
+                updateRightPanel();
+                showStatus(`已创建任务 "${newName}"`, 'success');
+            }
+
+            function openAreaModal(mode, areaName = '') {
+                areaModalMode = mode;
+                if (mode === 'add') {
+                    areaModalTitle.textContent = '新增区域';
+                    areaNameInput.value = '';
+                    areaOldName.value = '';
+                } else {
+                    areaModalTitle.textContent = '重命名区域';
+                    areaNameInput.value = areaName;
+                    areaOldName.value = areaName;
+                }
+                areaModal.show();
+            }
+
+            function confirmAreaModal() {
+                const newName = areaNameInput.value.trim();
+                if (!newName) { alert('区域名称不能为空'); return; }
+                if (areaModalMode === 'add') {
+                    if (configData.areas[newName]) { alert('区域名称已存在'); return; }
+                    configData.areas[newName] = { tasks: {} };
+                    showStatus(`区域 "${newName}" 已添加`, 'success');
+                } else {
+                    const oldName = areaOldName.value;
+                    if (oldName === newName) { areaModal.hide(); return; }
+                    if (configData.areas[newName]) { alert('区域名称已存在'); return; }
+                    configData.areas[newName] = configData.areas[oldName];
+                    delete configData.areas[oldName];
+                    if (currentAreaName === oldName) currentAreaName = newName;
+                    showStatus(`区域已重命名为 "${newName}"`, 'success');
+                }
+                areaModal.hide();
+                renderAreaTree();
+                updateRightPanel();
+            }
+
+            function deleteArea(areaName) {
+                if (!confirm(`确定删除区域 "${areaName}" 及其所有任务吗？`)) return;
+                delete configData.areas[areaName];
+                if (currentAreaName === areaName) { currentAreaName = null; currentTaskName = null; }
+                renderAreaTree();
+                updateRightPanel();
+                showStatus(`区域 "${areaName}" 已删除`, 'success');
+            }
+
+            // 保存配置到源文件
+            function saveConfigToSource() {
+                syncConfigToTextarea();
+                showStatus('配置已同步到源文件编辑区', 'success');
+            }
+
+            function exportConfigFile() {
+                syncConfigToTextarea();
+                const blob = new Blob([configContent.value], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'config.js';
+                a.click();
+                URL.revokeObjectURL(url);
+                showStatus('配置文件已导出', 'success');
+            }
+
+            // ---------- 备份管理 ----------
+            function generateBackupName() {
+                const now = new Date();
+                return `backup_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getTime()}`;
+            }
+
+            function renderBackupList() {
+                if (backups.length === 0) {
+                    backupListEl.innerHTML = '<div class="text-center py-3 text-muted"><i class="bi bi-inbox me-2"></i>暂无备份文件</div>';
+                    return;
+                }
+                let html = '';
+                backups.sort((a,b) => b.timestamp - a.timestamp).forEach(backup => {
+                    html += `
+                        <div class="backup-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${backup.name}</strong>
+                                    <span class="badge bg-secondary version-badge ms-2">v${backup.version || 1}</span>
+                                    <div class="text-muted small">${new Date(backup.timestamp).toLocaleString()}</div>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-primary restore-backup-btn" data-name="${backup.name}">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info view-backup-btn" data-name="${backup.name}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-backup-btn" data-name="${backup.name}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                backupListEl.innerHTML = html;
+                
+                document.querySelectorAll('.restore-backup-btn').forEach(btn => {
+                    btn.addEventListener('click', () => restoreBackup(btn.dataset.name));
+                });
+                document.querySelectorAll('.view-backup-btn').forEach(btn => {
+                    btn.addEventListener('click', () => viewBackup(btn.dataset.name));
+                });
+                document.querySelectorAll('.delete-backup-btn').forEach(btn => {
+                    btn.addEventListener('click', () => deleteBackup(btn.dataset.name));
+                });
+            }
+
+            function createBackup(manual = true) {
+                const backup = {
+                    name: generateBackupName(),
+                    timestamp: Date.now(),
+                    version: backups.length + 1,
+                    content: JSON.stringify(configData, null, 4)
+                };
+                backups.push(backup);
+                renderBackupList();
+                showStatus(`备份 "${backup.name}" 创建成功`, 'success');
+            }
+
+            function restoreBackup(name) {
+                const backup = backups.find(b => b.name === name);
+                if (!backup) return;
+                if (!confirm(`确定恢复备份 ${name} 吗？当前未保存的更改将丢失。`)) return;
+                try {
+                    configData = JSON.parse(backup.content);
+                    currentAreaName = null; currentTaskName = null;
+                    renderAreaTree();
+                    updateRightPanel();
+                    syncConfigToTextarea();
+                    showStatus(`已恢复到备份 ${name}`, 'success');
+                } catch (e) {
+                    showStatus('恢复失败: 备份数据损坏', 'error');
+                }
+            }
+
+            function viewBackup(name) {
+                const backup = backups.find(b => b.name === name);
+                if (!backup) return;
+                document.getElementById('backup-content-view').textContent = backup.content;
+                viewBackupModal.show();
+            }
+
+            function deleteBackup(name) {
+                if (!confirm(`确定删除备份 ${name} 吗？`)) return;
+                backups = backups.filter(b => b.name !== name);
+                renderBackupList();
+                showStatus(`备份 ${name} 已删除`, 'success');
+            }
+
+            function importConfigFromFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = e.target.result;
+                        let parsed;
+                        if (file.name.endsWith('.json')) {
+                            parsed = JSON.parse(content);
+                        } else {
+                            const match = content.match(/const config = ([\s\S]*?);/);
+                            if (!match) throw new Error('无效的配置文件格式');
+                            parsed = JSON.parse(match[1]);
+                        }
+                        if (!parsed.areas) throw new Error('缺少 areas 字段');
+                        configData = parsed;
+                        currentAreaName = null; currentTaskName = null;
+                        renderAreaTree();
+                        updateRightPanel();
+                        syncConfigToTextarea();
+                        showStatus('配置文件导入成功', 'success');
+                    } catch (err) {
+                        showStatus('导入失败: ' + err.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // ---------- 主题 ----------
+            function initTheme() {
+                const savedTheme = localStorage.getItem('config-editor-theme') || 'light';
+                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                updateThemeButton(savedTheme);
+            }
+            function toggleTheme() {
+                const current = document.documentElement.getAttribute('data-bs-theme');
+                const newTheme = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('config-editor-theme', newTheme);
+                updateThemeButton(newTheme);
+            }
+            function updateThemeButton(theme) {
+                const icon = document.querySelector('#theme-toggle i');
+                const btn = document.querySelector('#theme-toggle');
+                if (theme === 'dark') {
+                    icon.className = 'bi bi-sun me-2';
+                    btn.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
+                } else {
+                    icon.className = 'bi bi-moon-stars me-2';
+                    btn.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
+                }
+            }
+
+            // 标签页切换
+            function switchTab(tabId) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+                document.querySelectorAll('.editor-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`${tabId}-editor`).classList.add('active');
+                if (tabId === 'source') syncConfigToTextarea();
+            }
+
+            function formatSource() {
+                try {
+                    const text = configContent.value;
+                    const match = text.match(/const config = ([\s\S]*?);/);
+                    if (!match) throw new Error('找不到 config 对象');
+                    const parsed = JSON.parse(match[1]);
+                    const formatted = JSON.stringify(parsed, null, 4);
+                    configContent.value = `// config.js - AGV跨环境任务下发系统配置文件
+// 所有区域、任务模板、URL、路径选项等均在此定义
+const config = ${formatted};`;
+                    showStatus('格式化完成', 'success');
+                    clearJsonError();
+                } catch (e) {
+                    showJsonError('格式化失败: ' + e.message);
+                }
+            }
+
+            function copySource() {
+                configContent.select();
+                document.execCommand('copy');
+                showStatus('已复制到剪贴板', 'success');
+            }
+
+            // ---------- 事件绑定 ----------
+            function bindEvents() {
+                document.getElementById('add-area-btn').addEventListener('click', () => openAreaModal('add'));
+                document.getElementById('add-task-btn').addEventListener('click', createNewTask);
+                document.getElementById('add-path-option').addEventListener('click', addPathOption);
+                
+                taskRequiresPath.addEventListener('change', (e) => {
+                    pathOptionsSection.style.display = e.target.checked ? 'block' : 'none';
+                });
+                
+                enableCapacityCheck.addEventListener('change', (e) => {
+                    capacityInputWrapper.style.display = e.target.checked ? 'block' : 'none';
+                });
+                
+                taskBaseUrlInput.addEventListener('blur', () => {
+                    const url = taskBaseUrlInput.value.trim();
+                    if (url && !isValidUrl(url)) {
+                        showUrlError('URL 格式不正确，应以 http:// 或 https:// 开头');
+                    } else {
+                        clearUrlError();
+                    }
+                });
+                
+                taskForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    saveTaskForm();
+                });
+                
+                deleteTaskBtn.addEventListener('click', deleteCurrentTask);
+                cancelTaskBtn.addEventListener('click', () => {
+                    if (currentTaskName) loadTaskToForm(currentTaskName);
+                    else taskFormContainer.style.display = 'none';
+                });
+                
+                areaModalConfirm.addEventListener('click', confirmAreaModal);
+                
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+                });
+                
+                document.getElementById('save-config-btn').addEventListener('click', saveConfigToSource);
+                document.getElementById('export-config-btn').addEventListener('click', exportConfigFile);
+                document.getElementById('apply-source-btn').addEventListener('click', () => {
+                    parseConfigFromTextarea();
+                    renderAreaTree();
+                    updateRightPanel();
+                });
+                document.getElementById('format-source-btn').addEventListener('click', formatSource);
+                document.getElementById('copy-code-btn').addEventListener('click', copySource);
+                document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+                document.getElementById('refresh-btn').addEventListener('click', () => {
+                    if (confirm('确定重置为初始演示配置吗？未保存的更改将丢失。')) {
+                        configData = JSON.parse(JSON.stringify(initialConfig));
+                        currentAreaName = null; currentTaskName = null;
+                        renderAreaTree();
+                        updateRightPanel();
+                        syncConfigToTextarea();
+                        showStatus('已重置为初始配置', 'info');
+                    }
+                });
+                
+                // 备份管理事件
+                document.getElementById('create-backup-btn').addEventListener('click', () => createBackup(true));
+                document.getElementById('export-config-backup-btn').addEventListener('click', exportConfigFile);
+                document.getElementById('import-config-backup-btn').addEventListener('click', () => {
+                    document.getElementById('backup-file-input').click();
+                });
+                document.getElementById('backup-file-input').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) importConfigFromFile(file);
+                    e.target.value = '';
+                });
+                
+                // 初始化模拟备份数据
+                createBackup(false); // 初始自动创建一个备份示例
+            }
+
+            function init() {
+                initTheme();
+                renderAreaTree();
+                syncConfigToTextarea();
+                bindEvents();
+                renderBackupList();
+            }
+
+            init();
+        })();
     </script>
 </body>
 </html>
