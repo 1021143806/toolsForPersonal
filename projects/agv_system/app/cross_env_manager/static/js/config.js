@@ -1,3 +1,5 @@
+// config.js - AGV跨环境任务下发系统配置文件
+// 所有区域、任务模板、URL、路径选项等均在此定义
 const config = {
     "general": {
         "title": "AGV 跨环境任务下发系统 v1.5.1.4",

@@ -193,59 +193,71 @@
             tab-size: 4;
         }
         
-        /* JSON语法高亮 */
+        /* VSCode风格JSON语法高亮 */
         .json-key {
-            color: #d73a49;
-            font-weight: bold;
+            color: #9cdcfe; /* 键名 - 浅蓝色 */
         }
         
         .json-string {
-            color: #032f62;
+            color: #ce9178; /* 字符串 - 棕色 */
         }
         
         .json-number {
-            color: #005cc5;
+            color: #b5cea8; /* 数字 - 浅绿色 */
         }
         
         .json-boolean {
-            color: #6f42c1;
+            color: #569cd6; /* 布尔值 - 蓝色 */
         }
         
         .json-null {
-            color: #6a737d;
+            color: #569cd6; /* null值 - 蓝色 */
         }
         
         .json-comment {
-            color: #6a737d;
+            color: #6a9955; /* 注释 - 绿色 */
             font-style: italic;
         }
         
         .json-punctuation {
-            color: #24292e;
+            color: #d4d4d4; /* 标点符号 - 浅灰色 */
         }
         
-        [data-bs-theme="dark"] .json-key {
-            color: #ff7b72;
+        .json-property {
+            color: #9cdcfe; /* 属性名 - 浅蓝色 */
         }
         
-        [data-bs-theme="dark"] .json-string {
-            color: #a5d6ff;
+        /* 亮色主题 */
+        [data-bs-theme="light"] .json-key {
+            color: #001080; /* 键名 - 深蓝色 */
         }
         
-        [data-bs-theme="dark"] .json-number {
-            color: #79c0ff;
+        [data-bs-theme="light"] .json-string {
+            color: #a31515; /* 字符串 - 深红色 */
         }
         
-        [data-bs-theme="dark"] .json-boolean {
-            color: #d2a8ff;
+        [data-bs-theme="light"] .json-number {
+            color: #098658; /* 数字 - 深绿色 */
         }
         
-        [data-bs-theme="dark"] .json-null {
-            color: #8b949e;
+        [data-bs-theme="light"] .json-boolean {
+            color: #0000ff; /* 布尔值 - 蓝色 */
         }
         
-        [data-bs-theme="dark"] .json-comment {
-            color: #8b949e;
+        [data-bs-theme="light"] .json-null {
+            color: #0000ff; /* null值 - 蓝色 */
+        }
+        
+        [data-bs-theme="light"] .json-comment {
+            color: #008000; /* 注释 - 绿色 */
+        }
+        
+        [data-bs-theme="light"] .json-punctuation {
+            color: #000000; /* 标点符号 - 黑色 */
+        }
+        
+        [data-bs-theme="light"] .json-property {
+            color: #001080; /* 属性名 - 深蓝色 */
         }
         
         [data-bs-theme="dark"] .json-punctuation {
@@ -951,40 +963,45 @@
             }
         }
         
-        // 语法高亮
+        // 语法高亮 - VSCode风格
         function highlightSyntax() {
             if (!highlightEnabled) return;
             
             const text = codeContent.textContent;
             let highlighted = text;
             
-            // JSON键名（双引号包围的字符串后跟冒号）
-            highlighted = highlighted.replace(/"([^"\\]|\\.)*"\s*:/g, '<span class="json-key">$&</span>');
+            // 先处理注释（避免影响其他匹配）
+            highlighted = highlighted.replace(/\/\/.*$/gm, '<span class="json-comment">$&</span>');
+            highlighted = highlighted.replace(/\/\*[\\s\\S]*?\*\//g, '<span class="json-comment">$&</span>');
             
-            // 字符串值
-            highlighted = highlighted.replace(/"([^"\\]|\\.)*"/g, function(match) {
-                // 跳过已经是键名的字符串
-                if (match.endsWith('":')) {
+            // 处理标点符号
+            highlighted = highlighted.replace(/[{}\[\],]/g, '<span class="json-punctuation">$&</span>');
+            
+            // 处理冒号（键值分隔符）
+            highlighted = highlighted.replace(/:/g, '<span class="json-punctuation">:</span>');
+            
+            // 处理JSON键名（更精确的匹配）
+            highlighted = highlighted.replace(/"([^"\\]|\\.)*"(?=\s*:)/g, '<span class="json-key">$&</span>');
+            
+            // 处理字符串值（不在键名位置的字符串）
+            highlighted = highlighted.replace(/"([^"\\]|\\.)*"/g, function(match, p1, offset, fullText) {
+                // 检查这个字符串是否已经被处理为键名
+                const afterMatch = fullText.slice(offset + match.length);
+                // 如果后面紧跟着冒号，说明是键名，已经处理过了
+                if (afterMatch.trim().startsWith(':')) {
                     return match;
                 }
                 return '<span class="json-string">' + match + '</span>';
             });
             
-            // 数字
-            highlighted = highlighted.replace(/\b\d+\.?\d*\b/g, '<span class="json-number">$&</span>');
+            // 处理数字（包括整数、浮点数、科学计数法）
+            highlighted = highlighted.replace(/\b-?\d+(\.\d+)?([eE][+-]?\d+)?\b/g, '<span class="json-number">$&</span>');
             
-            // 布尔值
+            // 处理布尔值
             highlighted = highlighted.replace(/\b(true|false)\b/g, '<span class="json-boolean">$&</span>');
             
-            // null值
+            // 处理null值
             highlighted = highlighted.replace(/\bnull\b/g, '<span class="json-null">$&</span>');
-            
-            // 注释
-            highlighted = highlighted.replace(/\/\/.*$/gm, '<span class="json-comment">$&</span>');
-            highlighted = highlighted.replace(/\/\*[\\s\\S]*?\*\//g, '<span class="json-comment">$&</span>');
-            
-            // 标点符号
-            highlighted = highlighted.replace(/[{}\[\],:]/g, '<span class="json-punctuation">$&</span>');
             
             // 设置高亮内容
             codeContent.innerHTML = highlighted;
