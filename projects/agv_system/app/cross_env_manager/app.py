@@ -32,7 +32,8 @@ try:
         shelf_query,
         agv_status,
         join_qr_node_query,
-        task_query_extended
+        task_query_extended,
+        device_validation_extended
     )
     QUERY_MODULES_AVAILABLE = True
 except ImportError as e:
@@ -51,6 +52,8 @@ except ImportError as e:
     shelf_query = EmptyModule()
     agv_status = EmptyModule()
     join_qr_node_query = EmptyModule()
+    task_query_extended = EmptyModule()
+    device_validation_extended = EmptyModule()
     task_query_extended = EmptyModule()
 
 # 尝试导入tomli（Python 3.11+内置tomllib，低版本使用tomli）
@@ -1157,37 +1160,16 @@ def query_index():
         flash('查询功能模块未正确加载，请检查模块配置', 'error')
         return redirect(url_for('index'))
     
-    return render_template('query/index.html')
+    return render_template('query/index_optimized.html')
 
 @app.route('/query/task', methods=['GET', 'POST'])
-def query_task():
-    """任务查询"""
+def query_task_extended():
+    """整合任务查询页面"""
     if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
+        flash('查询功能模块未正确加载，请检查模块配置', 'error')
+        return redirect(url_for('index'))
     
-    if request.method == 'POST':
-        task_number = request.form.get('task_number', '').strip()
-        if not task_number:
-            flash('请输入任务单号', 'warning')
-            return render_template('query/task_query.html')
-        
-        try:
-            # 使用测试数据库进行查询
-            task_info = task_query.query_task_by_number(task_number, use_production=False)
-            
-            if task_info:
-                return render_template('query/task_result.html', 
-                                     task_info=task_info,
-                                     task_number=task_number)
-            else:
-                flash(f'未找到任务单号: {task_number}', 'info')
-                return render_template('query/task_query.html')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            return render_template('query/task_query.html')
-    
-    return render_template('query/task_query.html')
+    return render_template('query/task_extended.html')
 
 @app.route('/query/device', methods=['GET', 'POST'])
 def query_device():
@@ -1714,6 +1696,23 @@ def get_join_qr_node_stats_api():
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:
         return jsonify({'success': False, 'message': f'获取统计信息失败: {str(e)}'}), 500
+
+@app.route('/addtask')
+def addtask():
+    """AGV任务下发页面"""
+    return render_template('addTask/addtask.html')
+
+@app.route('/addtask/help')
+def addtask_help():
+    """提供addtask页面的帮助文档"""
+    try:
+        # 读取readme.md文件
+        readme_path = os.path.join(os.path.dirname(__file__), 'templates', 'addTask', 'readme.md')
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return f"无法加载帮助文档: {str(e)}", 500
 
 if __name__ == '__main__':
     # 创建模板目录

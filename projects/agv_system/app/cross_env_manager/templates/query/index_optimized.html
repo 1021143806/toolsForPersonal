@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV查询功能 - 跨环境任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --dark-bg: #212529;
+            --dark-card: #343a40;
+            --dark-border: #495057;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 2rem 2rem;
+        }
+        
+        .feature-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+            border-color: var(--primary-color);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .btn-primary-gradient {
+            background: linear-gradient(135deg, var(--primary-color), #6610f2);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.3);
+        }
+        
+        .stat-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+        }
+        
+        .section-title {
+            color: #f8f9fa;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 0;
+            width: 3rem;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+        
+        .coming-soon {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .coming-soon::before {
+            content: '即将推出';
+            position: absolute;
+            top: 1rem;
+            right: -2rem;
+            background: var(--warning-color);
+            color: #000;
+            padding: 0.25rem 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transform: rotate(45deg);
+            z-index: 1;
+        }
+        
+        .feature-description {
+            color: #adb5bd;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .footer {
+            background: var(--dark-card);
+            border-top: 1px solid var(--dark-border);
+            margin-top: 3rem;
+            padding: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-robot me-2"></i>跨环境任务管理系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="bi bi-house me-1"></i>主页
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('query_index') }}">
+                            <i class="bi bi-search me-1"></i>AGV查询
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('search') }}">
+                            <i class="bi bi-folder me-1"></i>模板管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('show_docs') }}">
+                            <i class="bi bi-file-text me-1"></i>文档
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <button class="btn btn-outline-light" onclick="toggleTheme()">
+                        <i class="bi bi-palette"></i> 切换主题
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面头部 -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-3">
+                <i class="bi bi-search-heart me-3"></i>AGV查询功能
+            </h1>
+            <p class="lead mb-4">一站式AGV设备、任务、状态查询与管理平台</p>
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <p class="mb-0">提供全面的AGV设备验证、任务查询、状态监控功能，支持设备数据同步和管理</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div class="container">
+        <!-- 功能卡片区域 -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="section-title">核心查询功能</h2>
+            </div>
+            
+            <!-- 任务查询 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-card p-4">
+                    <div class="text-center">
+                        <i class="bi bi-clipboard-check feature-icon"></i>
+                        <h4 class="fw-bold mb-3">任务查询</h4>
+                        <p class="feature-description mb-4">
+                            根据任务单号查询详细信息，包括设备状态、执行进度、时间信息等，支持跨环境任务查询
+                        </p>
+                        <a href="{{ url_for('query_task_extended') }}" class="btn btn-primary-gradient w-100">
+                            <i class="bi bi-arrow-right me-2"></i>开始查询
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 设备验证 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-card p-4">
+                    <div class="text-center">
+                        <i class="bi bi-device-hdd feature-icon"></i>
+                        <h4 class="fw-bold mb-3">设备验证</h4>
+                        <p class="feature-description mb-4">
+                            验证AGV、货架、RFID设备信息，支持设备数据同步、设备组管理和数据库操作
+                        </p>
+                        <a href="{{ url_for('query_device') }}" class="btn btn-primary-gradient w-100">
+                            <i class="bi bi-arrow-right me-2"></i>开始验证
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AGV状态 -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-card p-4 coming-soon">
+                    <div class="text-center">
+                        <i class="bi bi-robot feature-icon"></i>
+                        <h4 class="fw-bold mb-3">AGV状态</h4>
+                        <p class="feature-description mb-4">
+                            实时查询AGV运行状态、电池信息、当前位置等，支持设备监控和告警功能
+                        </p>
+                        <button class="btn btn-secondary w-100" disabled>
+                            <i class="bi bi-clock me-2"></i>即将推出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 扩展功能区域 -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="section-title">扩展功能</h2>
+            </div>
+            
+            <!-- 交接点查询 -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-card p-4 coming-soon">
+                    <div class="text-center">
+                        <i class="bi bi-signpost feature-icon"></i>
+                        <h5 class="fw-bold mb-3">交接点查询</h5>
+                        <p class="feature-description mb-4">
+                            查询交接点位置和配置信息，支持路径规划和区域管理
+                        </p>
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-clock me-2"></i>等待数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 货架模型 -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-card p-4 coming-soon">
+                    <div class="text-center">
+                        <i class="bi bi-box feature-icon"></i>
+                        <h5 class="fw-bold mb-3">货架模型</h5>
+                        <p class="feature-description mb-4">
+                            查询货架模型规格和参数，支持货架配置和管理
+                        </p>
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-clock me-2"></i>等待数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 货架查询 -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-card p-4 coming-soon">
+                    <div class="text-center">
+                        <i class="bi bi-pallet feature-icon"></i>
+                        <h5 class="fw-bold mb-3">货架查询</h5>
+                        <p class="feature-description mb-4">
+                            查询货架状态和位置信息，支持库存管理和追踪
+                        </p>
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-clock me-2"></i>等待数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 所有AGV状态 -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-card p-4 coming-soon">
+                    <div class="text-center">
+                        <i class="bi bi-grid-1x2 feature-icon"></i>
+                        <h5 class="fw-bold mb-3">所有AGV状态</h5>
+                        <p class="feature-description mb-4">
+                            查看所有AGV的实时状态，支持批量监控和统计分析
+                        </p>
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-clock me-2"></i>即将推出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统信息 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="feature-card p-4">
+                    <h3 class="section-title mb-4">系统信息</h3>
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number">2</div>
+                                <div class="stat-label">核心功能</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number">4</div>
+                                <div class="stat-label">扩展功能</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number">实时</div>
+                                <div class="stat-label">数据更新</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number">安全</div>
+                                <div class="stat-label">数据验证</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container text-center">
+            <p class="mb-2">
+                <i class="bi bi-c-circle me-1"></i>2026 跨环境任务管理系统
+            </p>
+            <p class="mb-0 text-muted">
+                <small>版本: 2.1 | 最后更新: 2026年4月</small>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 主题切换脚本 -->
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-bs-theme', newTheme);
+            
+            // 更新按钮文本
+            const button = document.querySelector('[onclick="toggleTheme()"]');
+            const icon = button.querySelector('i');
+            const text = newTheme === 'dark' ? '切换主题' : '切换主题';
+            
+            button.innerHTML = `<i class="bi bi-palette"></i> ${text}`;
+            
+            // 保存主题偏好
+            localStorage.setItem('theme', newTheme);
+        }
+        
+        // 初始化主题
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            
+            // 为所有卡片添加点击效果
+            const cards = document.querySelectorAll('.feature-card:not(.coming-soon)');
+            cards.forEach(card => {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+                        const link = this.querySelector('a');
+                        if (link) {
+                            link.click();
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

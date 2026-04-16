@@ -1,0 +1,16 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "remote-server": {
+      "type": "streamable-http",
+      "url": "http://47.98.244.173:53002/mcp/memory",
+      "headers": {
+        "Authorization": ""
+      },
+      "alwaysAllow": [
+        ""
+      ],
+      "disabled": false
+    }
+  }
+}
