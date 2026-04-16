@@ -476,62 +476,84 @@
         (function(){
             "use strict";
 
-            // ---------- 初始配置数据（简化演示版，实际可替换完整数据）----------
-            const initialConfig = {
-                "general": {
-                    "title": "AGV 跨环境任务下发系统 v1.5.1.4",
-                    "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
-                },
-                "areas": {
-                    "A1-1 PCBA": {
-                        "tasks": {
-                            "送满A1pcba1F去A2华昱欣3F": {
-                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
-                                "requires_shelf": true,
-                                "requires_task_path": false,
-                                "task_path_options": []
-                            },
-                            "回空A1pcba1F去A2华昱欣3F": {
-                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                                "code": "HJBY_31A1DZ1F_to_19A2HYX3F_back",
-                                "requires_shelf": true,
-                                "requires_task_path": false,
-                                "task_path_options": []
-                            }
-                        }
-                    },
-                    "A1-2 电装工厂": {
-                        "tasks": {
-                            "314空车A1电装2F去A2华消1F": {
-                                "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
-                                "code": "K_31A1DZ1F_to_19A2HX1F_go",
-                                "requires_shelf": false,
-                                "requires_task_path": false,
-                                "task_path_options": []
-                            }
-                        }
-                    },
-                    "A2-2 存储备料": {
-                        "tasks": {
-                            "上架任务": {
-                                "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
-                                "code": "shangjiafangxia",
-                                "requires_shelf": true,
-                                "requires_task_path": true,
-                                "task_path_options": [
-                                    { "value": "33254836", "label": "（33254836）" },
-                                    { "value": "33254835", "label": "（33254835）" }
-                                ],
-                                "capacity": 10
-                            }
-                        }
+            // ---------- 配置数据加载函数 ----------
+            async function loadConfigFromFile() {
+                try {
+                    // 尝试从本地文件加载配置
+                    const response = await fetch('/static/js/config.js');
+                    if (!response.ok) {
+                        throw new Error('无法加载配置文件');
                     }
+                    const configText = await response.text();
+                    
+                    // 从JavaScript文件中提取config对象
+                    const match = configText.match(/const config = ([\s\S]*?);/);
+                    if (!match) {
+                        throw new Error('配置文件格式错误，找不到config对象');
+                    }
+                    
+                    const configObj = JSON.parse(match[1]);
+                    return configObj;
+                } catch (error) {
+                    console.warn('加载本地配置文件失败，使用默认配置:', error);
+                    // 如果加载失败，使用默认配置
+                    return {
+                        "general": {
+                            "title": "AGV 跨环境任务下发系统 v1.5.1.4",
+                            "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+                        },
+                        "areas": {
+                            "A1-1 PCBA": {
+                                "tasks": {
+                                    "送满A1pcba1F去A2华昱欣3F": {
+                                        "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                        "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
+                                        "requires_shelf": true,
+                                        "requires_task_path": false,
+                                        "task_path_options": []
+                                    },
+                                    "回空A1pcba1F去A2华昱欣3F": {
+                                        "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                        "code": "HJBY_31A1DZ1F_to_19A2HYX3F_back",
+                                        "requires_shelf": true,
+                                        "requires_task_path": false,
+                                        "task_path_options": []
+                                    }
+                                }
+                            },
+                            "A1-2 电装工厂": {
+                                "tasks": {
+                                    "314空车A1电装2F去A2华消1F": {
+                                        "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                        "code": "K_31A1DZ1F_to_19A2HX1F_go",
+                                        "requires_shelf": false,
+                                        "requires_task_path": false,
+                                        "task_path_options": []
+                                    }
+                                }
+                            },
+                            "A2-2 存储备料": {
+                                "tasks": {
+                                    "上架任务": {
+                                        "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                                        "code": "shangjiafangxia",
+                                        "requires_shelf": true,
+                                        "requires_task_path": true,
+                                        "task_path_options": [
+                                            { "value": "33254836", "label": "（33254836）" },
+                                            { "value": "33254835", "label": "（33254835）" }
+                                        ],
+                                        "capacity": 10
+                                    }
+                                }
+                            }
+                        }
+                    };
                 }
-            };
+            }
 
             // 当前工作配置对象
-            let configData = JSON.parse(JSON.stringify(initialConfig));
+            let configData = {};
 
             // UI状态
             let currentAreaName = null;
@@ -569,6 +591,7 @@
             const statusMessage = document.getElementById('status-message');
             const statusText = document.getElementById('status-text');
             const backupListEl = document.getElementById('backup-list');
+            const refreshBtn = document.getElementById('refresh-btn');
 
             // 模态框
             const areaModalEl = document.getElementById('area-modal');
@@ -580,6 +603,20 @@
             if (areaModalEl) areaModal = new bootstrap.Modal(areaModalEl);
             const viewBackupModalEl = document.getElementById('view-backup-modal');
             if (viewBackupModalEl) viewBackupModal = new bootstrap.Modal(viewBackupModalEl);
+
+            // 页面初始化
+            async function initPage() {
+                try {
+                    showStatus('正在加载配置文件...', 'info');
+                    configData = await loadConfigFromFile();
+                    renderAreaTree();
+                    updateRightPanel();
+                    syncConfigToTextarea();
+                    showStatus('配置文件加载完成', 'success');
+                } catch (error) {
+                    showStatus('初始化失败: ' + error.message, 'error');
+                }
+            }
 
             // ---------- 辅助函数 ----------
             function showStatus(msg, type = 'info') {
@@ -1096,6 +1133,22 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 if (tabId === 'source') syncConfigToTextarea();
             }
 
+            // 重置演示数据（重新加载配置文件）
+            async function resetDemoData() {
+                try {
+                    showStatus('正在重新加载配置文件...', 'info');
+                    configData = await loadConfigFromFile();
+                    currentAreaName = null;
+                    currentTaskName = null;
+                    renderAreaTree();
+                    updateRightPanel();
+                    syncConfigToTextarea();
+                    showStatus('配置文件已重置', 'success');
+                } catch (error) {
+                    showStatus('重置失败: ' + error.message, 'error');
+                }
+            }
+
             function formatSource() {
                 try {
                     const text = configContent.value;
@@ -1170,13 +1223,8 @@ const config = ${formatted};`;
                 document.getElementById('copy-code-btn').addEventListener('click', copySource);
                 document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
                 document.getElementById('refresh-btn').addEventListener('click', () => {
-                    if (confirm('确定重置为初始演示配置吗？未保存的更改将丢失。')) {
-                        configData = JSON.parse(JSON.stringify(initialConfig));
-                        currentAreaName = null; currentTaskName = null;
-                        renderAreaTree();
-                        updateRightPanel();
-                        syncConfigToTextarea();
-                        showStatus('已重置为初始配置', 'info');
+                    if (confirm('确定重新加载配置文件吗？未保存的更改将丢失。')) {
+                        resetDemoData();
                     }
                 });
                 
@@ -1192,16 +1240,30 @@ const config = ${formatted};`;
                     e.target.value = '';
                 });
                 
-                // 初始化模拟备份数据
-                createBackup(false); // 初始自动创建一个备份示例
+                // 初始化模拟备份数据（在配置加载完成后创建）
+                // 备份创建将在init()函数中配置加载完成后进行
             }
 
-            function init() {
+            async function init() {
                 initTheme();
-                renderAreaTree();
-                syncConfigToTextarea();
                 bindEvents();
                 renderBackupList();
+                
+                // 异步加载配置文件
+                try {
+                    showStatus('正在加载配置文件...', 'info');
+                    configData = await loadConfigFromFile();
+                    renderAreaTree();
+                    updateRightPanel();
+                    syncConfigToTextarea();
+                    
+                    // 创建初始备份
+                    createBackup(false);
+                    
+                    showStatus('配置文件加载完成', 'success');
+                } catch (error) {
+                    showStatus('初始化失败: ' + error.message, 'error');
+                }
             }
 
             init();
