@@ -1714,6 +1714,165 @@ def addtask_help():
     except Exception as e:
         return f"无法加载帮助文档: {str(e)}", 500
 
+@app.route('/config')
+def config_editor():
+    """配置管理页面"""
+    return render_template('config_editor.html')
+
+@app.route('/addtask/config')
+def get_addtask_config():
+    """获取当前配置"""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 直接返回文件内容，让前端处理JSON提取
+        return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return jsonify({'error': f'无法加载配置: {str(e)}'}), 500
+
+@app.route('/addtask/config', methods=['POST'])
+def save_addtask_config():
+    """保存配置"""
+    try:
+        new_config = request.json
+        config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
+        
+        # 创建备份目录
+        backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # 创建自动备份
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f"config_backup_{timestamp}.js"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        # 备份当前配置
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                current_content = f.read()
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(current_content)
+        
+        # 保存新配置
+        import json
+        config_content = f"const config = {json.dumps(new_config, indent=4, ensure_ascii=False)};"
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(config_content)
+        
+        return jsonify({'success': True, 'backup_name': backup_name})
+    except Exception as e:
+        return jsonify({'error': f'保存配置失败: {str(e)}'}), 500
+
+@app.route('/addtask/config/backups')
+def list_backups():
+    """列出所有备份文件"""
+    try:
+        backup_dir = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups')
+        backups = []
+        
+        if os.path.exists(backup_dir):
+            for filename in sorted(os.listdir(backup_dir), reverse=True):
+                if filename.endswith('.js'):
+                    filepath = os.path.join(backup_dir, filename)
+                    stat = os.stat(filepath)
+                    
+                    # 从文件名提取版本信息
+                    version_match = filename.split('_')[-1].replace('.js', '')
+                    
+                    backups.append({
+                        'name': filename,
+                        'version': version_match,
+                        'timestamp': stat.st_mtime * 1000,  # 转换为毫秒
+                        'size': stat.st_size
+                    })
+        
+        return jsonify(backups)
+    except Exception as e:
+        return jsonify({'error': f'无法列出备份: {str(e)}'}), 500
+
+@app.route('/addtask/config/backup', methods=['POST'])
+def create_backup():
+    """创建手动备份"""
+    try:
+        backup_type = request.json.get('type', 'manual')
+        config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
+        backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f"config_{backup_type}_{timestamp}.js"
+        backup_path = os.path.join(backup_dir, backup_name)
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+        
+        return jsonify({'success': True, 'backup_name': backup_name})
+    except Exception as e:
+        return jsonify({'error': f'创建备份失败: {str(e)}'}), 500
+
+@app.route('/addtask/config/backup/<backup_name>')
+def get_backup(backup_name):
+    """获取备份文件内容"""
+    try:
+        backup_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups', backup_name)
+        if not os.path.exists(backup_path):
+            return jsonify({'error': '备份文件不存在'}), 404
+        
+        with open(backup_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return jsonify({'error': f'无法读取备份: {str(e)}'}), 500
+
+@app.route('/addtask/config/backup/<backup_name>/restore', methods=['POST'])
+def restore_backup(backup_name):
+    """恢复备份"""
+    try:
+        backup_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups', backup_name)
+        config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
+        
+        if not os.path.exists(backup_path):
+            return jsonify({'error': '备份文件不存在'}), 404
+        
+        # 读取备份内容
+        with open(backup_path, 'r', encoding='utf-8') as f:
+            backup_content = f.read()
+        
+        # 恢复配置
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(backup_content)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'恢复备份失败: {str(e)}'}), 500
+
+@app.route('/addtask/config/backup/<backup_name>', methods=['DELETE'])
+def delete_backup(backup_name):
+    """删除备份"""
+    try:
+        backup_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups', backup_name)
+        
+        if not os.path.exists(backup_path):
+            return jsonify({'error': '备份文件不存在'}), 404
+        
+        os.remove(backup_path)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'删除备份失败: {str(e)}'}), 500
+
+@app.route('/actuator/health')
+def health_check():
+    """健康检查接口 - 用于服务器监控"""
+    return '1000', 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
 if __name__ == '__main__':
     # 创建模板目录
     os.makedirs('templates', exist_ok=True)

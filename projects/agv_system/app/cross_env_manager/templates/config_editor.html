@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGV任务配置管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), #6c5ce7);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        
+        .editor-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .editor-tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .editor-content {
+            display: none;
+        }
+        
+        .editor-content.active {
+            display: block;
+        }
+        
+        .config-textarea {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .backup-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .backup-item {
+            border-left: 4px solid var(--primary-color);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .json-error {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .version-badge {
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 页头 -->
+        <div class="header text-center">
+            <h1><i class="bi bi-gear me-2"></i>AGV任务配置管理系统</h1>
+            <p class="mb-0">可视化配置编辑与版本管理</p>
+        </div>
+        
+        <!-- 导航 -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <a href="/addtask" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>返回任务下发
+            </a>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-info" id="refresh-btn">
+                    <i class="bi bi-arrow-clockwise me-2"></i>刷新
+                </button>
+                <button class="btn btn-outline-secondary" id="help-btn">
+                    <i class="bi bi-question-circle me-2"></i>帮助
+                </button>
+            </div>
+        </div>
+        
+        <!-- 编辑器容器 -->
+        <div class="editor-container">
+            <!-- 编辑模式切换 -->
+            <div class="editor-tabs">
+                <button class="tab-btn active" data-tab="visual">
+                    <i class="bi bi-layout-text-sidebar me-2"></i>可视化编辑
+                </button>
+                <button class="tab-btn" data-tab="source">
+                    <i class="bi bi-code-slash me-2"></i>源文件编辑
+                </button>
+            </div>
+            
+            <!-- 可视化编辑器 -->
+            <div class="editor-content active" id="visual-editor">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    可视化编辑器正在开发中，当前请使用源文件编辑模式
+                </div>
+                <div class="text-center py-4">
+                    <button class="btn btn-primary" onclick="switchToSource()">
+                        <i class="bi bi-code-slash me-2"></i>切换到源文件编辑
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 源文件编辑器 -->
+            <div class="editor-content" id="source-editor">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">配置文件内容 (config.js)</label>
+                    <textarea class="form-control config-textarea" id="config-content" rows="25" 
+                              placeholder="请输入配置文件内容..."></textarea>
+                    <div class="json-error" id="json-error"></div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" id="save-btn">
+                        <i class="bi bi-check-circle me-2"></i>保存配置
+                    </button>
+                    <button class="btn btn-success" id="validate-btn">
+                        <i class="bi bi-check-lg me-2"></i>验证JSON
+                    </button>
+                    <button class="btn btn-outline-secondary" id="format-btn">
+                        <i class="bi bi-arrow-clockwise me-2"></i>格式化
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 备份管理 -->
+        <div class="editor-container">
+            <h4><i class="bi bi-clock-history me-2"></i>配置备份管理</h4>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="backup-list" id="backup-list">
+                        <div class="text-center py-3 text-muted">
+                            <i class="bi bi-hourglass-split me-2"></i>加载备份列表...
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-section">
+                        <h6>备份操作</h6>
+                        <button class="btn btn-outline-primary w-100 mb-2" id="create-backup">
+                            <i class="bi bi-plus-circle me-2"></i>创建手动备份
+                        </button>
+                        <button class="btn btn-outline-info w-100 mb-2" id="export-config">
+                            <i class="bi bi-download me-2"></i>导出配置
+                        </button>
+                        <button class="btn btn-outline-warning w-100" id="import-config">
+                            <i class="bi bi-upload me-2"></i>导入配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 状态信息 -->
+        <div class="alert alert-info" id="status-message" style="display: none;">
+            <i class="bi bi-info-circle me-2"></i>
+            <span id="status-text"></span>
+        </div>
+    </div>
+
+    <!-- 导入配置模态框 -->
+    <div class="modal fade" id="import-modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">导入配置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="file" class="form-control" id="config-file" accept=".js,.json">
+                    <div class="form-text">支持 .js 或 .json 格式的配置文件</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-import">导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let currentConfig = '';
+        let backups = [];
+        
+        // DOM元素
+        const configContent = document.getElementById('config-content');
+        const jsonError = document.getElementById('json-error');
+        const backupList = document.getElementById('backup-list');
+        const statusMessage = document.getElementById('status-message');
+        const statusText = document.getElementById('status-text');
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            loadBackups();
+            setupEventListeners();
+        });
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 标签页切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    switchTab(tab);
+                });
+            });
+            
+            // 按钮事件
+            document.getElementById('save-btn').addEventListener('click', saveConfig);
+            document.getElementById('validate-btn').addEventListener('click', validateConfig);
+            document.getElementById('format-btn').addEventListener('click', formatConfig);
+            document.getElementById('refresh-btn').addEventListener('click', refreshPage);
+            document.getElementById('create-backup').addEventListener('click', createManualBackup);
+            document.getElementById('export-config').addEventListener('click', exportConfig);
+            document.getElementById('import-config').addEventListener('click', showImportModal);
+            document.getElementById('confirm-import').addEventListener('click', importConfig);
+            
+            // 配置文件变化事件
+            configContent.addEventListener('input', function() {
+                clearError();
+            });
+        }
+        
+        // 切换标签页
+        function switchTab(tab) {
+            // 更新按钮状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            
+            // 更新内容显示
+            document.querySelectorAll('.editor-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tab}-editor`).classList.add('active');
+        }
+        
+        // 切换到源文件编辑
+        function switchToSource() {
+            switchTab('source');
+        }
+        
+        // 加载配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('/addtask/config');
+                if (response.ok) {
+                    const content = await response.text();
+                    // 直接使用文件内容
+                    configContent.value = content;
+                    showStatus('配置加载成功', 'success');
+                } else {
+                    throw new Error('无法加载配置');
+                }
+            } catch (error) {
+                showStatus('配置加载失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 保存配置
+        async function saveConfig() {
+            if (!validateConfig()) {
+                return;
+            }
+            
+            try {
+                // 提取JSON部分
+                const configText = configContent.value;
+                const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
+                if (!jsonMatch) {
+                    throw new Error('配置文件格式错误');
+                }
+                
+                const configJson = JSON.parse(jsonMatch[1]);
+                
+                const response = await fetch('/addtask/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(configJson)
+                });
+                
+                if (response.ok) {
+                    showStatus('配置保存成功', 'success');
+                    // 自动创建备份
+                    await createBackup('manual');
+                    // 重新加载备份列表
+                    loadBackups();
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                showStatus('保存失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 验证配置
+        function validateConfig() {
+            clearError();
+            try {
+                const configText = configContent.value;
+                const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
+                if (!jsonMatch) {
+                    throw new Error('找不到配置对象');
+                }
+                
+                JSON.parse(jsonMatch[1]);
+                showStatus('JSON格式正确', 'success');
+                return true;
+            } catch (error) {
+                showError('JSON格式错误: ' + error.message);
+                return false;
+            }
+        }
+        
+        // 格式化配置
+        function formatConfig() {
+            if (validateConfig()) {
+                try {
+                    const configText = configContent.value;
+                    const jsonMatch = configText.match(/const config = ([\s\S]*?);/);
+                    if (jsonMatch) {
+                        const formattedJson = JSON.stringify(JSON.parse(jsonMatch[1]), null, 2);
+                        configContent.value = `const config = ${formattedJson};`;
+                        showStatus('格式化完成', 'success');
+                    }
+                } catch (error) {
+                    showError('格式化失败: ' + error.message);
+                }
+            }
+        }
+        
+        // 加载备份列表
+        async function loadBackups() {
+            try {
+                const response = await fetch('/addtask/config/backups');
+                if (response.ok) {
+                    backups = await response.json();
+                    renderBackupList();
+                }
+            } catch (error) {
+                console.error('加载备份列表失败:', error);
+            }
+        }
+        
+        // 渲染备份列表
+        function renderBackupList() {
+            if (backups.length === 0) {
+                backupList.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-inbox me-2"></i>暂无备份文件
+                    </div>
+                `;
+                return;
+            }
+            
+            backupList.innerHTML = backups.map(backup => `
+                <div class="backup-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${backup.name}</strong>
+                            <span class="badge bg-secondary version-badge ms-2">v${backup.version}</span>
+                            <div class="text-muted small">${new Date(backup.timestamp).toLocaleString()}</div>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" onclick="restoreBackup('${backup.name}')">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewBackup('${backup.name}')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${backup.name}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 创建手动备份
+        async function createManualBackup() {
+            await createBackup('manual');
+            loadBackups();
+        }
+        
+        // 创建备份
+        async function createBackup(type) {
+            try {
+                const response = await fetch('/addtask/config/backup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type: type })
+                });
+                
+                if (response.ok) {
+                    showStatus('备份创建成功', 'success');
+                } else {
+                    throw new Error('备份创建失败');
+                }
+            } catch (error) {
+                showStatus('备份创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 恢复备份
+        async function restoreBackup(backupName) {
+            if (!confirm(`确定要恢复备份 ${backupName} 吗？当前配置将被覆盖。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}/restore`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showStatus('备份恢复成功', 'success');
+                    loadConfig();
+                } else {
+                    throw new Error('恢复失败');
+                }
+            } catch (error) {
+                showStatus('恢复失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 查看备份
+        async function viewBackup(backupName) {
+            try {
+                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}`);
+                if (response.ok) {
+                    const content = await response.text();
+                    // 在新窗口或模态框中显示备份内容
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(`
+                        <html>
+                            <head><title>备份内容 - ${backupName}</title></head>
+                            <body>
+                                <pre>${content}</pre>
+                            </body>
+                        </html>
+                    `);
+                }
+            } catch (error) {
+                showStatus('查看备份失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 删除备份
+        async function deleteBackup(backupName) {
+            if (!confirm(`确定要删除备份 ${backupName} 吗？此操作不可恢复。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/addtask/config/backup/${encodeURIComponent(backupName)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showStatus('备份删除成功', 'success');
+                    loadBackups();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                showStatus('删除失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 导出配置
+        function exportConfig() {
+            const configText = configContent.value;
+            const blob = new Blob([configText], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `config_backup_${new Date().toISOString().split('T')[0]}.js`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showStatus('配置导出成功', 'success');
+        }
+        
+        // 显示导入模态框
+        function showImportModal() {
+            const modal = new bootstrap.Modal(document.getElementById('import-modal'));
+            modal.show();
+        }
+        
+        // 导入配置
+        function importConfig() {
+            const fileInput = document.getElementById('config-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('请选择要导入的文件', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    // 验证文件内容
+                    const jsonMatch = content.match(/const config = ([\s\S]*?);/);
+                    if (!jsonMatch) {
+                        throw new Error('无效的配置文件格式');
+                    }
+                    JSON.parse(jsonMatch[1]);
+                    
+                    // 更新编辑器内容
+                    configContent.value = content;
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('import-modal'));
+                    modal.hide();
+                    
+                    showStatus('配置导入成功，请点击保存应用更改', 'success');
+                } catch (error) {
+                    showStatus('导入失败: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // 刷新页面
+        function refreshPage() {
+            loadConfig();
+            loadBackups();
+        }
+        
+        // 显示状态信息
+        function showStatus(message, type) {
+            statusText.textContent = message;
+            statusMessage.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
+            statusMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            jsonError.textContent = message;
+            jsonError.style.display = 'block';
+        }
+        
+        // 清除错误信息
+        function clearError() {
+            jsonError.textContent = '';
+            jsonError.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

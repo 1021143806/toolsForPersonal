@@ -103,6 +103,24 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
+        .config-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .config-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
         .help-toggle {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -558,28 +576,39 @@
     <div class="container">
         <header>
             <h1 id="page-title">AGV 跨环境任务下发系统</h1>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="help-toggle" id="help-toggle" title="查看帮助文档">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div class="theme-toggle" id="theme-toggle">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 20V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M4.93 4.93L6.34 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M17.66 17.66L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M6.34 17.66L4.93 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M19.07 4.93L17.66 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-            </div>
+             <div style="display: flex; align-items: center; gap: 10px;">
+                 <div class="config-toggle" id="config-toggle" title="配置管理" onclick="window.open('/config', '_blank')">
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                         <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M19.4 15C19.2669 15.3031 19.1337 15.6062 19.0006 15.9094C18.5458 16.8724 18.0909 17.8354 17.6361 18.7984C17.2218 19.6764 16.8075 20.5544 16.3932 21.4324C16.2019 21.8345 16.0106 22.2366 15.8193 22.6387C15.5155 23.2848 14.7761 23.6579 14.0769 23.516C13.7182 23.441 13.3898 23.2628 13.1378 23.0049C12.8857 22.747 12.7215 22.4214 12.6667 22.0714V22.0714C12.6118 21.7214 12.6689 21.3639 12.8295 21.0493C12.9901 20.7348 13.2454 20.4795 13.5599 20.3189C13.8745 20.1583 14.2319 20.1012 14.5819 20.1561L14.6667 20.1667C15.3333 20.2778 16 20.3889 16.6667 20.5C16.8889 20.537 17.1111 20.5741 17.3333 20.6111C17.6667 20.6667 18 20.7222 18.3333 20.7778C18.6667 20.8333 19 20.8889 19.3333 20.9444C19.6667 21 20 21.0556 20.3333 21.1111C20.6667 21.1667 21 21.2222 21.3333 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M4.60078 15C4.73387 15.3031 4.867 15.6062 5.00013 15.9094C5.45497 16.8724 5.90981 17.8354 6.36465 18.7984C6.77898 19.6764 7.19331 20.5544 7.60764 21.4324C7.79891 21.8345 7.99018 22.2366 8.18145 22.6387C8.48528 23.2848 9.22465 23.6579 9.92389 23.516C10.2826 23.441 10.611 23.2628 10.863 23.0049C11.1151 22.747 11.2793 22.4214 11.3341 22.0714V22.0714C11.389 21.7214 11.3319 21.3639 11.1713 21.0493C11.0107 20.7348 10.7554 20.4795 10.4409 20.3189C10.1263 20.1583 9.7689 20.1012 9.41892 20.1561L9.33412 20.1667C8.66745 20.2778 8.00078 20.3889 7.33412 20.5C7.11189 20.537 6.88967 20.5741 6.66745 20.6111C6.33412 20.6667 6.00078 20.7222 5.66745 20.7778C5.33412 20.8333 5.00078 20.8889 4.66745 20.9444C4.33412 21 4.00078 21.0556 3.66745 21.1111C3.33412 21.1667 3.00078 21.2222 2.66745 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M3 9C3.79565 9 4.55871 8.68393 5.12132 8.12132C5.68393 7.55871 6 6.79565 6 6C6 5.20435 5.68393 4.44129 5.12132 3.87868C4.55871 3.31607 3.79565 3 3 3C2.20435 3 1.44129 3.31607 0.87868 3.87868C0.31607 4.44129 0 5.20435 0 6C0 6.79565 0.31607 7.55871 0.87868 8.12132C1.44129 8.68393 2.20435 9 3 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M21 9C21.7956 9 22.5587 8.68393 23.1213 8.12132C23.6839 7.55871 24 6.79565 24 6C24 5.20435 23.6839 4.44129 23.1213 3.87868C22.5587 3.31607 21.7956 3 21 3C20.2044 3 19.4413 3.31607 18.8787 3.87868C18.3161 4.44129 18 5.20435 18 6C18 6.79565 18.3161 7.55871 18.8787 8.12132C19.4413 8.68393 20.2044 9 21 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M9 3H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M9 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                     </svg>
+                 </div>
+                 <div class="help-toggle" id="help-toggle" title="查看帮助文档">
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                         <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                     </svg>
+                 </div>
+                 <div class="theme-toggle" id="theme-toggle">
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                         <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M12 20V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M4.93 4.93L6.34 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M17.66 17.66L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M2 12H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M20 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M6.34 17.66L4.93 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                         <path d="M19.07 4.93L17.66 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                     </svg>
+                 </div>
+             </div>
         </header>
 
         <!-- 左侧：任务下发 -->

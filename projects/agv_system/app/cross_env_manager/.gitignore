@@ -1,5 +1,11 @@
 config/*.toml
 config/old/*
 test_*
-test/*
 *.sql
+# 配置管理相关文件
+static/js/config.js
+static/js/backups/*
+# 开发环境文件
+.env
+.env.local
+*.log

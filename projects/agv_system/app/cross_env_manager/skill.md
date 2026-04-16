@@ -95,3 +95,56 @@ cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
 
 ### 测试报告
 详细的测试报告见：`test/DEPLOYMENT_TEST_REPORT.md`
+
+### 新增功能测试 (2026-04-16)
+
+#### 新增功能清单
+1. **健康检查接口** - `/actuator/health` (返回固定值1000，用于服务器监控)
+2. **AGV任务下发页面** - `/addtask` (集成原有addTask功能)
+3. **配置管理系统** - `/config` (独立配置管理界面)
+4. **配置管理API** - 支持配置的获取、保存、备份管理
+5. **帮助文档功能** - `/addtask/help` (在线帮助文档)
+
+#### 测试验证
+所有新增功能已通过Flask测试客户端验证：
+- ✓ 健康检查接口正常工作
+- ✓ 主页面包含任务下发导航链接
+- ✓ addtask页面正常显示
+- ✓ 配置管理页面功能完整
+- ✓ 配置管理API接口正常
+- ✓ 帮助文档功能正常
+
+#### 测试脚本
+新增综合测试脚本：`test/test_new_features.py`
+```bash
+# 运行测试
+cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
+python3 test/test_new_features.py http://127.0.0.1:5000
+```
+
+#### 测试文件夹管理
+test文件夹已从.gitignore中移除，包含以下测试脚本：
+- `test_new_features.py` - 新增功能综合测试
+- `test_web_access.py` - Web访问测试
+- `test_production_task_query.py` - 生产环境任务查询测试
+- 其他功能测试脚本
+
+#### 配置管理功能
+- 支持可视化编辑和源文件编辑双模式
+- 自动备份和版本管理
+- 备份文件存储在`static/js/backups/`目录
+- 配置文件和备份文件已添加到.gitignore
+
+#### 健康检查接口
+- 地址：`/actuator/health`
+- 输入：无
+- 返回：`1000` (纯文本)
+- 用途：服务器监控系统健康检查
+
+### 部署验证
+部署后应验证以下功能：
+1. 健康检查接口返回1000
+2. 主页面导航栏显示任务下发链接
+3. addtask页面功能正常
+4. 配置管理系统可访问
+5. 帮助文档正常加载
