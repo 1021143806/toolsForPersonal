@@ -1,899 +1,734 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AGV 跨环境任务下发系统</title>
-    <!-- 内联 favicon，避免 403 错误 -->
+    <title>AGV 跨环境任务下发 · 模板管理系统</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='80' height='40' x='10' y='30' fill='%234a6cf7' rx='8'/%3E%3Ccircle cx='30' cy='70' r='12' fill='%23333'/%3E%3Ccircle cx='70' cy='70' r='12' fill='%23333'/%3E%3C/svg%3E">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
-        /* 原有的CSS样式保持不变 */
         :root {
-            --primary-color: #4a6cf7;
-            --primary-dark: #3a5bd9;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #17a2b8;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-gradient-dark: linear-gradient(135deg, #4c63b6 0%, #5d3a8c 100%);
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
+            --transition-speed: 0.3s;
+        }
+
+        [data-bs-theme="light"] {
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #212529;
             --border-color: #dee2e6;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
-            --radius: 12px;
+            --header-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --detail-card-bg: #f8f9fa;
+            --form-section-bg: #ffffff;
+            --copy-box-bg: #e7f3ff;
+            --copy-box-border: #007bff;
         }
 
-        .dark-mode {
-            --primary-color: #5d7df9;
-            --primary-dark: #4a6cf7;
-            --secondary-color: #8a93a2;
+        [data-bs-theme="dark"] {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --border-color: #333333;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --text-color: #e9ecef;
+            --border-color: #495057;
+            --header-bg: linear-gradient(135deg, #4c63b6 0%, #5d3a8c 100%);
+            --detail-card-bg: #2d2d2d;
+            --form-section-bg: #2d2d2d;
+            --copy-box-bg: #1a3a5f;
+            --copy-box-border: #0d6efd;
         }
 
         body {
-            background: linear-gradient(135deg, var(--bg-color) 0%, #e9ecef 100%);
+            background-color: var(--bg-color);
             color: var(--text-color);
+            padding-top: 20px;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
             min-height: 100vh;
-            transition: var(--transition);
-            padding: 20px;
         }
 
         .container {
             max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
         }
 
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
+        .header {
+            background: var(--header-bg);
+            color: white;
+            padding: 2rem 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2.5rem;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
         }
 
-        header {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.3;
         }
 
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            background: linear-gradient(135deg, var(--primary-color), #6c5ce7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .theme-toggle {
-            background: var(--card-bg);
+        .template-card, .card {
             border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .theme-toggle:hover {
-            transform: rotate(15deg);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .config-toggle {
+            border-radius: 16px;
+            margin-bottom: 1.8rem;
             background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .config-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .help-toggle {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .help-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 25px;
-            margin-bottom: 25px;
-            transition: var(--transition);
-            height: fit-content;
+            box-shadow: var(--card-shadow);
+            transition: all var(--transition-speed);
+            overflow: hidden;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
         }
 
-        .card-title {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .card-header-custom {
+            background-color: var(--detail-card-bg);
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
         }
 
-        .card-title svg {
-            width: 24px;
-            height: 24px;
+        .card-body-custom {
+            padding: 1.75rem;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .detail-card {
+            border-left: 4px solid #0d6efd;
+            margin-bottom: 1rem;
+            background-color: var(--detail-card-bg);
+            border-radius: 8px;
+            transition: transform 0.2s;
         }
 
-        label {
-            display: block;
+        .detail-card:hover {
+            transform: translateX(5px);
+        }
+
+        .btn-action {
+            margin-right: 8px;
             margin-bottom: 8px;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
             font-weight: 500;
-            color: var(--text-color);
         }
 
-        select, input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--card-bg);
-            color: var(--text-color);
-            font-size: 16px;
-            transition: var(--transition);
-        }
-
-        select:focus, input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.2);
-        }
-
-        /* 禁用选项样式 */
-        select option:disabled {
-            color: var(--secondary-color);
-            background-color: var(--card-bg);
-        }
-
-        .btn {
-            padding: 12px 25px;
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: var(--secondary-color);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-secondary {
-            background: var(--secondary-color);
-        }
-
-        .btn-success {
-            background: var(--success-color);
-        }
-
-        .btn-warning {
-            background: var(--warning-color);
-            color: #212529;
-        }
-
-        .btn-info {
-            background: var(--info-color);
-        }
-
-        .error {
-            color: var(--danger-color);
-            font-size: 14px;
-            margin-top: 5px;
-            display: none;
-        }
-
-        .response-box {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            border: 1px solid var(--border-color);
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-            display: none;
-        }
-
-        .debug-toggle {
-            background: none;
-            border: none;
-            color: var(--primary-color);
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 14px;
-            text-decoration: underline;
-        }
-
-        .debug-info {
-            display: none;
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
-            border: 1px solid var(--border-color);
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-        }
-
-        footer {
-            grid-column: 1 / -1;
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: var(--secondary-color);
-            font-size: 14px;
-        }
-
-        .modal {
-            display: none;
+        .alert-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+
+        .form-section {
+            background: var(--form-section-bg);
+            padding: 0.5rem 0;
+        }
+
+        .theme-switcher {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
             z-index: 1000;
+        }
+
+        .theme-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
         }
 
-        .modal-content {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: var(--radius);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        .theme-btn:hover {
+            transform: rotate(15deg) scale(1.1);
         }
 
-        .modal-content-large {
-            max-width: 90%;
-            width: 90%;
-            max-height: 90vh;
+        .floating-action {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .floating-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
         }
 
-        /* 帮助模态框内Markdown内容样式 */
-        .help-content h1,
-        .help-content h2,
-        .help-content h3 {
-            color: var(--primary-color);
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-            font-weight: 600;
-        }
-        .help-content h1 {
-            font-size: 1.8em;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.3em;
-        }
-        .help-content h2 {
-            font-size: 1.5em;
-        }
-        .help-content h3 {
-            font-size: 1.2em;
-        }
-        .help-content p {
-            margin-bottom: 1em;
-            line-height: 1.6;
-            color: var(--text-color);
-        }
-        .help-content code {
-            background-color: rgba(0, 0, 0, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
-            color: var(--danger-color);
-        }
-        .help-content pre {
-            background-color: rgba(0, 0, 0, 0.05);
-            padding: 12px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin-bottom: 1em;
-        }
-        .help-content pre code {
-            background-color: transparent;
-            padding: 0;
-            color: inherit;
-        }
-        .help-content ul,
-        .help-content ol {
-            margin-left: 1.5em;
-            margin-bottom: 1em;
-            color: var(--text-color);
-        }
-        .help-content li {
-            margin-bottom: 0.5em;
-        }
-        .help-content blockquote {
-            border-left: 4px solid var(--primary-color);
-            padding-left: 1em;
-            margin-left: 0;
-            color: var(--secondary-color);
-            font-style: italic;
-        }
-        .help-content a {
-            color: var(--primary-color);
-            text-decoration: underline;
-        }
-        .help-content a:hover {
-            color: var(--primary-dark);
+        .floating-btn:hover {
+            transform: translateY(-3px);
         }
 
-        /* 表格样式 */
-        .help-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 1em;
+        .form-control, .form-select {
+            border-radius: 10px;
             border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: all 0.3s;
+            padding: 0.6rem 1rem;
         }
-        .help-content th,
-        .help-content td {
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            text-align: left;
-        }
-        .help-content th {
-            background-color: rgba(0, 0, 0, 0.05);
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-        .help-content tr:nth-child(even) {
-            background-color: rgba(0, 0, 0, 0.02);
-        }
-        /* 粗体/斜体样式 */
-        .help-content strong,
-        .help-content b {
-            font-weight: 700;
+
+        .form-control:focus, .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            background-color: var(--card-bg);
             color: var(--text-color);
         }
-        .help-content em,
-        .help-content i {
-            font-style: italic;
-        }
-        /* 水平线 */
-        .help-content hr {
-            border: none;
-            border-top: 1px solid var(--border-color);
-            margin: 1.5em 0;
-        }
-        /* 图片样式 */
-        .help-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 1em 0;
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .modal h2 {
-            margin-bottom: 15px;
-            color: var(--primary-color);
+        [data-bs-theme="dark"] .glass-effect {
+            background: rgba(30, 30, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .modal p {
-            margin-bottom: 20px;
-            line-height: 1.5;
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: #0d6efd;
+            animation: spin 1s linear infinite;
         }
 
-        .shelf-lock {
-            color: var(--warning-color);
-            font-size: 14px;
-            margin-top: 5px;
-            display: none;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
+
+        /* 原页面特有样式适配 */
+        .task-item {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: var(--detail-card-bg);
+        }
+
+        .task-item:first-child {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .task-status {
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status-8 { background-color: #198754; color: white; }
+        .status-6 { background-color: #ffc107; color: #212529; }
+        .status-4 { background-color: #0dcaf0; color: #212529; }
+        .status-9 { background-color: #6f42c1; color: white; }
+        .status--1 { background-color: #6c757d; color: white; }
 
         .query-toggle {
             display: flex;
-            margin-bottom: 15px;
-            border-radius: 8px;
+            margin-bottom: 20px;
+            border-radius: 50px;
             overflow: hidden;
             border: 1px solid var(--border-color);
+            background: var(--detail-card-bg);
         }
 
         .toggle-option {
             flex: 1;
-            padding: 10px;
+            padding: 10px 16px;
             text-align: center;
-            background: var(--card-bg);
+            background: transparent;
             cursor: pointer;
-            transition: var(--transition);
+            transition: var(--transition-speed);
+            font-weight: 500;
+            color: var(--text-color);
         }
 
         .toggle-option.active {
-            background: var(--primary-color);
+            background: var(--primary-gradient);
             color: white;
         }
 
-        .task-details {
-            margin-top: 20px;
-            border-top: 1px solid var(--border-color);
-            padding-top: 15px;
+        .debug-info {
+            background: var(--detail-card-bg);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px dashed var(--border-color);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
         }
 
-        .task-item {
-            padding: 12px;
+        .response-box {
+            background: var(--detail-card-bg);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.03);
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
         }
 
-        .task-item:first-child {
-            border-left: 4px solid var(--primary-color);
+        .modal-content {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
         }
 
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .task-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
         }
 
-        .status-8 { background-color: var(--success-color); color: white; }
-        .status-6 { background-color: var(--warning-color); color: #212529; }
-        .status-4 { background-color: var(--info-color); color: white; }
-        .status-9 { background-color: var(--primary-color); color: white; }
-
-        .task-info {
-            font-size: 14px;
-            margin-bottom: 5px;
+        .error-message {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-top: 6px;
         }
 
-        .task-info span {
-            font-weight: 500;
-        }
-
-        .priority-btn {
-            margin-top: 10px;
-            padding: 6px 12px;
-            font-size: 14px;
+        .shelf-lock-warning {
+            color: #fd7e14;
+            font-size: 0.85rem;
+            margin-top: 6px;
         }
 
         .empty-state {
             text-align: center;
-            padding: 30px;
+            padding: 40px 20px;
             color: var(--secondary-color);
         }
 
-        .empty-state svg {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 15px;
-            opacity: 0.5;
+        .btn-outline-light-custom {
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
         }
-        
-        /* 点位注释样式（保留用于旧版，新版使用内联计数） */
-        .option-with-comment {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .option-value {
-            font-weight: 500;
-        }
-        
-        .option-comment {
-            font-size: 12px;
-            color: var(--secondary-color);
-            margin-left: 10px;
+
+        .btn-outline-light-custom:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
         }
     </style>
-    <!-- Marked.js for Markdown rendering (注释掉，使用内置解析) -->
-    <!--<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
 </head>
 <body>
+    <!-- 主题切换按钮 (模板风格) -->
+    <div class="theme-switcher">
+        <button id="themeToggle" class="btn btn-primary theme-btn" title="切换主题">
+            <i class="bi bi-moon-stars"></i>
+        </button>
+    </div>
+
+    <!-- 浮动回到顶部 -->
+    <div class="floating-action">
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="btn btn-primary floating-btn" title="回到顶部">
+            <i class="bi bi-arrow-up"></i>
+        </button>
+    </div>
+
     <div class="container">
-        <header>
-            <h1 id="page-title">AGV 跨环境任务下发系统</h1>
-             <div style="display: flex; align-items: center; gap: 10px;">
-                 <div class="config-toggle" id="config-toggle" title="配置管理" onclick="window.open('/config', '_blank')">
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                         <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M19.4 15C19.2669 15.3031 19.1337 15.6062 19.0006 15.9094C18.5458 16.8724 18.0909 17.8354 17.6361 18.7984C17.2218 19.6764 16.8075 20.5544 16.3932 21.4324C16.2019 21.8345 16.0106 22.2366 15.8193 22.6387C15.5155 23.2848 14.7761 23.6579 14.0769 23.516C13.7182 23.441 13.3898 23.2628 13.1378 23.0049C12.8857 22.747 12.7215 22.4214 12.6667 22.0714V22.0714C12.6118 21.7214 12.6689 21.3639 12.8295 21.0493C12.9901 20.7348 13.2454 20.4795 13.5599 20.3189C13.8745 20.1583 14.2319 20.1012 14.5819 20.1561L14.6667 20.1667C15.3333 20.2778 16 20.3889 16.6667 20.5C16.8889 20.537 17.1111 20.5741 17.3333 20.6111C17.6667 20.6667 18 20.7222 18.3333 20.7778C18.6667 20.8333 19 20.8889 19.3333 20.9444C19.6667 21 20 21.0556 20.3333 21.1111C20.6667 21.1667 21 21.2222 21.3333 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M4.60078 15C4.73387 15.3031 4.867 15.6062 5.00013 15.9094C5.45497 16.8724 5.90981 17.8354 6.36465 18.7984C6.77898 19.6764 7.19331 20.5544 7.60764 21.4324C7.79891 21.8345 7.99018 22.2366 8.18145 22.6387C8.48528 23.2848 9.22465 23.6579 9.92389 23.516C10.2826 23.441 10.611 23.2628 10.863 23.0049C11.1151 22.747 11.2793 22.4214 11.3341 22.0714V22.0714C11.389 21.7214 11.3319 21.3639 11.1713 21.0493C11.0107 20.7348 10.7554 20.4795 10.4409 20.3189C10.1263 20.1583 9.7689 20.1012 9.41892 20.1561L9.33412 20.1667C8.66745 20.2778 8.00078 20.3889 7.33412 20.5C7.11189 20.537 6.88967 20.5741 6.66745 20.6111C6.33412 20.6667 6.00078 20.7222 5.66745 20.7778C5.33412 20.8333 5.00078 20.8889 4.66745 20.9444C4.33412 21 4.00078 21.0556 3.66745 21.1111C3.33412 21.1667 3.00078 21.2222 2.66745 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M3 9C3.79565 9 4.55871 8.68393 5.12132 8.12132C5.68393 7.55871 6 6.79565 6 6C6 5.20435 5.68393 4.44129 5.12132 3.87868C4.55871 3.31607 3.79565 3 3 3C2.20435 3 1.44129 3.31607 0.87868 3.87868C0.31607 4.44129 0 5.20435 0 6C0 6.79565 0.31607 7.55871 0.87868 8.12132C1.44129 8.68393 2.20435 9 3 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M21 9C21.7956 9 22.5587 8.68393 23.1213 8.12132C23.6839 7.55871 24 6.79565 24 6C24 5.20435 23.6839 4.44129 23.1213 3.87868C22.5587 3.31607 21.7956 3 21 3C20.2044 3 19.4413 3.31607 18.8787 3.87868C18.3161 4.44129 18 5.20435 18 6C18 6.79565 18.3161 7.55871 18.8787 8.12132C19.4413 8.68393 20.2044 9 21 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M9 3H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M9 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                     </svg>
-                 </div>
-                 <div class="help-toggle" id="help-toggle" title="查看帮助文档">
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                         <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                     </svg>
-                 </div>
-                 <div class="theme-toggle" id="theme-toggle">
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                         <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M12 2V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M12 20V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M4.93 4.93L6.34 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M17.66 17.66L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M2 12H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M20 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M6.34 17.66L4.93 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                         <path d="M19.07 4.93L17.66 6.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                     </svg>
-                 </div>
-             </div>
-        </header>
+        <!-- 消息容器 (用于可能的提示) -->
+        <div class="alert-container"></div>
 
-        <!-- 左侧：任务下发 -->
-        <div class="card">
-            <h2 class="card-title">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M19.4 15C19.2669 15.3031 19.1337 15.6062 19.0006 15.9094C18.5458 16.8724 18.0909 17.8354 17.6361 18.7984C17.2218 19.6764 16.8075 20.5544 16.3932 21.4324C16.2019 21.8345 16.0106 22.2366 15.8193 22.6387C15.5155 23.2848 14.7761 23.6579 14.0769 23.516C13.7182 23.441 13.3898 23.2628 13.1378 23.0049C12.8857 22.747 12.7215 22.4214 12.6667 22.0714V22.0714C12.6118 21.7214 12.6689 21.3639 12.8295 21.0493C12.9901 20.7348 13.2454 20.4795 13.5599 20.3189C13.8745 20.1583 14.2319 20.1012 14.5819 20.1561L14.6667 20.1667C15.3333 20.2778 16 20.3889 16.6667 20.5C16.8889 20.537 17.1111 20.5741 17.3333 20.6111C17.6667 20.6667 18 20.7222 18.3333 20.7778C18.6667 20.8333 19 20.8889 19.3333 20.9444C19.6667 21 20 21.0556 20.3333 21.1111C20.6667 21.1667 21 21.2222 21.3333 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M4.60078 15C4.73387 15.3031 4.867 15.6062 5.00013 15.9094C5.45497 16.8724 5.90981 17.8354 6.36465 18.7984C6.77898 19.6764 7.19331 20.5544 7.60764 21.4324C7.79891 21.8345 7.99018 22.2366 8.18145 22.6387C8.48528 23.2848 9.22465 23.6579 9.92389 23.516C10.2826 23.441 10.611 23.2628 10.863 23.0049C11.1151 22.747 11.2793 22.4214 11.3341 22.0714V22.0714C11.389 21.7214 11.3319 21.3639 11.1713 21.0493C11.0107 20.7348 10.7554 20.4795 10.4409 20.3189C10.1263 20.1583 9.7689 20.1012 9.41892 20.1561L9.33412 20.1667C8.66745 20.2778 8.00078 20.3889 7.33412 20.5C7.11189 20.537 6.88967 20.5741 6.66745 20.6111C6.33412 20.6667 6.00078 20.7222 5.66745 20.7778C5.33412 20.8333 5.00078 20.8889 4.66745 20.9444C4.33412 21 4.00078 21.0556 3.66745 21.1111C3.33412 21.1667 3.00078 21.2222 2.66745 21.2778" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M3 9C3.79565 9 4.55871 8.68393 5.12132 8.12132C5.68393 7.55871 6 6.79565 6 6C6 5.20435 5.68393 4.44129 5.12132 3.87868C4.55871 3.31607 3.79565 3 3 3C2.20435 3 1.44129 3.31607 0.87868 3.87868C0.31607 4.44129 0 5.20435 0 6C0 6.79565 0.31607 7.55871 0.87868 8.12132C1.44129 8.68393 2.20435 9 3 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M21 9C21.7956 9 22.5587 8.68393 23.1213 8.12132C23.6839 7.55871 24 6.79565 24 6C24 5.20435 23.6839 4.44129 23.1213 3.87868C22.5587 3.31607 21.7956 3 21 3C20.2044 3 19.4413 3.31607 18.8787 3.87868C18.3161 4.44129 18 5.20435 18 6C18 6.79565 18.3161 7.55871 18.8787 8.12132C19.4413 8.68393 20.2044 9 21 9V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M9 3H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M9 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                任务下发
-            </h2>
-            <div class="form-group">
-                <label for="area-select">选择区域</label>
-                <select id="area-select">
-                    <option value="">请选择区域</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="task-select">任务模板</label>
-                <select id="task-select">
-                    <option value="">请先选择区域</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="shelf-group">
-                <label for="shelf-input">货架号</label>
-                <input type="text" id="shelf-input" placeholder="请输入货架号">
-                <div class="error" id="shelf-error">请输入货架号</div>
-                <div class="shelf-lock" id="shelf-lock">此货架在5分钟内已下发过任务，请勿重复下发</div>
-            </div>
-
-            <div class="form-group" id="task-path-group">
-                <label for="task-path-select">任务路径</label>
-                <select id="task-path-select">
-                    <option value="">请选择任务路径</option>
-                </select>
-                <div class="error" id="task-path-error">请选择任务路径</div>
-            </div>
-
-            <button class="btn" id="submit-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                下发任务
-            </button>
-            <button class="debug-toggle" id="debug-toggle">查看发送的报文</button>
-            <div class="debug-info" id="debug-info"></div>
-        </div>
-
-        <!-- 右侧：任务查询 -->
-        <div class="card">
-            <h2 class="card-title">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21L16.514 16.506" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                任务查询
-            </h2>
-            
-            <div class="query-toggle">
-                <div class="toggle-option active" data-type="shelf">按货架查询</div>
-                <div class="toggle-option" data-type="order">按OrderId查询</div>
-            </div>
-            
-            <div class="form-group" id="shelf-query-group">
-                <label for="shelf-query-input">货架号</label>
-                <input type="text" id="shelf-query-input" placeholder="请输入货架号">
-            </div>
-            
-            <div class="form-group" id="order-query-group" style="display: none;">
-                <label for="order-query-input">OrderId</label>
-                <input type="text" id="order-query-input" placeholder="请输入OrderId">
-            </div>
-            
-            <button class="btn btn-info" id="query-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21L16.514 16.506" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                查询任务
-            </button>
-            
-            <div class="task-details" id="task-details">
-                <div class="empty-state" id="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 21L16.514 16.506" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <p>暂无任务数据，请先查询</p>
+        <!-- 页头 (模板风格 + 功能按钮) -->
+        <div class="header text-center animate__animated animate__fadeInDown">
+            <div class="position-relative">
+                <h1 class="display-5 fw-bold mb-3"><i class="bi bi-diagram-3 me-2"></i>AGV 跨环境任务下发系统</h1>
+                <p class="lead mb-4 opacity-75">智能管理 · 实时监控 · 容量管控</p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="/config" target="_blank" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-gear me-2"></i>配置管理
+                    </a>
+                    <button id="help-toggle" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-question-circle me-2"></i>帮助文档
+                    </button>
+                    <a href="/" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-house me-2"></i>首页
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h3>响应信息</h3>
-            <div class="response-box" id="response-box"></div>
+        <!-- 主要内容区域：两列布局 -->
+        <div class="row g-4">
+            <!-- 左侧：任务下发 -->
+            <div class="col-lg-6">
+                <div class="card h-100 animate__animated animate__fadeInLeft">
+                    <div class="card-header-custom">
+                        <h4 class="mb-0"><i class="bi bi-send-fill me-2"></i>任务下发</h4>
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">选择区域</label>
+                            <select id="area-select" class="form-select">
+                                <option value="">请选择区域</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">任务模板</label>
+                            <select id="task-select" class="form-select">
+                                <option value="">请先选择区域</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="shelf-group" style="display: none;">
+                            <label class="form-label fw-semibold">货架号</label>
+                            <input type="text" id="shelf-input" class="form-control" placeholder="请输入货架号">
+                            <div class="error-message" id="shelf-error" style="display: none;">请输入货架号</div>
+                            <div class="shelf-lock-warning" id="shelf-lock" style="display: none;"><i class="bi bi-exclamation-triangle me-1"></i>此货架在5分钟内已下发过任务，请勿重复下发</div>
+                        </div>
+
+                        <div class="mb-4" id="task-path-group" style="display: none;">
+                            <label class="form-label fw-semibold">任务路径</label>
+                            <select id="task-path-select" class="form-select">
+                                <option value="">请选择任务路径</option>
+                            </select>
+                            <div class="error-message" id="task-path-error" style="display: none;">请选择任务路径</div>
+                        </div>
+
+                        <button class="btn btn-primary btn-lg w-100 mb-3" id="submit-btn">
+                            <i class="bi bi-send me-2"></i>下发任务
+                        </button>
+
+                        <button class="btn btn-outline-secondary w-100" id="debug-toggle">
+                            <i class="bi bi-code-slash me-2"></i>查看发送的报文
+                        </button>
+                        <div class="debug-info" id="debug-info" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：任务查询 -->
+            <div class="col-lg-6">
+                <div class="card h-100 animate__animated animate__fadeInRight">
+                    <div class="card-header-custom">
+                        <h4 class="mb-0"><i class="bi bi-search-heart me-2"></i>任务查询</h4>
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="query-toggle">
+                            <div class="toggle-option active" data-type="shelf">按货架查询</div>
+                            <div class="toggle-option" data-type="order">按OrderId查询</div>
+                        </div>
+
+                        <div class="mb-3" id="shelf-query-group">
+                            <label class="form-label fw-semibold">货架号</label>
+                            <input type="text" id="shelf-query-input" class="form-control" placeholder="请输入货架号">
+                        </div>
+
+                        <div class="mb-3" id="order-query-group" style="display: none;">
+                            <label class="form-label fw-semibold">OrderId</label>
+                            <input type="text" id="order-query-input" class="form-control" placeholder="请输入OrderId">
+                        </div>
+
+                        <button class="btn btn-info text-white w-100 mb-4" id="query-btn">
+                            <i class="bi bi-search me-2"></i>查询任务
+                        </button>
+
+                        <div id="task-details">
+                            <div class="empty-state" id="empty-state">
+                                <i class="bi bi-inbox fs-1 opacity-50"></i>
+                                <p class="mt-3">暂无任务数据，请先查询</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <footer id="footer-text">
-            任务下发系统 © 2025 | 运营 AGV 组提供技术支持
+        <!-- 响应信息卡片 (独立一行) -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card animate__animated animate__fadeInUp">
+                    <div class="card-header-custom">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>响应信息</h5>
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="response-box" id="response-box" style="display: none;"></div>
+                        <div id="no-response-placeholder" class="text-muted text-center py-3">
+                            <i class="bi bi-arrow-up-short me-2"></i>下发任务后响应将显示在此处
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-5 pt-4 text-center animate__animated animate__fadeInUp">
+            <div class="glass-effect rounded-4 p-4">
+                <p class="mb-2">AGV 跨环境任务下发系统 &copy; 2026 | 版本 2.0</p>
+                <p class="small opacity-75 mb-0">基于《跨环境配置及实施说明书》开发 · 现代化UI · 暗黑模式支持</p>
+                <div class="mt-3">
+                    <span class="badge bg-primary me-2">Bootstrap 5.3</span>
+                    <span class="badge bg-success me-2">Python Flask</span>
+                    <span class="badge bg-info me-2">实时监控</span>
+                    <span class="badge bg-warning">容量管控</span>
+                </div>
+            </div>
         </footer>
     </div>
 
-    <div class="modal" id="success-modal">
-        <div class="modal-content">
-            <h2>下发成功</h2>
-            <p>任务已成功下发，请勿重复下发。</p>
-            <button class="btn" id="modal-close">确定</button>
-        </div>
-    </div>
-
-    <div class="modal" id="task-exists-modal">
-        <div class="modal-content">
-            <h2>任务已存在</h2>
-            <p id="task-exists-message"></p>
-            <button class="btn" id="task-exists-close">确定</button>
-        </div>
-    </div>
-
-    <div class="modal" id="priority-modal">
-        <div class="modal-content">
-            <h2 id="priority-modal-title">优先级调整</h2>
-            <p id="priority-modal-message"></p>
-            <button class="btn" id="priority-modal-close">确定</button>
-        </div>
-    </div>
-
-    <div class="modal" id="capacity-modal">
-        <div class="modal-content">
-            <h2>点位容量已满</h2>
-            <p id="capacity-modal-message"></p>
-            <button class="btn" id="capacity-modal-close">确定</button>
-        </div>
-    </div>
-
-    <div class="modal" id="help-modal">
-        <div class="modal-content modal-content-large">
-            <h2>帮助文档</h2>
-            <div class="modal-body" id="help-modal-body" style="text-align: left; max-height: 70vh; overflow-y: auto; padding: 10px 0;">
-                <div class="help-content">
-                    <p>正在加载帮助文档...</p>
+    <!-- 模态框 (适配Bootstrap风格) -->
+    <div class="modal fade" id="success-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="bi bi-check-circle-fill text-success me-2"></i>下发成功</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>任务已成功下发，请勿重复下发。</p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
                 </div>
             </div>
-            <div style="margin-top: 20px;">
-                <button class="btn" id="help-modal-close">关闭</button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="task-exists-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>任务已存在</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="task-exists-message"></p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">确定</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 加载外部配置文件 config.js -->
+    <div class="modal fade" id="priority-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="priority-modal-title">优先级调整</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="priority-modal-message"></p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="capacity-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="bi bi-cone-striped text-warning me-2"></i>点位容量已满</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="capacity-modal-message"></p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="help-modal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-book me-2"></i>帮助文档</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="help-modal-body" class="help-content">
+                        <p>正在加载帮助文档...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载外部配置 -->
     <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 确保config对象已从config.js加载
-        if (typeof config === 'undefined') {
-            alert('配置文件加载失败，请确保config.js存在且可访问。');
-            throw new Error('config is not defined');
+        // 主题切换 (与模板一致)
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('i');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+            themeToggle.classList.add('animate__animated', 'animate__flip');
+            setTimeout(() => themeToggle.classList.remove('animate__animated', 'animate__flip'), 500);
+        });
+        
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun';
+                themeToggle.title = '切换到亮色模式';
+            } else {
+                themeIcon.className = 'bi bi-moon-stars';
+                themeToggle.title = '切换到暗黑模式';
+            }
         }
 
-        // 存储已下发任务的货架和时间
-        const shelfHistory = {};
-        
-        // 防重复点击计时器
-        let queryLastClickTime = 0;
-        let priorityLastClickTime = 0;
-
-        // 容量加载节流记录（按任务模板编码）
-        const lastCapacityLoadByCode = {};
-
-        // DOM元素
-        const areaSelect = document.getElementById('area-select');
-        const taskSelect = document.getElementById('task-select');
-        const shelfGroup = document.getElementById('shelf-group');
-        const shelfInput = document.getElementById('shelf-input');
-        const shelfError = document.getElementById('shelf-error');
-        const shelfLock = document.getElementById('shelf-lock');
-        const taskPathGroup = document.getElementById('task-path-group');
-        const taskPathSelect = document.getElementById('task-path-select');
-        const taskPathError = document.getElementById('task-path-error');
-        const submitBtn = document.getElementById('submit-btn');
-        const responseBox = document.getElementById('response-box');
-        const debugToggle = document.getElementById('debug-toggle');
-        const debugInfo = document.getElementById('debug-info');
-        const successModal = document.getElementById('success-modal');
-        const modalClose = document.getElementById('modal-close');
-        const taskExistsModal = document.getElementById('task-exists-modal');
-        const taskExistsMessage = document.getElementById('task-exists-message');
-        const taskExistsClose = document.getElementById('task-exists-close');
-        const themeToggle = document.getElementById('theme-toggle');
-        const pageTitle = document.getElementById('page-title');
-        const footerText = document.getElementById('footer-text');
-        
-        // 新增查询相关DOM元素
-        const queryToggleOptions = document.querySelectorAll('.toggle-option');
-        const shelfQueryGroup = document.getElementById('shelf-query-group');
-        const orderQueryGroup = document.getElementById('order-query-group');
-        const shelfQueryInput = document.getElementById('shelf-query-input');
-        const orderQueryInput = document.getElementById('order-query-input');
-        const queryBtn = document.getElementById('query-btn');
-        const taskDetails = document.getElementById('task-details');
-        const emptyState = document.getElementById('empty-state');
-        const priorityModal = document.getElementById('priority-modal');
-        const priorityModalTitle = document.getElementById('priority-modal-title');
-        const priorityModalMessage = document.getElementById('priority-modal-message');
-        const priorityModalClose = document.getElementById('priority-modal-close');
-        
-        // 新增容量管控模态框
-        const capacityModal = document.getElementById('capacity-modal');
-        const capacityModalMessage = document.getElementById('capacity-modal-message');
-        const capacityModalClose = document.getElementById('capacity-modal-close');
-        
-        // 帮助相关DOM元素
-        const helpToggle = document.getElementById('help-toggle');
-        const helpModal = document.getElementById('help-modal');
-        const helpModalBody = document.getElementById('help-modal-body');
-        const helpModalClose = document.getElementById('help-modal-close');
-
-        // 初始化页面
-        function initPage() {
-            // 设置页面标题和页脚
-            pageTitle.textContent = config.general.title;
-            footerText.textContent = config.general.footer_text;
-            
-            // 填充区域选择
-            for (const area in config.areas) {
-                const option = document.createElement('option');
-                option.value = area;
-                option.textContent = area;
-                areaSelect.appendChild(option);
+        // 业务逻辑 (保留原有全部逻辑，仅调整DOM操作适配新结构)
+        (function() {
+            if (typeof config === 'undefined') {
+                alert('配置文件加载失败，请确保config.js存在且可访问。');
+                throw new Error('config is not defined');
             }
+
+            const shelfHistory = {};
+            let queryLastClickTime = 0;
+            let priorityLastClickTime = 0;
+            const lastCapacityLoadByCode = {};
+
+            const areaSelect = document.getElementById('area-select');
+            const taskSelect = document.getElementById('task-select');
+            const shelfGroup = document.getElementById('shelf-group');
+            const shelfInput = document.getElementById('shelf-input');
+            const shelfError = document.getElementById('shelf-error');
+            const shelfLock = document.getElementById('shelf-lock');
+            const taskPathGroup = document.getElementById('task-path-group');
+            const taskPathSelect = document.getElementById('task-path-select');
+            const taskPathError = document.getElementById('task-path-error');
+            const submitBtn = document.getElementById('submit-btn');
+            const responseBox = document.getElementById('response-box');
+            const debugToggle = document.getElementById('debug-toggle');
+            const debugInfo = document.getElementById('debug-info');
+            const queryToggleOptions = document.querySelectorAll('.toggle-option');
+            const shelfQueryGroup = document.getElementById('shelf-query-group');
+            const orderQueryGroup = document.getElementById('order-query-group');
+            const shelfQueryInput = document.getElementById('shelf-query-input');
+            const orderQueryInput = document.getElementById('order-query-input');
+            const queryBtn = document.getElementById('query-btn');
+            const taskDetails = document.getElementById('task-details');
+            const emptyState = document.getElementById('empty-state');
+            const noResponsePlaceholder = document.getElementById('no-response-placeholder');
+
+            // Bootstrap modals
+            const successModal = new bootstrap.Modal(document.getElementById('success-modal'));
+            const taskExistsModal = new bootstrap.Modal(document.getElementById('task-exists-modal'));
+            const priorityModal = new bootstrap.Modal(document.getElementById('priority-modal'));
+            const capacityModal = new bootstrap.Modal(document.getElementById('capacity-modal'));
+            const helpModal = new bootstrap.Modal(document.getElementById('help-modal'));
             
-            // 事件监听
-            areaSelect.addEventListener('change', updateTaskOptions);
-            taskSelect.addEventListener('change', updateFormFields);
-            submitBtn.addEventListener('click', submitTask);
-            debugToggle.addEventListener('click', toggleDebugInfo);
-            modalClose.addEventListener('click', closeModal);
-            taskExistsClose.addEventListener('click', closeTaskExistsModal);
-            themeToggle.addEventListener('click', toggleTheme);
-            helpToggle.addEventListener('click', showHelpModal);
-            helpModalClose.addEventListener('click', closeHelpModal);
-            priorityModalClose.addEventListener('click', closePriorityModal);
-            capacityModalClose.addEventListener('click', closeCapacityModal);
-            
-            // 查询相关事件监听
-            queryToggleOptions.forEach(option => {
-                option.addEventListener('click', toggleQueryType);
-            });
-            queryBtn.addEventListener('click', queryTasks);
-            
-            // 任务路径选择框变化时隐藏错误提示
-            taskPathSelect.addEventListener('change', function() {
-                if (this.value && this.value.trim() !== '' && this.value !== '请选择任务路径') {
-                    taskPathError.style.display = 'none';
-                    this.style.borderColor = 'green';
-                } else {
-                    this.style.borderColor = 'red';
-                }
-            });
-            
-            // 货架号输入时隐藏错误提示
-            shelfInput.addEventListener('input', function() {
-                if (this.value.trim()) {
-                    shelfError.style.display = 'none';
-                    this.style.borderColor = 'green';
-                } else {
-                    this.style.borderColor = 'red';
+            const taskExistsMessage = document.getElementById('task-exists-message');
+            const priorityModalTitle = document.getElementById('priority-modal-title');
+            const priorityModalMessage = document.getElementById('priority-modal-message');
+            const capacityModalMessage = document.getElementById('capacity-modal-message');
+            const helpModalBody = document.getElementById('help-modal-body');
+
+            function initPage() {
+                for (const area in config.areas) {
+                    const option = document.createElement('option');
+                    option.value = area;
+                    option.textContent = area;
+                    areaSelect.appendChild(option);
                 }
                 
-                // 检查货架锁定状态
+                areaSelect.addEventListener('change', updateTaskOptions);
+                taskSelect.addEventListener('change', updateFormFields);
+                submitBtn.addEventListener('click', submitTask);
+                debugToggle.addEventListener('click', () => {
+                    debugInfo.style.display = debugInfo.style.display === 'block' ? 'none' : 'block';
+                    debugToggle.innerHTML = debugInfo.style.display === 'block' ? 
+                        '<i class="bi bi-code-slash me-2"></i>隐藏发送的报文' : 
+                        '<i class="bi bi-code-slash me-2"></i>查看发送的报文';
+                });
+                
+                queryToggleOptions.forEach(opt => opt.addEventListener('click', toggleQueryType));
+                queryBtn.addEventListener('click', queryTasks);
+                
+                taskPathSelect.addEventListener('change', () => {
+                    if (taskPathSelect.value && taskPathSelect.value !== '请选择任务路径') {
+                        taskPathError.style.display = 'none';
+                        taskPathSelect.style.borderColor = 'var(--border-color)';
+                    } else {
+                        taskPathSelect.style.borderColor = '#dc3545';
+                    }
+                });
+                
+                shelfInput.addEventListener('input', function() {
+                    if (this.value.trim()) {
+                        shelfError.style.display = 'none';
+                        this.style.borderColor = 'var(--border-color)';
+                    } else {
+                        this.style.borderColor = '#dc3545';
+                    }
+                    validateShelfLock();
+                });
+
+                taskPathSelect.addEventListener('focus', () => {
+                    const area = areaSelect.value;
+                    const taskName = taskSelect.value;
+                    if (area && taskName) {
+                        const task = config.areas[area]?.tasks[taskName];
+                        if (task && task.requires_task_path && task.capacity > 0) {
+                            loadPathCapacity(task.code, task.capacity);
+                        }
+                    }
+                });
+
+                document.getElementById('help-toggle').addEventListener('click', showHelpModal);
+            }
+
+            function validateShelfLock() {
                 const area = areaSelect.value;
                 const taskName = taskSelect.value;
-                
-                if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
+                if (area && taskName && config.areas[area]?.tasks[taskName]) {
                     const task = config.areas[area].tasks[taskName];
-                    
                     if (task.requires_shelf) {
                         const shelf = shelfInput.value.trim();
-                        
                         if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
                             shelfLock.style.display = 'block';
                             submitBtn.disabled = true;
@@ -903,880 +738,324 @@
                         }
                     }
                 }
-            });
+            }
 
-            // 为任务路径下拉框添加 focus 事件，点击时刷新容量（带节流）
-            taskPathSelect.addEventListener('focus', () => {
+            function updateTaskOptions() {
                 const area = areaSelect.value;
-                const taskName = taskSelect.value;
-                if (area && taskName) {
-                    const task = config.areas[area]?.tasks[taskName];
-                    if (task && task.requires_task_path && task.capacity && task.capacity > 0) {
-                        loadPathCapacity(task.code, task.capacity);
+                taskSelect.innerHTML = '<option value="">请选择任务模板</option>';
+                if (area && config.areas[area]) {
+                    const tasks = config.areas[area].tasks;
+                    for (const taskName in tasks) {
+                        const option = document.createElement('option');
+                        option.value = taskName;
+                        option.textContent = taskName;
+                        taskSelect.appendChild(option);
                     }
                 }
-            });
-            
-            // 检查本地存储的主题偏好
-            if (localStorage.getItem('darkMode') === 'true') {
-                document.body.classList.add('dark-mode');
+                updateFormFields();
             }
-            
-            // 初始隐藏货架号和任务路径组
-            shelfGroup.style.display = 'none';
-            taskPathGroup.style.display = 'none';
-        }
 
-        // 更新任务选项
-        function updateTaskOptions() {
-            const area = areaSelect.value;
-            taskSelect.innerHTML = '<option value="">请选择任务模板</option>';
-            
-            if (area && config.areas[area]) {
-                const tasks = config.areas[area].tasks;
-                for (const taskName in tasks) {
-                    const option = document.createElement('option');
-                    option.value = taskName;
-                    option.textContent = taskName;
-                    taskSelect.appendChild(option);
-                }
-            }
-            
-            // 重置表单字段
-            updateFormFields();
-        }
-
-        // 更新表单字段显示
-        function updateFormFields() {
-            const area = areaSelect.value;
-            const taskName = taskSelect.value;
-            
-            // 隐藏错误信息
-            shelfError.style.display = 'none';
-            taskPathError.style.display = 'none';
-            shelfLock.style.display = 'none';
-            
-            if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
-                const task = config.areas[area].tasks[taskName];
+            function updateFormFields() {
+                const area = areaSelect.value;
+                const taskName = taskSelect.value;
+                shelfError.style.display = 'none';
+                taskPathError.style.display = 'none';
+                shelfLock.style.display = 'none';
                 
-                // 显示或隐藏货架号输入
-                if (task.requires_shelf) {
-                    shelfGroup.style.display = 'block';
-                    
-                    // 检查货架是否在5分钟内已下发过任务
-                    const shelf = shelfInput.value.trim();
-                    if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
-                        shelfLock.style.display = 'block';
-                        submitBtn.disabled = true;
+                if (area && taskName && config.areas[area]?.tasks[taskName]) {
+                    const task = config.areas[area].tasks[taskName];
+                    if (task.requires_shelf) {
+                        shelfGroup.style.display = 'block';
+                        validateShelfLock();
                     } else {
-                        shelfLock.style.display = 'none';
+                        shelfGroup.style.display = 'none';
                         submitBtn.disabled = false;
+                    }
+                    
+                    if (task.requires_task_path) {
+                        taskPathGroup.style.display = 'block';
+                        taskPathSelect.innerHTML = '<option value="">请选择任务路径</option>';
+                        task.task_path_options.forEach(option => {
+                            const opt = document.createElement('option');
+                            let value, baseText;
+                            if (typeof option === 'object') {
+                                value = option.value;
+                                baseText = option.label ? `${option.label} (${option.value})` : option.value;
+                            } else {
+                                value = option;
+                                baseText = option;
+                            }
+                            opt.value = value;
+                            opt.textContent = baseText;
+                            opt.dataset.baseText = baseText;
+                            taskPathSelect.appendChild(opt);
+                        });
+                        if (task.capacity > 0) loadPathCapacity(task.code, task.capacity);
+                    } else {
+                        taskPathGroup.style.display = 'none';
                     }
                 } else {
                     shelfGroup.style.display = 'none';
-                    submitBtn.disabled = false;
-                }
-                
-                // 显示或隐藏任务路径选择
-                if (task.requires_task_path) {
-                    taskPathGroup.style.display = 'block';
-                    
-                    // 填充任务路径选项
-                    taskPathSelect.innerHTML = '<option value="">请选择任务路径</option>';
-                    
-                    task.task_path_options.forEach(option => {
-                        const optionElement = document.createElement('option');
-                        
-                        // 判断配置格式：支持对象格式和字符串/数字格式
-                        let value, baseText;
-                        if (typeof option === 'object') {
-                            value = option.value;
-                            baseText = option.label ? `${option.label} (${option.value})` : option.value;
-                        } else {
-                            value = option;
-                            baseText = option;
-                        }
-                        
-                        optionElement.value = value;
-                        optionElement.textContent = baseText;
-                        // 保存基础文本，用于后续更新计数
-                        optionElement.dataset.baseText = baseText;
-                        taskPathSelect.appendChild(optionElement);
-                    });
-                    
-                    // 如果任务配置了容量，则加载并更新点位占用计数（内部会节流）
-                    if (task.capacity && task.capacity > 0) {
-                        loadPathCapacity(task.code, task.capacity);
-                    }
-                } else {
                     taskPathGroup.style.display = 'none';
-                }
-            } else {
-                shelfGroup.style.display = 'none';
-                taskPathGroup.style.display = 'none';
-                submitBtn.disabled = false;
-            }
-        }
-
-        /**
-         * 加载指定任务模板的点位容量占用情况，并更新下拉选项
-         * 内置节流：同一模板3秒内只执行一次
-         * @param {string} modelProcessCode 任务模板code
-         * @param {number} capacity 容量上限
-         */
-        async function loadPathCapacity(modelProcessCode, capacity) {
-            // 节流控制：同一模板3秒内只执行一次
-            const now = Date.now();
-            const last = lastCapacityLoadByCode[modelProcessCode];
-            if (last && now - last < 3000) {
-                console.log(`容量刷新节流: ${modelProcessCode} 在3秒内已刷新，跳过`);
-                return;
-            }
-            lastCapacityLoadByCode[modelProcessCode] = now;
-
-            try {
-                // 查询状态 4,6,9,-1 的未完成任务
-                const statusList = [4, 6, 9, -1];
-                const countMap = new Map(); // key: taskPath, value: 计数
-                
-                for (const status of statusList) {
-                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            modelProcessCode: modelProcessCode,
-                            taskStatus: status.toString(),
-                            pageSize: 100, // 一次性拉取较多数据
-                            pageNo: 1
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.code === 1000 && data.data.list) {
-                        data.data.list.forEach(task => {
-                            const path = task.taskPath;
-                            if (path) {
-                                countMap.set(path, (countMap.get(path) || 0) + 1);
-                            }
-                        });
-                    }
-                }
-                
-                // 更新下拉选项的显示文本和禁用状态
-                Array.from(taskPathSelect.options).forEach(option => {
-                    if (option.value && option.dataset.baseText) {
-                        const path = option.value;
-                        const currentCount = countMap.get(path) || 0;
-                        const isFull = currentCount >= capacity;
-                        
-                        // 更新文本：基础文本 + [当前/容量]
-                        option.textContent = `${option.dataset.baseText} [${currentCount}/${capacity}]`;
-                        
-                        // 根据是否满额禁用选项
-                        option.disabled = isFull;
-                        
-                        // 可选：设置颜色样式（浏览器默认会灰显）
-                    }
-                });
-            } catch (error) {
-                console.error('加载点位容量失败:', error);
-                // 失败时保持原样，不阻塞用户操作
-            }
-        }
-
-        /**
-         * 检查指定任务模板下某个点位的实时占用是否已达容量上限
-         * @param {string} modelProcessCode 
-         * @param {string} taskPath 
-         * @param {number} capacity 
-         * @returns {Promise<boolean>} true表示已满，false表示未满
-         */
-        async function isPathCapacityFull(modelProcessCode, taskPath, capacity) {
-            if (!capacity || capacity <= 0) return false;
-            
-            try {
-                const statusList = [4, 6, 9, -1];
-                let total = 0;
-                
-                for (const status of statusList) {
-                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            modelProcessCode: modelProcessCode,
-                            taskStatus: status.toString(),
-                            pageSize: 100,
-                            pageNo: 1
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    if (data.code === 1000 && data.data.list) {
-                        total += data.data.list.filter(task => task.taskPath === taskPath).length;
-                    }
-                }
-                
-                return total >= capacity;
-            } catch (error) {
-                console.error('检查点位容量失败:', error);
-                return false; // 查询失败时允许下发（容错）
-            }
-        }
-
-        // 检查货架任务状态
-        async function checkShelfTaskStatus(shelf) {
-            // 需要检查的状态：4(正在发送), 6(执行中), 9(已下发), -1(容量管控)
-            const statusList = [4, 6, 9, -1];
-            
-            for (const status of statusList) {
-                try {
-                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            taskStatus: status.toString(),
-                            shelfNum: shelf,
-                            pageSize: 20,
-                            pageNo: 1
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.code === 1000 && data.data.list && data.data.list.length > 0) {
-                        // 找到对应状态的任务
-                        let statusText = '';
-                        switch (status) {
-                            case 4:
-                                statusText = '正在发送';
-                                break;
-                            case 6:
-                                statusText = '执行中';
-                                break;
-                            case 9:
-                                statusText = '已下发';
-                                break;
-                            case -1:
-                                statusText = '容量管控';
-                                break;
-                            default:
-                                statusText = `状态${status}`;
-                        }
-                        return {
-                            exists: true,
-                            status: statusText
-                        };
-                    }
-                } catch (error) {
-                    console.error(`查询状态${status}的任务时出错:`, error);
-                    // 如果查询失败，继续查询其他状态
-                }
-            }
-            
-            return { exists: false };
-        }
-
-        // 提交任务
-        async function submitTask() {
-            const area = areaSelect.value;
-            const taskName = taskSelect.value;
-            
-            if (!area) {
-                alert('请选择区域');
-                return;
-            }
-            
-            if (!taskName) {
-                alert('请选择任务模板');
-                return;
-            }
-            
-            const task = config.areas[area].tasks[taskName];
-            if (!task) {
-                console.error('任务配置查找失败:', { area, taskName });
-                alert('错误：找不到对应的任务配置，请重新选择');
-                return;
-            }
-            let shelf = shelfInput.value.trim();
-            
-            // 验证货架号
-            if (task.requires_shelf) {
-                if (!shelf) {
-                    console.error('货架号验证失败: 货架号为空或只有空格');
-                    shelfError.style.display = 'block';
-                    alert('错误：请输入有效的货架号！');
-                    return;
-                }
-            }
-
-            // 验证任务路径
-            if (task.requires_task_path) {
-                const taskPathValue = taskPathSelect.value;
-                
-                if (!taskPathValue || taskPathValue.trim() === '' || taskPathValue === '请选择任务路径') {
-                    console.error('任务路径验证失败:', taskPathValue);
-                    taskPathError.style.display = 'block';
-                    alert('错误：请选择有效的任务路径！');
-                    return;
-                }
-            }
-            
-            // 检查货架是否在5分钟内已下发过任务
-            if (task.requires_shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
-                shelfLock.style.display = 'block';
-                return;
-            }
-            
-            // 如果任务需要货架号，检查货架任务状态
-            if (task.requires_shelf) {
-                console.log(`开始检查货架任务状态，货架号: "${shelf}"`);
-                submitBtn.disabled = true;
-                submitBtn.textContent = '检查任务状态中...';
-                
-                try {
-                    const checkResult = await checkShelfTaskStatus(shelf);
-                    
-                    if (checkResult.exists) {
-                        // 显示任务存在提示
-                        taskExistsMessage.textContent = `当前货架 ${shelf} 有任务正在${checkResult.status}，请勿重复下发！`;
-                        taskExistsModal.style.display = 'flex';
-                        
-                        // 自动在右侧查询界面显示该货架的任务信息
-                        shelfQueryInput.value = shelf;
-                        // 确保查询类型为货架查询
-                        document.querySelector('.toggle-option[data-type="shelf"]').classList.add('active');
-                        document.querySelector('.toggle-option[data-type="order"]').classList.remove('active');
-                        shelfQueryGroup.style.display = 'block';
-                        orderQueryGroup.style.display = 'none';
-                        // 触发查询
-                        setTimeout(() => queryTasks(), 100);
-                        
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = '下发任务';
-                        return;
-                    }
-                } catch (error) {
-                    console.error('检查货架任务状态时出错:', error);
-                    // 如果检查失败，继续下发任务
-                }
-                
-                submitBtn.textContent = '下发中...';
-            }
-            
-            // 新增：如果任务启用了容量管控，检查所选点位的实时占用
-            if (task.requires_task_path && task.capacity && task.capacity > 0) {
-                const selectedPath = taskPathSelect.value;
-                const isFull = await isPathCapacityFull(task.code, selectedPath, task.capacity);
-                
-                if (isFull) {
-                    capacityModalMessage.textContent = `所选点位 ${selectedPath} 当前占用已达上限 (${task.capacity}/${task.capacity})，请等待任务执行完成后再试。`;
-                    capacityModal.style.display = 'flex';
                     submitBtn.disabled = false;
-                    submitBtn.textContent = '下发任务';
-                    return;
                 }
             }
-            
-            // 准备请求数据
-            const getBeijingTime = () => {
-                const now = new Date();
-                return now.toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('T', ' ');
-            };
 
-            const requestData = [{
-                modelProcessCode: task.code,
-                priority: 6,
-                orderId: `pad_html${getBeijingTime()}`,
-                fromSystem: "pad-html",
-                taskOrderDetail: {
-                    taskPath: task.requires_task_path ? taskPathSelect.value : "",
-                    shelfNumber: task.requires_shelf ? shelf : ""
-                }
-            }];
-            
-            // 显示调试信息
-            debugInfo.textContent = JSON.stringify(requestData, null, 2);
-            
-            console.log('=== 任务下发调试信息 ===');
-            console.log('区域:', area);
-            console.log('任务模板:', taskName);
-            console.log('任务配置:', task);
-            console.log('货架号:', shelf);
-            console.log('任务路径:', task.requires_task_path ? taskPathSelect.value : '无');
-            console.log('准备发送的报文:', requestData);
-            console.log('目标URL:', task.base_url);
-            console.log('========================');
-            
-            try {
-                const targetUrl = task.base_url;
-                console.log('实际发送到URL:', targetUrl);
-                
-                const response = await fetch(targetUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestData)
-                });
-                
-                console.log('请求已发送，响应状态:', response.status);
-                
-                const data = await response.json();
-                
-                // 显示响应信息
-                responseBox.style.display = 'block';
-                responseBox.textContent = JSON.stringify(data, null, 2);
-                
-                if (data.code === 1000) {
-                    // 成功处理
-                    successModal.style.display = 'flex';
-                    
-                    // 记录货架下发时间
-                    if (task.requires_shelf && shelf) {
-                        shelfHistory[shelf] = Date.now();
-                    }
-                    
-                    // 任务下发成功后自动查询任务
-                    const orderId = requestData[0].orderId;
-                    orderQueryInput.value = orderId;
-                    toggleQueryType({ target: document.querySelector('.toggle-option[data-type="order"]') });
-                    queryTasks();
-                    
-                    // 如果启用了容量管控，刷新下拉列表的计数
-                    if (task.requires_task_path && task.capacity && task.capacity > 0) {
-                        setTimeout(() => {
-                            loadPathCapacity(task.code, task.capacity);
-                        }, 500); // 稍等片刻让后端更新状态
-                    }
-                }
-            } catch (error) {
-                responseBox.style.display = 'block';
-                responseBox.textContent = `请求失败: ${error.message}`;
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '下发任务';
-            }
-        }
-
-        // 切换调试信息显示
-        function toggleDebugInfo() {
-            if (debugInfo.style.display === 'block') {
-                debugInfo.style.display = 'none';
-                debugToggle.textContent = '查看发送的报文';
-            } else {
-                debugInfo.style.display = 'block';
-                debugToggle.textContent = '隐藏发送的报文';
-            }
-        }
-
-        // 关闭成功模态框
-        function closeModal() {
-            successModal.style.display = 'none';
-        }
-
-        // 关闭任务存在模态框
-        function closeTaskExistsModal() {
-            taskExistsModal.style.display = 'none';
-        }
-
-        // 关闭优先级调整模态框
-        function closePriorityModal() {
-            priorityModal.style.display = 'none';
-        }
-
-        // 关闭容量管控模态框
-        function closeCapacityModal() {
-            capacityModal.style.display = 'none';
-        }
-
-        // 简单的Markdown解析函数（降级方案）
-        function simpleMarkdown(markdown) {
-            // 替换标题
-            let html = markdown
-                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
-                .replace(/^##### (.*$)/gm, '<h5>$1</h5>')
-                .replace(/^###### (.*$)/gm, '<h6>$1</h6>')
-                // 替换粗体：**text** 或 __text__
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/__(.*?)__/g, '<strong>$1</strong>')
-                // 替换斜体：*text* 或 _text_
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/_(.*?)_/g, '<em>$1</em>')
-                // 替换代码块：`code`
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                // 替换多行代码块：```language\ncode\n```
-                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-                // 替换无序列表：- 或 * 开头
-                .replace(/^\s*[-*]\s+(.*$)/gm, '<li>$1</li>')
-                // 替换有序列表：1. 开头
-                .replace(/^\s*\d+\.\s+(.*$)/gm, '<li>$1</li>')
-                // 将连续的<li>包装在<ul>或<ol>中（简化处理）
-                .replace(/(<li>.*<\/li>)/gs, function(match) {
-                    // 检查是否有序号前缀（简单判断）
-                    if (match.match(/^\s*\d+\./m)) {
-                        return '<ol>' + match + '</ol>';
-                    } else {
-                        return '<ul>' + match + '</ul>';
-                    }
-                })
-                // 替换水平线：---
-                .replace(/^\s*---\s*$/gm, '<hr>')
-                // 替换链接：[text](url)
-                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-                // 替换图片：![alt](src)
-                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
-                // 替换表格（简化处理：仅支持简单表格）
-                .replace(/^\|(.+)\|$/gm, function(match, row) {
-                    const cells = row.split('|').map(cell => cell.trim());
-                    if (cells.length > 1) {
-                        // 判断是否为表头行（下一行是分隔线）
-                        return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
-                    }
-                    return match;
-                })
-                // 将表格行包装在<table>中（简化处理）
-                .replace(/(<tr>.*<\/tr>)/gs, function(match) {
-                    // 检查是否有多个行
-                    const rows = match.split('</tr><tr>').length;
-                    if (rows > 1) {
-                        return '<table>' + match + '</table>';
-                    }
-                    return match;
-                })
-                // 替换段落：将连续的非空行包装在<p>中
-                .replace(/^\s*([^<\n].*[^>\n])\s*$/gm, '<p>$1</p>')
-                // 清理多余的<p>标签
-                .replace(/<p>\s*<\/p>/g, '')
-                // 将多个连续的空行合并
-                .replace(/\n\s*\n/g, '\n');
-
-            return html;
-        }
-
-        // 显示帮助模态框
-        async function showHelpModal() {
-            helpModal.style.display = 'flex';
-            // 如果内容尚未加载，则加载readme.md
-            if (!helpModalBody.dataset.loaded) {
+            async function loadPathCapacity(modelProcessCode, capacity) {
+                const now = Date.now();
+                if (lastCapacityLoadByCode[modelProcessCode] && now - lastCapacityLoadByCode[modelProcessCode] < 3000) return;
+                lastCapacityLoadByCode[modelProcessCode] = now;
                 try {
-                    const response = await fetch('/addtask/help');
-                    if (!response.ok) {
-                        throw new Error('无法加载帮助文档');
-                    }
-                    const markdown = await response.text();
-                    // 直接使用内置的simpleMarkdown函数进行解析，不再依赖marked
-                    const html = simpleMarkdown(markdown);
-                    helpModalBody.querySelector('.help-content').innerHTML = html;
-                    helpModalBody.dataset.loaded = true;
-                } catch (error) {
-                    helpModalBody.querySelector('.help-content').innerHTML = `<p style="color: var(--danger-color);">加载帮助文档失败: ${error.message}</p>`;
-                }
-            }
-        }
-
-        // 关闭帮助模态框
-        function closeHelpModal() {
-            helpModal.style.display = 'none';
-        }
-
-        // 切换主题
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-        }
-
-        // 切换查询类型
-        function toggleQueryType(e) {
-            const type = e.target.dataset.type;
-            
-            queryToggleOptions.forEach(option => {
-                option.classList.remove('active');
-            });
-            e.target.classList.add('active');
-            
-            if (type === 'shelf') {
-                shelfQueryGroup.style.display = 'block';
-                orderQueryGroup.style.display = 'none';
-            } else {
-                shelfQueryGroup.style.display = 'none';
-                orderQueryGroup.style.display = 'block';
-            }
-        }
-
-        // 查询任务
-        async function queryTasks() {
-            // 防重复点击检查
-            const now = Date.now();
-            if (now - queryLastClickTime < 2000) {
-                return;
-            }
-            queryLastClickTime = now;
-            
-            const isShelfQuery = document.querySelector('.toggle-option[data-type="shelf"]').classList.contains('active');
-            const shelf = shelfQueryInput.value.trim();
-            const orderId = orderQueryInput.value.trim();
-            
-            if (isShelfQuery && !shelf) {
-                alert('请输入货架号');
-                return;
-            }
-            
-            if (!isShelfQuery && !orderId) {
-                alert('请输入OrderId');
-                return;
-            }
-            
-            queryBtn.disabled = true;
-            queryBtn.textContent = '查询中...';
-            
-            try {
-                let mainTaskData;
-                
-                if (isShelfQuery) {
-                    // 按货架查询：查询状态为4,6,9的任务，优先显示执行中，然后已下发，最后正在发送
-                    const statusList = [6, 9, 4]; // 按优先级排序
-                    
+                    const statusList = [4, 6, 9, -1];
+                    const countMap = new Map();
                     for (const status of statusList) {
-                        try {
-                            const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    taskStatus: status.toString(),
-                                    shelfNum: shelf,
-                                    pageSize: 20,
-                                    pageNo: 1
-                                })
-                            });
-                            
-                            const data = await response.json();
-                            
-                            if (data.code === 1000 && data.data.list && data.data.list.length > 0) {
-                                mainTaskData = data.data.list[0];
-                                break;
-                            }
-                        } catch (error) {
-                            console.error(`查询状态${status}的任务时出错:`, error);
+                        const res = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({modelProcessCode, taskStatus: status.toString(), pageSize: 100, pageNo: 1})
+                        });
+                        const data = await res.json();
+                        if (data.code === 1000 && data.data.list) {
+                            data.data.list.forEach(t => { if (t.taskPath) countMap.set(t.taskPath, (countMap.get(t.taskPath)||0)+1); });
                         }
                     }
-                } else {
-                    // 按OrderId查询
-                    const response = await fetch('http://10.68.2.32:8315/crossTask/query', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            orderId: orderId,
-                            pageSize: 20,
-                            pageNo: 1
-                        })
+                    Array.from(taskPathSelect.options).forEach(opt => {
+                        if (opt.value && opt.dataset.baseText) {
+                            const cnt = countMap.get(opt.value) || 0;
+                            opt.textContent = `${opt.dataset.baseText} [${cnt}/${capacity}]`;
+                            opt.disabled = cnt >= capacity;
+                        }
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (data.code === 1000 && data.data.list && data.data.list.length > 0) {
-                        mainTaskData = data.data.list[0];
+                } catch (e) { console.error('容量加载失败', e); }
+            }
+
+            async function isPathCapacityFull(code, path, cap) {
+                if (!cap) return false;
+                try {
+                    let total = 0;
+                    for (const st of [4,6,9,-1]) {
+                        const res = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({modelProcessCode: code, taskStatus: st.toString(), pageSize: 100, pageNo: 1})
+                        });
+                        const d = await res.json();
+                        if (d.code===1000 && d.data.list) total += d.data.list.filter(t=>t.taskPath===path).length;
                     }
-                }
-                
-                if (!mainTaskData) {
-                    emptyState.style.display = 'block';
-                    taskDetails.innerHTML = '';
-                    return;
-                }
-                
-                // 获取子任务详情
-                const detailResponse = await fetch('http://10.68.2.32:8315/crossTask/detail', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: mainTaskData.id
-                    })
-                });
-                
-                const detailData = await detailResponse.json();
-                
-                if (detailData.code === 1000 && detailData.data && detailData.data.length > 0) {
-                    displayTaskDetails(mainTaskData, detailData.data);
-                } else {
-                    emptyState.style.display = 'block';
-                    taskDetails.innerHTML = '';
-                }
-                
-            } catch (error) {
-                console.error('查询任务时出错:', error);
-                alert('查询任务失败，请稍后重试');
-            } finally {
-                queryBtn.disabled = false;
-                queryBtn.textContent = '查询任务';
+                    return total >= cap;
+                } catch { return false; }
             }
-        }
 
-        // 显示任务详情
-        function displayTaskDetails(mainTask, subtasks) {
-            emptyState.style.display = 'none';
-            
-            // 按任务序号排序
-            subtasks.sort((a, b) => a.taskSeq - b.taskSeq);
-            
-            let html = `
-                <div class="task-item main-task">
-                    <div class="task-header">
-                        <h4>主任务信息</h4>
-                        <div class="task-status status-${mainTask.taskStatus}">
-                            ${getStatusText(mainTask.taskStatus)}
-                        </div>
-                    </div>
-                    <div class="task-info"><span>OrderId:</span> ${mainTask.orderId}</div>
-                    <div class="task-info"><span>任务名称:</span> ${mainTask.modelProcessName}</div>
-                    <div class="task-info"><span>货架号:</span> ${mainTask.shelfNum || '无'}</div>
-                    <div class="task-info"><span>设备编号:</span> ${mainTask.deviceNum || '无'}</div>
-                </div>
-                <h4 style="margin: 15px 0 10px;">子任务列表</h4>
-            `;
-            
-            subtasks.forEach((task, index) => {
-                html += `
-                    <div class="task-item ${index === 0 ? 'first-subtask' : ''}">
-                        <div class="task-header">
-                            <div><strong>子任务 ${task.taskSeq}</strong></div>
-                            <div class="task-status status-${task.status}">
-                                ${getStatusText(task.status)}
-                            </div>
-                        </div>
-                        <div class="task-info"><span>模板名称:</span> ${task.templateName}</div>
-                        <div class="task-info"><span>子任务ID:</span> ${task.subOrderId}</div>
-                        <div class="task-info"><span>服务地址:</span> ${task.serviceUrl}</div>
-                        <div class="task-info"><span>任务路径:</span> ${task.taskPath || '无'}</div>
-                        ${index === 0 ? `
-                            <button class="btn priority-btn" 
-                                    onclick="updateTaskPriority('${task.subOrderId}', '${task.serviceUrl}', ${task.status})"
-                                    ${[4, 9].includes(task.status) ? '' : 'disabled'}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                ${[4,9].includes(task.status) ? '优先执行' : '无法优先'}
-                            </button>
-                        ` : ''}
-                    </div>
-                `;
-            });
-            
-            taskDetails.innerHTML = html;
-        }
-
-        // 获取状态文本
-        function getStatusText(status) {
-            switch (status) {
-                case 8: return '已完成';
-                case 6: return '执行中';
-                case 4: return '正在发送';
-                case 9: return '已下发';
-                case -1: return '容量管控';
-                default: return `状态${status}`;
-            }
-        }
-
-        // 更新任务优先级
-        async function updateTaskPriority(subOrderId, serviceUrl, status) {
-            // 防重复点击检查
-            const now = Date.now();
-            if (now - priorityLastClickTime < 2000) {
-                return;
-            }
-            priorityLastClickTime = now;
-            
-            // 检查任务状态 - 允许状态4、6、9调整优先级
-            if (![4, 9].includes(status)) {
-                priorityModalTitle.textContent = '无法调整优先级';
-                priorityModalMessage.textContent = '只有正在发送或已下发的任务才能调整优先级';
-                priorityModal.style.display = 'flex';
-                return;
-            }
-            
-            // 根据状态获取状态文本
-            let statusText = '';
-            switch (status) {
-                case 4:
-                    statusText = '正在发送';
-                    break;
-                case 6:
-                    statusText = '执行中';
-                    break;
-                case 9:
-                    statusText = '已下发';
-                    break;
-            }
-            
-            try {
-                // 提取服务地址中的IP和端口
-                const url = new URL(serviceUrl);
-                const updateUrl = `${url.protocol}//${url.host}/ics/out/updateTaskPriority`;
-                
-                const response = await fetch(updateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        orderId: subOrderId,
-                        score: "100000"
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.code === 1000) {
-                    priorityModalTitle.textContent = '优先级调整成功';
-                    priorityModalMessage.textContent = `${statusText}任务的优先级已成功提高，任务将优先执行`;
-                    priorityModal.style.display = 'flex';
-                } else {
-                    priorityModalTitle.textContent = '优先级调整失败';
-                    priorityModalMessage.textContent = `${statusText}任务调整优先级失败: ${data.desc || '未知错误'}`;
-                    priorityModal.style.display = 'flex';
+            async function checkShelfTaskStatus(shelf) {
+                for (const st of [4,6,9,-1]) {
+                    try {
+                        const res = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                            method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({taskStatus: st.toString(), shelfNum: shelf, pageSize: 20, pageNo: 1})
+                        });
+                        const d = await res.json();
+                        if (d.code===1000 && d.data.list?.length>0) {
+                            const text = {4:'正在发送',6:'执行中',9:'已下发','-1':'容量管控'}[st]||`状态${st}`;
+                            return {exists: true, status: text};
+                        }
+                    } catch {}
                 }
-            } catch (error) {
-                console.error('调整任务优先级时出错:', error);
-                priorityModalTitle.textContent = '优先级调整失败';
-                priorityModalMessage.textContent = `${statusText}任务调整优先级失败: ${error.message}`;
-                priorityModal.style.display = 'flex';
+                return {exists: false};
             }
-        }
 
-        // 货架输入变化时检查锁定状态
-        shelfInput.addEventListener('input', function() {
-            const area = areaSelect.value;
-            const taskName = taskSelect.value;
-            
-            if (area && taskName && config.areas[area] && config.areas[area].tasks[taskName]) {
+            async function submitTask() {
+                const area = areaSelect.value, taskName = taskSelect.value;
+                if (!area || !taskName) return alert('请完整选择区域和任务');
                 const task = config.areas[area].tasks[taskName];
+                let shelf = shelfInput.value.trim();
+                if (task.requires_shelf && !shelf) { shelfError.style.display='block'; return; }
+                if (task.requires_task_path && (!taskPathSelect.value || taskPathSelect.value==='请选择任务路径')) {
+                    taskPathError.style.display='block'; return;
+                }
+                if (task.requires_shelf && shelfHistory[shelf] && Date.now()-shelfHistory[shelf]<300000) {
+                    shelfLock.style.display='block'; return;
+                }
                 
                 if (task.requires_shelf) {
-                    const shelf = shelfInput.value.trim();
-                    
-                    if (shelf && shelfHistory[shelf] && (Date.now() - shelfHistory[shelf]) < 300000) {
-                        shelfLock.style.display = 'block';
-                        submitBtn.disabled = true;
-                    } else {
-                        shelfLock.style.display = 'none';
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>检查中...';
+                    const check = await checkShelfTaskStatus(shelf);
+                    if (check.exists) {
+                        taskExistsMessage.textContent = `当前货架 ${shelf} 有任务正在${check.status}，请勿重复下发！`;
+                        taskExistsModal.show();
+                        shelfQueryInput.value = shelf;
+                        document.querySelector('[data-type="shelf"]').classList.add('active');
+                        document.querySelector('[data-type="order"]').classList.remove('active');
+                        shelfQueryGroup.style.display='block'; orderQueryGroup.style.display='none';
+                        setTimeout(queryTasks, 200);
                         submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>下发任务';
+                        return;
+                    }
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>下发中...';
+                }
+                
+                if (task.requires_task_path && task.capacity>0) {
+                    if (await isPathCapacityFull(task.code, taskPathSelect.value, task.capacity)) {
+                        capacityModalMessage.textContent = `点位 ${taskPathSelect.value} 容量已满 (${task.capacity}/${task.capacity})`;
+                        capacityModal.show();
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>下发任务';
+                        return;
                     }
                 }
+                
+                const getBeijingTime = () => new Date().toLocaleString('sv-SE', {timeZone:'Asia/Shanghai'}).replace('T',' ');
+                const orderId = `pad_html${getBeijingTime()}`;
+                const requestData = [{
+                    modelProcessCode: task.code, priority: 6, orderId, fromSystem: "pad-html",
+                    taskOrderDetail: { taskPath: task.requires_task_path ? taskPathSelect.value : "", shelfNumber: task.requires_shelf ? shelf : "" }
+                }];
+                debugInfo.textContent = JSON.stringify(requestData, null, 2);
+                
+                try {
+                    const res = await fetch(task.base_url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(requestData)});
+                    const data = await res.json();
+                    responseBox.style.display = 'block';
+                    responseBox.textContent = JSON.stringify(data, null, 2);
+                    noResponsePlaceholder.style.display = 'none';
+                    if (data.code === 1000) {
+                        successModal.show();
+                        if (task.requires_shelf) shelfHistory[shelf] = Date.now();
+                        orderQueryInput.value = orderId;
+                        document.querySelector('[data-type="order"]').classList.add('active');
+                        document.querySelector('[data-type="shelf"]').classList.remove('active');
+                        shelfQueryGroup.style.display='none'; orderQueryGroup.style.display='block';
+                        queryTasks();
+                        if (task.requires_task_path && task.capacity>0) setTimeout(()=>loadPathCapacity(task.code, task.capacity), 500);
+                    }
+                } catch (e) {
+                    responseBox.style.display = 'block';
+                    responseBox.textContent = `请求失败: ${e.message}`;
+                    noResponsePlaceholder.style.display = 'none';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>下发任务';
+                }
             }
-        });
 
-        // 初始化页面
-        document.addEventListener('DOMContentLoaded', initPage);
+            function toggleQueryType(e) {
+                const type = e.target.dataset.type;
+                queryToggleOptions.forEach(o=>o.classList.remove('active'));
+                e.target.classList.add('active');
+                shelfQueryGroup.style.display = type==='shelf'?'block':'none';
+                orderQueryGroup.style.display = type==='order'?'block':'none';
+            }
+
+            async function queryTasks() {
+                if (Date.now() - queryLastClickTime < 2000) return;
+                queryLastClickTime = Date.now();
+                const isShelf = document.querySelector('[data-type="shelf"]').classList.contains('active');
+                const shelf = shelfQueryInput.value.trim(), orderId = orderQueryInput.value.trim();
+                if (isShelf && !shelf) return alert('请输入货架号');
+                if (!isShelf && !orderId) return alert('请输入OrderId');
+                queryBtn.disabled = true;
+                queryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>查询中...';
+                try {
+                    let mainTask = null;
+                    if (isShelf) {
+                        for (const st of [6,9,4]) {
+                            const res = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                                method:'POST', headers:{'Content-Type':'application/json'},
+                                body: JSON.stringify({taskStatus: st.toString(), shelfNum: shelf, pageSize:20, pageNo:1})
+                            });
+                            const d = await res.json();
+                            if (d.code===1000 && d.data.list?.length) { mainTask = d.data.list[0]; break; }
+                        }
+                    } else {
+                        const res = await fetch('http://10.68.2.32:8315/crossTask/query', {
+                            method:'POST', headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({orderId, pageSize:20, pageNo:1})
+                        });
+                        const d = await res.json();
+                        if (d.code===1000 && d.data.list?.length) mainTask = d.data.list[0];
+                    }
+                    if (!mainTask) { emptyState.style.display='block'; taskDetails.innerHTML=''; return; }
+                    const detailRes = await fetch('http://10.68.2.32:8315/crossTask/detail', {
+                        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: mainTask.id})
+                    });
+                    const detailData = await detailRes.json();
+                    if (detailData.code===1000 && detailData.data?.length) displayTaskDetails(mainTask, detailData.data);
+                    else { emptyState.style.display='block'; taskDetails.innerHTML=''; }
+                } catch (e) { alert('查询失败'); } finally {
+                    queryBtn.disabled = false;
+                    queryBtn.innerHTML = '<i class="bi bi-search me-2"></i>查询任务';
+                }
+            }
+
+            function getStatusText(st) {
+                const map = {8:'已完成',6:'执行中',4:'正在发送',9:'已下发','-1':'容量管控'};
+                return map[st] || `状态${st}`;
+            }
+
+            function displayTaskDetails(main, subs) {
+                emptyState.style.display = 'none';
+                subs.sort((a,b)=>a.taskSeq-b.taskSeq);
+                let html = `<div class="task-item"><div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">主任务</h5><span class="task-status status-${main.taskStatus}">${getStatusText(main.taskStatus)}</span></div>
+                    <div class="small"><span class="fw-semibold">OrderId:</span> ${main.orderId}</div>
+                    <div class="small"><span class="fw-semibold">任务名称:</span> ${main.modelProcessName}</div>
+                    <div class="small"><span class="fw-semibold">货架号:</span> ${main.shelfNum||'无'}</div>
+                    <div class="small"><span class="fw-semibold">设备编号:</span> ${main.deviceNum||'无'}</div></div><h6 class="mt-3 mb-2">子任务列表</h6>`;
+                subs.forEach((t,idx)=>{
+                    const canPriority = [4,9].includes(t.status);
+                    html += `<div class="task-item ${idx===0?'border-primary':''}"><div class="d-flex justify-content-between"><strong>子任务 ${t.taskSeq}</strong><span class="task-status status-${t.status}">${getStatusText(t.status)}</span></div>
+                        <div class="small mt-2"><span class="fw-semibold">模板:</span> ${t.templateName}</div>
+                        <div class="small"><span class="fw-semibold">子任务ID:</span> ${t.subOrderId}</div>
+                        <div class="small"><span class="fw-semibold">服务地址:</span> ${t.serviceUrl}</div>
+                        <div class="small"><span class="fw-semibold">任务路径:</span> ${t.taskPath||'无'}</div>
+                        ${idx===0 ? `<button class="btn btn-sm ${canPriority?'btn-warning':'btn-secondary'} mt-2" onclick="updateTaskPriority('${t.subOrderId}','${t.serviceUrl}',${t.status})" ${!canPriority?'disabled':''}><i class="bi bi-star-fill me-1"></i>优先执行</button>`:''}
+                    </div>`;
+                });
+                taskDetails.innerHTML = html;
+            }
+
+            window.updateTaskPriority = async function(subOrderId, serviceUrl, status) {
+                if (Date.now() - priorityLastClickTime < 2000) return;
+                priorityLastClickTime = Date.now();
+                if (![4,9].includes(status)) {
+                    priorityModalTitle.textContent = '无法调整优先级';
+                    priorityModalMessage.textContent = '只有正在发送或已下发的任务才能调整优先级';
+                    priorityModal.show(); return;
+                }
+                try {
+                    const url = new URL(serviceUrl);
+                    const updateUrl = `${url.protocol}//${url.host}/ics/out/updateTaskPriority`;
+                    const res = await fetch(updateUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({orderId: subOrderId, score:"100000"})});
+                    const data = await res.json();
+                    priorityModalTitle.textContent = data.code===1000 ? '优先级调整成功' : '优先级调整失败';
+                    priorityModalMessage.textContent = data.code===1000 ? '任务优先级已提高' : (data.desc||'未知错误');
+                    priorityModal.show();
+                } catch(e) {
+                    priorityModalTitle.textContent = '错误';
+                    priorityModalMessage.textContent = e.message;
+                    priorityModal.show();
+                }
+            };
+
+            async function showHelpModal() {
+                if (!helpModalBody.dataset.loaded) {
+                    try {
+                        const res = await fetch('/addtask/help');
+                        const md = await res.text();
+                        helpModalBody.innerHTML = simpleMarkdown(md);
+                        helpModalBody.dataset.loaded = true;
+                    } catch(e) { helpModalBody.innerHTML = `<p class="text-danger">加载失败: ${e.message}</p>`; }
+                }
+                helpModal.show();
+            }
+
+            function simpleMarkdown(md) {
+                return md.replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^### (.*$)/gm,'<h3>$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>')
+                    .replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+            }
+
+            document.addEventListener('DOMContentLoaded', initPage);
+        })();
     </script>
 </body>
 </html>
