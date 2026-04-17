@@ -21,15 +21,29 @@ description: 该cross_env_manager项目相关指导操作
 ### 部署脚本位置
 `deploy_iraypleos/deploy_iraypleos.sh` - 作为离线部署脚本,同时用于更新后续的部署测试验证。
 
-### 重要更新（2026-04-14）
-1. **依赖包修复**：添加了缺失的 `importlib_metadata==8.7.1` 依赖包
-2. **代码修复**：修复了 `back_wait_time` 数据处理错误（int对象没有strip方法）
-3. **部署逻辑改进**：改进了mysql.connector检测逻辑，只检测未注释的导入
+### 重要更新（2026-04-17）
+1. **完全离线支持**：所有外部Web依赖已下载到本地 `static/vendor/` 目录
+2. **依赖包修复**：添加了缺失的 `importlib_metadata==8.7.1` 依赖包
+3. **代码修复**：修复了 `back_wait_time` 数据处理错误（int对象没有strip方法）
+4. **部署逻辑改进**：改进了mysql.connector检测逻辑，只检测未注释的导入
+
+### 本地Web依赖说明
+项目已将所有外部Web依赖下载到本地，支持完全离线运行：
+- **Bootstrap 5.3.0**：主界面使用
+- **Bootstrap 5.1.3**：查询页面使用  
+- **Bootstrap Icons**：图标库
+- **Animate.css**：动画效果
+- **Sortable.js**：拖拽排序
+- **Chart.js**：图表展示
+- **Font Awesome**：图标字体
+
+所有依赖文件位于 `static/vendor/` 目录，模板文件已更新为使用本地路径。
 
 ### 部署流程
-1. 新增依赖时，需要同时更新离线依赖包（vendor_packages3.9目录）
-2. 在部署脚本中添加相应的安装步骤
-3. 更新requirements.txt文件
+1. 新增Python依赖时，需要同时更新离线依赖包（vendor_packages3.9目录）
+2. 新增Web依赖时，需要下载到 `static/vendor/` 对应目录并更新模板文件
+3. 在部署脚本中添加相应的安装步骤
+4. 更新requirements.txt文件
 
 ### 配置文件验证
 确认 `config/env.toml` 中内容为：

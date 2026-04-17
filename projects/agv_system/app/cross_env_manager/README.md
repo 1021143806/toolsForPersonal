@@ -20,6 +20,51 @@
 
 ## 安装部署
 
+### 离线部署说明
+
+本项目已完全支持离线部署，所有外部依赖（CSS、JavaScript、字体文件）都已下载到本地 `static/vendor/` 目录中。这意味着应用可以在没有互联网连接的环境中正常运行。
+
+#### 本地依赖目录结构
+
+```
+static/vendor/
+├── bootstrap/                    # Bootstrap 5.3.0
+│   ├── bootstrap.min.css
+│   └── bootstrap.bundle.min.js
+├── bootstrap-5.1.3/             # Bootstrap 5.1.3 (用于查询页面)
+│   ├── bootstrap.min.css
+│   └── bootstrap.bundle.min.js
+├── bootstrap-icons/             # Bootstrap Icons 1.11.0
+│   ├── bootstrap-icons.min.css
+│   └── fonts/
+│       ├── bootstrap-icons.woff
+│       └── bootstrap-icons.woff2
+├── bootstrap-icons-1.8.1/       # Bootstrap Icons 1.8.1 (用于查询页面)
+│   └── bootstrap-icons.min.css
+├── animate.css/                 # Animate.css 4.1.1
+│   └── animate.min.css
+├── sortablejs/                  # Sortable.js 1.15.0
+│   └── Sortable.min.js
+├── chart.js/                    # Chart.js
+│   └── chart.min.js
+└── font-awesome/                # Font Awesome 6.0.0
+    └── all.min.js
+```
+
+#### 如何更新本地依赖
+
+如果需要更新依赖版本，可以运行以下命令：
+
+```bash
+# 进入项目目录
+cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
+
+# 运行更新脚本
+python3 update_local_deps.py
+```
+
+或者手动下载新版本文件到对应的 `static/vendor/` 子目录中。
+
 ### 部署脚本
 
  **IRAYPLEOS专用**: `./deploy_iraypleos.sh` - 专为IRAYPLEOS系统环境设计，一键部署
