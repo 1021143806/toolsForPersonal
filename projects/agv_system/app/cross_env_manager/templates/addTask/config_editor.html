@@ -1,3 +1,5 @@
+这是您所需的AGV任务配置管理页面的完整HTML代码。我已在保存任务、保存配置到源文件、创建备份等操作成功后，添加了Bootstrap模态框弹窗提示“修改成功”，并优化了交互流程。
+```html
 <!DOCTYPE html>
 <html lang="zh-CN" data-bs-theme="dark">
 <head>
@@ -476,6 +478,25 @@
         </div>
     </div>
 
+    <!-- 新增：修改成功弹窗模态框 -->
+    <div class="modal fade" id="success-modal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title"><i class="bi bi-check-circle-fill me-2"></i>操作成功</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    <p class="mt-3 mb-0 fs-5" id="success-message-text">修改成功！</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <!-- 统一的主题管理器 -->
     <script src="/static/js/theme-manager.js"></script>
@@ -568,6 +589,7 @@
             let areaModalMode = 'add';
             let areaModal = null;
             let viewBackupModal = null;
+            let successModal = null;   // 新增成功弹窗实例
 
             // 备份数据（从后端获取）
             let backups = [];
@@ -610,6 +632,17 @@
             if (areaModalEl) areaModal = new bootstrap.Modal(areaModalEl);
             const viewBackupModalEl = document.getElementById('view-backup-modal');
             if (viewBackupModalEl) viewBackupModal = new bootstrap.Modal(viewBackupModalEl);
+            
+            // 成功弹窗实例
+            const successModalEl = document.getElementById('success-modal');
+            if (successModalEl) successModal = new bootstrap.Modal(successModalEl);
+            const successMessageText = document.getElementById('success-message-text');
+
+            // 显示成功弹窗 (统一入口)
+            function showSuccessModal(message = '修改成功！') {
+                if (successMessageText) successMessageText.textContent = message;
+                if (successModal) successModal.show();
+            }
 
             // 页面初始化
             async function initPage() {
@@ -849,7 +882,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 renderPathOptions(options);
             }
 
-            // 保存任务（带URL校验）
+            // 保存任务（带URL校验）—— 修改后弹窗
             function saveTaskForm() {
                 if (!currentAreaName) return;
                 
@@ -893,6 +926,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 currentTaskName = newTaskName;
                 updateRightPanel();
                 showStatus('任务已保存', 'success');
+                // ★ 弹窗提示修改成功
+                showSuccessModal('任务修改成功！');
             }
 
             function deleteCurrentTask() {
@@ -924,6 +959,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 currentTaskName = newName;
                 updateRightPanel();
                 showStatus(`已创建任务 "${newName}"`, 'success');
+                // 新增任务也可以视为修改成功
+                showSuccessModal('新任务已创建！');
             }
 
             function openAreaModal(mode, areaName = '') {
@@ -947,6 +984,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     if (configData.areas[newName]) { alert('区域名称已存在'); return; }
                     configData.areas[newName] = { tasks: {} };
                     showStatus(`区域 "${newName}" 已添加`, 'success');
+                    showSuccessModal(`区域 "${newName}" 添加成功！`);
                 } else {
                     const oldName = areaOldName.value;
                     if (oldName === newName) { areaModal.hide(); return; }
@@ -955,6 +993,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     delete configData.areas[oldName];
                     if (currentAreaName === oldName) currentAreaName = newName;
                     showStatus(`区域已重命名为 "${newName}"`, 'success');
+                    showSuccessModal(`区域重命名成功！`);
                 }
                 areaModal.hide();
                 renderAreaTree();
@@ -970,7 +1009,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 showStatus(`区域 "${areaName}" 已删除`, 'success');
             }
 
-            // 保存配置到源文件
+            // 保存配置到源文件 (成功后弹窗)
             async function saveConfigToSource() {
                 try {
                     showStatus('正在保存配置到文件...', 'info');
@@ -993,6 +1032,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         showStatus(`配置已保存到文件，已创建备份: ${result.backup_name}`, 'success');
                         // 同步到文本域
                         syncConfigToTextarea();
+                        // ★ 弹窗提示
+                        showSuccessModal('配置已成功保存到源文件！');
                     } else {
                         showStatus(`保存失败: ${result.error || '未知错误'}`, 'error');
                     }
@@ -1011,6 +1052,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 a.click();
                 URL.revokeObjectURL(url);
                 showStatus('配置文件已导出', 'success');
+                showSuccessModal('配置文件已导出！');
             }
 
             // ---------- 备份管理 ----------
@@ -1084,6 +1126,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     const result = await response.json();
                     if (response.ok && result.success) {
                         showStatus(`备份 "${result.backup_name}" 创建成功`, 'success');
+                        showSuccessModal(`备份 "${result.backup_name}" 创建成功！`);
                         // 重新加载备份列表
                         await loadBackups();
                     } else {
@@ -1106,6 +1149,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     const result = await response.json();
                     if (response.ok && result.success) {
                         showStatus(`已恢复到备份 ${name}`, 'success');
+                        showSuccessModal(`已成功恢复到备份 ${name}`);
                         // 重新加载配置
                         configData = await loadConfigFromFile();
                         currentAreaName = null; currentTaskName = null;
@@ -1173,15 +1217,13 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         updateRightPanel();
                         syncConfigToTextarea();
                         showStatus('配置文件导入成功', 'success');
+                        showSuccessModal('配置文件导入成功！');
                     } catch (err) {
                         showStatus('导入失败: ' + err.message, 'error');
                     }
                 };
                 reader.readAsText(file);
             }
-
-            // ---------- 主题 ----------
-            // 使用统一的主题管理器，无需自定义主题函数
 
             // 标签页切换
             function switchTab(tabId) {
@@ -1203,6 +1245,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     updateRightPanel();
                     syncConfigToTextarea();
                     showStatus('配置文件已重置', 'success');
+                    showSuccessModal('配置文件已重置为默认数据');
                 } catch (error) {
                     showStatus('重置失败: ' + error.message, 'error');
                 }
@@ -1298,9 +1341,6 @@ const config = ${formatted};`;
                     if (file) importConfigFromFile(file);
                     e.target.value = '';
                 });
-                
-                // 加载备份数据
-                // 备份创建将在init()函数中配置加载完成后进行
             }
 
             async function init() {
@@ -1328,3 +1368,4 @@ const config = ${formatted};`;
     </script>
 </body>
 </html>
+```
