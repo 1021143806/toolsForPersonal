@@ -1,0 +1,160 @@
+{% extends "base_simple.html" %}
+
+{% block title %}示例页面 - 使用组件{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 页面特定样式 */
+    .custom-card {
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {# 设置头部参数 #}
+    {% set header_title = "示例页面" %}
+    {% set header_subtitle = "展示如何使用共享组件构建页面" %}
+    {% set header_icon = "bi-rocket-takeoff" %}
+    {% set header_actions = [
+        {'url': url_for('index'), 'text': '返回首页', 'icon': 'bi-arrow-left', 'class': 'btn-light'},
+        {'url': '#', 'text': '操作一', 'icon': 'bi-plus-circle', 'class': 'btn-outline-light'},
+        {'url': '#', 'text': '操作二', 'icon': 'bi-gear', 'class': 'btn-outline-light'}
+    ] %}
+    
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 使用表单组件 -->
+        {% set form_fields = [
+            {'name': 'username', 'label': '用户名', 'type': 'text', 'placeholder': '请输入用户名', 'required': True, 'width': 'col-md-6'},
+            {'name': 'email', 'label': '邮箱', 'type': 'email', 'placeholder': 'example@domain.com', 'required': True, 'width': 'col-md-6'},
+            {'name': 'role', 'label': '角色', 'type': 'select', 'options': [
+                {'value': 'admin', 'text': '管理员'},
+                {'value': 'user', 'text': '普通用户'},
+                {'value': 'guest', 'text': '访客'}
+            ], 'width': 'col-md-6'},
+            {'name': 'description', 'label': '描述', 'type': 'textarea', 'rows': 4, 'placeholder': '请输入描述信息', 'width': 'col-md-12'}
+        ] %}
+        
+        {% set form_buttons = [
+            {'type': 'submit', 'text': '保存设置', 'icon': 'bi-save', 'class': 'btn-primary'},
+            {'type': 'reset', 'text': '重置', 'icon': 'bi-arrow-clockwise', 'class': 'btn-secondary'},
+            {'type': 'link', 'text': '取消', 'url': url_for('index'), 'icon': 'bi-x-circle', 'class': 'btn-outline-secondary'}
+        ] %}
+        
+        {% include "components/form_section.html" with context %}
+        
+        <!-- 使用卡片组件 -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                {% set card_header = '信息卡片' %}
+                {% set card_title = '卡片标题' %}
+                {% set card_subtitle = '副标题' %}
+                {% set card_content = '<p>这是卡片的内容区域，可以放置任何HTML内容。</p><ul><li>列表项一</li><li>列表项二</li><li>列表项三</li></ul>' %}
+                {% set card_footer = '<button class="btn btn-sm btn-primary">操作</button>' %}
+                
+                {% include "components/card.html" with context %}
+            </div>
+            
+            <div class="col-md-6">
+                {% set card_header = '统计卡片' %}
+                {% set card_header_icon = 'bi-graph-up' %}
+                {% set card_title = '数据统计' %}
+                {% set card_content = '
+                <div class="stats-grid">
+                    <div class="text-center">
+                        <h3 class="text-primary">1,234</h3>
+                        <p class="text-muted">总用户数</p>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-success">89%</h3>
+                        <p class="text-muted">完成率</p>
+                    </div>
+                </div>' %}
+                
+                {% include "components/card.html" with context %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 侧边栏 -->
+        {% set card_header = '侧边栏' %}
+        {% set card_content = '
+        <h6>快速操作</h6>
+        <div class="d-grid gap-2">
+            <button class="btn btn-outline-primary">操作一</button>
+            <button class="btn btn-outline-success">操作二</button>
+            <button class="btn btn-outline-warning">操作三</button>
+        </div>
+        
+        <hr>
+        
+        <h6>系统信息</h6>
+        <ul class="list-unstyled">
+            <li><i class="bi bi-check-circle text-success me-2"></i>系统运行正常</li>
+            <li><i class="bi bi-clock text-info me-2"></i>最后更新: 刚刚</li>
+            <li><i class="bi bi-database text-primary me-2"></i>数据库连接正常</li>
+        </ul>' %}
+        
+        {% include "components/card.html" with context %}
+        
+        <!-- 使用按钮组件 -->
+        {% import "components/buttons.html" as buttons %}
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6>按钮示例</h6>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    {{ buttons.primary_button('主要按钮', icon='bi-check-circle') }}
+                    {{ buttons.secondary_button('次要按钮', icon='bi-gear') }}
+                    {{ buttons.success_button('成功按钮', icon='bi-check-lg') }}
+                </div>
+                
+                <div class="d-flex flex-wrap gap-2">
+                    {{ buttons.warning_button('警告按钮', icon='bi-exclamation-triangle') }}
+                    {{ buttons.danger_button('危险按钮', icon='bi-x-circle') }}
+                    {{ buttons.outline_button('轮廓按钮', color='primary', icon='bi-star') }}
+                </div>
+                
+                <hr>
+                
+                <h6>按钮组</h6>
+                {% set button_group_items = [
+                    {'type': 'primary', 'text': '保存', 'icon': 'bi-save'},
+                    {'type': 'secondary', 'text': '编辑', 'icon': 'bi-pencil'},
+                    {'type': 'danger', 'text': '删除', 'icon': 'bi-trash'}
+                ] %}
+                
+                {{ buttons.button_group(button_group_items, class='w-100') }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面特定JavaScript
+    $(document).ready(function() {
+        console.log('示例页面加载完成');
+        
+        // 表单提交处理
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+            alert('表单已提交（示例）');
+        });
+    });
+</script>
+{% endblock %}

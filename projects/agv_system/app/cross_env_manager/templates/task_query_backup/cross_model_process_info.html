@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}跨环境任务模板详情{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="header text-center animate__animated animate__fadeInDown mb-4">
+            <div class="position-relative">
+                <h1 class="display-4 fw-bold mb-3"><i class="bi bi-info-square me-2"></i> 跨环境任务模板详情</h1>
+                <p class="lead mb-4 opacity-75">跨环境任务模板详细信息查询</p>
+            </div>
+        </div>
+        
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">查询失败</h4>
+                <p>{{ error }}</p>
+            </div>
+        {% else %}
+            <!-- 主模板信息 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>主模板信息</h3>
+                </div>
+                <div class="card-body">
+                    {% if result.main_template %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>模板ID:</strong> {{ result.main_template.id }}</p>
+                                <p><strong>模板代码:</strong> {{ result.main_template.model_process_code }}</p>
+                                <p><strong>模板名称:</strong> {{ result.main_template.model_process_name }}</p>
+                                <p><strong>是否启用:</strong> {{ '启用' if result.main_template.enable else '禁用' }}</p>
+                                <p><strong>容量管控:</strong> {{ result.main_template.capacity }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>目标点位:</strong> {{ result.main_template.target_points }}</p>
+                                <p><strong>区域ID:</strong> {{ result.main_template.area_id }}</p>
+                                <p><strong>目标服务器IP:</strong> {{ result.main_template.target_points_ip }}</p>
+                                <p><strong>货架回流模板:</strong> {{ result.main_template.backflow_template_code }}</p>
+                                <p><strong>空车回流模板:</strong> {{ result.main_template.comeback_template_code }}</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">未找到主模板信息</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 子任务信息 -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>子任务列表</h3>
+                </div>
+                <div class="card-body">
+                    {% if result.sub_tasks %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>子任务ID</th>
+                                        <th>执行顺序</th>
+                                        <th>服务器地址</th>
+                                        <th>模板代码</th>
+                                        <th>模板名称</th>
+                                        <th>目标点标识</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in result.sub_tasks %}
+                                        <tr>
+                                            <td>{{ task.id }}</td>
+                                            <td>{{ task.task_seq }}</td>
+                                            <td>{{ task.task_servicec }}</td>
+                                            <td>{{ task.template_code }}</td>
+                                            <td>{{ task.template_name }}</td>
+                                            <td>{{ task.task_path }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">未找到子任务信息</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="text-center mt-4">
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a href="{{ url_for('task_query_home') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-2"></i> 返回查询页面
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-house me-2"></i> 返回模板管理
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

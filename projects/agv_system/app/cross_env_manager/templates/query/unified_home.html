@@ -1,6 +1,6 @@
 {% extends "base_simple.html" %}
 
-{% block title %}AGV查询功能 - 跨环境任务管理系统{% endblock %}
+{% block title %}AGV查询功能 - 统一查询系统{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -216,8 +216,8 @@
 
 {% block header %}
     {# 设置头部参数 #}
-    {% set header_title = "AGV查询功能" %}
-    {% set header_subtitle = "专业查询 · 实时监控 · 数据分析" %}
+    {% set header_title = "AGV统一查询系统" %}
+    {% set header_subtitle = "一站式查询 · 实时监控 · 数据分析" %}
     {% set header_icon = "bi-search-heart" %}
     {% set header_actions = [
         {'url': url_for('index'), 'text': '返回首页', 'icon': 'bi-arrow-left', 'class': 'btn-light'},
@@ -228,15 +228,11 @@
     {{ super() }}
 {% endblock %}
 
+{% block content %}
     <!-- 页面头部 -->
     <div class="hero-section">
         <div class="container text-center">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="mb-0">AGV任务查询系统</h1>
-            <button class="btn btn-outline-secondary" id="themeToggle">
-                <i class="bi bi-moon-stars me-2"></i>暗黑模式
-            </button>
-        </div>
+            <h1 class="display-4 fw-bold mb-3">AGV统一查询系统</h1>
             <p class="lead mb-4">一站式AGV设备、任务、状态查询与管理平台</p>
             <div class="row justify-content-center">
                 <div class="col-md-8">
@@ -286,53 +282,19 @@
                 </div>
             </div>
             
-<!-- AGV状态 -->
+            <!-- 跨环境任务查询 -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="feature-card p-4 coming-soon">
-                    <div class="text-center">
-                        <i class="bi bi-robot feature-icon"></i>
-                        <h4 class="fw-bold mb-3">AGV状态</h4>
-                        <p class="feature-description mb-4">
-                            查询AGV实时状态、电池信息、任务历史、设备参数和运行统计，支持批量查询
-                        </p>
-                        <button class="btn btn-secondary-gradient w-100" disabled>
-                            <i class="bi bi-clock me-2"></i>功能开发中
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 跨环境模型 -->
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="feature-card p-4 coming-soon">
+                <div class="feature-card p-4">
                     <div class="text-center">
                         <i class="bi bi-diagram-3 feature-icon"></i>
-                        <h4 class="fw-bold mb-3">跨环境模型</h4>
+                        <h4 class="fw-bold mb-3">跨环境任务查询</h4>
                         <p class="feature-description mb-4">
                             查询跨环境任务模板、子任务配置、服务器分配和容量管控设置，支持模板复制
                         </p>
-                        <button class="btn btn-secondary-gradient w-100" disabled>
-                            <i class="bi bi-clock me-2"></i>功能开发中
-                        </button>
+                        <a href="{{ url_for('task_query_home') }}" class="btn btn-primary-gradient w-100">
+                            <i class="bi bi-arrow-right me-2"></i>开始查询
+                        </a>
                     </div>
-                </div>
-            </div>
-            
-            <!-- 其他功能 -->
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="feature-card p-4 coming-soon">
-                    <div class="text-center">
-                        <i class="bi bi-plus-circle feature-icon"></i>
-                        <h4 class="fw-bold mb-3">更多功能</h4>
-                        <p class="feature-description mb-4">
-                            交接点查询、货架模型、货架查询等更多功能正在开发中，敬请期待
-                        </p>
-                        <button class="btn btn-secondary-gradient w-100" disabled>
-                            <i class="bi bi-clock me-2"></i>即将上线
-                        </button>
-                    </div>
-                </div>
-            </div>
                 </div>
             </div>
         </div>
@@ -391,14 +353,14 @@
                 </div>
             </div>
             
-            <!-- 所有AGV状态 -->
+            <!-- AGV状态 -->
             <div class="col-lg-3 col-md-6 mb-4">
                 <div class="feature-card p-4 coming-soon">
                     <div class="text-center">
-                        <i class="bi bi-grid-1x2 feature-icon"></i>
-                        <h5 class="fw-bold mb-3">所有AGV状态</h5>
+                        <i class="bi bi-robot feature-icon"></i>
+                        <h5 class="fw-bold mb-3">AGV状态</h5>
                         <p class="feature-description mb-4">
-                            查看所有AGV的实时状态，支持批量监控和统计分析
+                            查询AGV实时状态、电池信息、任务历史、设备参数和运行统计
                         </p>
                         <button class="btn btn-outline-secondary w-100" disabled>
                             <i class="bi bi-clock me-2"></i>即将推出
@@ -416,7 +378,7 @@
                     <div class="row">
                         <div class="col-md-3 col-6 mb-3">
                             <div class="stat-card">
-                                <div class="stat-number">2</div>
+                                <div class="stat-number">3</div>
                                 <div class="stat-label">核心功能</div>
                             </div>
                         </div>
@@ -451,55 +413,28 @@
                 <i class="bi bi-c-circle me-1"></i>2026 跨环境任务管理系统
             </p>
             <p class="mb-0 text-muted">
-                <small>版本: 2.1 | 最后更新: 2026年4月</small>
+                <small>版本: 2.2 | 统一查询系统 | 最后更新: 2026年4月</small>
             </p>
         </div>
     </footer>
+{% endblock %}
 
-    <!-- Bootstrap JS -->
-    <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    
-        <!-- 统一的主题管理器 -->
-    <script src="/static/js/theme-manager.js"></script>
-<!-- 主题切换脚本 -->
-    <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            html.setAttribute('data-bs-theme', newTheme);
-            
-            // 更新按钮文本
-            const button = document.querySelector('[onclick="toggleTheme()"]');
-            const icon = button.querySelector('i');
-            const text = newTheme === 'dark' ? '切换主题' : '切换主题';
-            
-            button.innerHTML = `<i class="bi bi-palette"></i> ${text}`;
-            
-            // 保存主题偏好
-            localStorage.setItem('theme', newTheme);
-        }
-        
-        // 初始化主题
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-bs-theme', savedTheme);
-            
-            // 为所有卡片添加点击效果
-            const cards = document.querySelectorAll('.feature-card:not(.coming-soon)');
-            cards.forEach(card => {
-                card.style.cursor = 'pointer';
-                card.addEventListener('click', function(e) {
-                    if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
-                        const link = this.querySelector('a');
-                        if (link) {
-                            link.click();
-                        }
+{% block extra_js %}
+<script>
+    // 为所有卡片添加点击效果
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.feature-card:not(.coming-soon)');
+        cards.forEach(card => {
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON') {
+                    const link = this.querySelector('a');
+                    if (link) {
+                        link.click();
                     }
-                });
+                }
             });
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}

@@ -96,11 +96,11 @@ def main():
     
     # 需要处理的文件列表（从测试结果中获取）
     files_to_process = [
-        'task_query_home.html',
-        'task_query_result.html',
-        'cross_task_by_template.html',
-        'cross_model_process_info.html',
-        'cross_task_info.html'
+        'task_query/task_query_home.html',
+        'task_query/task_query_result.html',
+        'task_query/cross_task_by_template.html',
+        'task_query/cross_model_process_info.html',
+        'task_query/cross_task_info.html'
     ]
     
     # 处理query目录下的文件

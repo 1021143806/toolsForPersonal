@@ -1232,6 +1232,15 @@ def query_index():
         flash('查询功能模块未正确加载，请检查模块配置', 'error')
         return redirect(url_for('index'))
     
+    return render_template('query/unified_home.html')
+
+@app.route('/query/legacy')
+def query_legacy():
+    """旧版查询功能主页（兼容性）"""
+    if not QUERY_MODULES_AVAILABLE:
+        flash('查询功能模块未正确加载，请检查模块配置', 'error')
+        return redirect(url_for('index'))
+    
     return render_template('query/index_optimized.html')
 
 @app.route('/query/task', methods=['GET', 'POST'])
@@ -1283,227 +1292,43 @@ def query_device():
     
     return render_template('query/device_validation.html')
 
-@app.route('/query/cross_model', methods=['GET', 'POST'])
-def query_cross_model():
-    """跨环境模板查询"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    if request.method == 'POST':
-        model_code = request.form.get('model_code', '').strip()
-        
-        if not model_code:
-            flash('请输入模板代码', 'warning')
-            return render_template('query/cross_model_query.html')
-        
-        try:
-            model_info = cross_model_query.query_cross_model_by_code(model_code, use_production=False)
-            
-            if model_info:
-                # 获取模板详细信息
-                details = cross_model_query.query_cross_model_details(model_info['id'], use_production=False)
-                model_info['details'] = details
-                
-                return render_template('query/cross_model_result.html',
-                                     model_info=model_info,
-                                     model_code=model_code)
-            else:
-                flash(f'未找到模板代码: {model_code}', 'info')
-                return render_template('query/cross_model_query.html')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            return render_template('query/cross_model_query.html')
-    
-    return render_template('query/cross_model_query.html')
+# @app.route('/query/cross_model', methods=['GET', 'POST'])
+# def query_cross_model():
+#     """跨环境模型查询 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
 
-@app.route('/query/join_point', methods=['GET', 'POST'])
-def query_join_point():
-    """交接点查询"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    if request.method == 'POST':
-        join_point_code = request.form.get('join_point_code', '').strip()
+# @app.route('/query/join_point', methods=['GET', 'POST'])
+# def query_join_point():
+#     """交接点查询 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
         
-        if not join_point_code:
-            flash('请输入交接点代码', 'warning')
-            return render_template('query/join_point_query.html')
-        
-        try:
-            join_point_info = join_point_query.query_join_point_by_code(join_point_code, use_production=False)
-            
-            if join_point_info:
-                return render_template('query/join_point_result.html',
-                                     join_point_info=join_point_info,
-                                     join_point_code=join_point_code)
-            else:
-                flash(f'未找到交接点代码: {join_point_code}', 'info')
-                return render_template('query/join_point_query.html')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            return render_template('query/join_point_query.html')
-    
-    return render_template('query/join_point_query.html')
 
-@app.route('/query/shelf_model', methods=['GET', 'POST'])
-def query_shelf_model():
-    """货架模型查询"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    if request.method == 'POST':
-        model_code = request.form.get('model_code', '').strip()
+# @app.route('/query/shelf_model', methods=['GET', 'POST'])
+# def query_shelf_model():
+#     """货架模型查询 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
         
-        if not model_code:
-            flash('请输入货架模型代码', 'warning')
-            return render_template('query/shelf_model_query.html')
-        
-        try:
-            model_info = shelf_model_query.query_shelf_model_by_code(model_code, use_production=False)
-            
-            if model_info:
-                return render_template('query/shelf_model_result.html',
-                                     model_info=model_info,
-                                     model_code=model_code)
-            else:
-                flash(f'未找到货架模型代码: {model_code}', 'info')
-                return render_template('query/shelf_model_query.html')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            return render_template('query/shelf_model_query.html')
-    
-    return render_template('query/shelf_model_query.html')
 
-@app.route('/query/shelf', methods=['GET', 'POST'])
-def query_shelf():
-    """货架查询"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    shelves = []
-    
-    if request.method == 'GET' and request.args:
-        # GET请求处理查询参数
-        shelf_id = request.args.get('shelf_id', '').strip()
-        shelf_code = request.args.get('shelf_code', '').strip()
-        shelf_model_id = request.args.get('shelf_model_id', '').strip()
-        status = request.args.get('status', '').strip()
-        location = request.args.get('location', '').strip()
-        limit = int(request.args.get('limit', '50'))
-        
-        try:
-            # 构建查询条件
-            conditions = []
-            params = []
-            
-            if shelf_id:
-                conditions.append("s.id = %s")
-                params.append(shelf_id)
-            
-            if shelf_code:
-                conditions.append("s.shelf_code LIKE %s")
-                params.append(f"%{shelf_code}%")
-            
-            if shelf_model_id:
-                conditions.append("s.shelf_model_id = %s")
-                params.append(shelf_model_id)
-            
-            if status:
-                conditions.append("s.status = %s")
-                params.append(status)
-            
-            if location:
-                conditions.append("s.location LIKE %s")
-                params.append(f"%{location}%")
-            
-            # 构建查询SQL
-            query = """
-            SELECT 
-                s.*,
-                sm.model_name,
-                sm.model_code as shelf_model_code
-            FROM shelf s
-            LEFT JOIN shelf_model sm ON s.shelf_model_id = sm.id
-            """
-            
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
-            
-            query += " ORDER BY s.id DESC LIMIT %s"
-            params.append(limit)
-            
-            # 执行查询
-            from modules.database.helpers import fetch_all
-            shelves = fetch_all(query, tuple(params), use_production=False)
-            
-            if not shelves:
-                flash('未找到符合条件的货架记录', 'info')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            print(f"货架查询错误: {e}")
-    
-    return render_template('query/shelf_query.html', shelves=shelves)
+# @app.route('/query/shelf', methods=['GET', 'POST'])
+# def query_shelf():
+#     """货架查询 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
 
-@app.route('/query/agv_status', methods=['GET', 'POST'])
-def query_agv_status():
-    """AGV状态查询"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    if request.method == 'POST':
-        agv_code = request.form.get('agv_code', '').strip()
-        
-        if not agv_code:
-            flash('请输入AGV代码', 'warning')
-            return render_template('query/agv_status_query.html')
-        
-        try:
-            agv_info = agv_status.query_agv_status_by_code(agv_code, use_production=False)
-            
-            if agv_info:
-                # 获取AGV的最近任务
-                tasks = agv_status.query_agv_tasks(agv_info['id'], limit=10, use_production=False)
-                agv_info['recent_tasks'] = tasks
-                
-                # 获取电池信息
-                battery_info = agv_status.query_agv_battery_info(agv_info['id'], use_production=False)
-                agv_info['battery_info'] = battery_info
-                
-                return render_template('query/agv_status_result.html',
-                                     agv_info=agv_info,
-                                     agv_code=agv_code)
-            else:
-                flash(f'未找到AGV代码: {agv_code}', 'info')
-                return render_template('query/agv_status_query.html')
-                
-        except Exception as e:
-            flash(f'查询失败: {str(e)}', 'error')
-            return render_template('query/agv_status_query.html')
-    
-    return render_template('query/agv_status_query.html')
+# @app.route('/query/agv_status', methods=['GET', 'POST'])
+# def query_agv_status():
+#     """AGV状态查询 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
 
-@app.route('/query/agv_status/all')
-def query_all_agv_status():
-    """查询所有AGV状态"""
-    if not QUERY_MODULES_AVAILABLE:
-        return jsonify({'success': False, 'message': '查询功能不可用'}), 503
-    
-    try:
-        all_agvs = agv_status.query_all_agv_status(limit=100, use_production=False)
-        online_agvs = agv_status.query_online_agvs(use_production=False)
-        statistics = agv_status.get_agv_statistics(use_production=False)
-        
-        return render_template('query/all_agv_status.html',
-                             all_agvs=all_agvs,
-                             online_agvs=online_agvs,
-                             statistics=statistics)
-    except Exception as e:
-        flash(f'查询失败: {str(e)}', 'error')
-        return redirect(url_for('query_agv_status'))
+# @app.route('/query/agv_status/all')
+# def query_all_agv_status():
+#     """查询所有AGV状态 - 已禁用"""
+#     flash('此查询功能已暂时禁用', 'info')
+#     return redirect(url_for('query_home'))
 
 # ============================================================================
 # 1.3项目功能整合 - 任务查询路由
@@ -1512,7 +1337,7 @@ def query_all_agv_status():
 @app.route('/task_query')
 def task_query_home():
     """任务查询主页 - 对应1.3项目的home.html功能"""
-    return render_template('task_query_home.html')
+    return render_template('query/task_query_home.html')
 
 @app.route('/task_query/result')
 def task_query_result():
@@ -1535,7 +1360,7 @@ def task_query_result():
             flash(result['error'], 'error')
             return redirect(url_for('task_query_home'))
         
-        return render_template('task_query_result.html', result=result)
+        return render_template('query/task_query_result.html', result=result)
         
     except Exception as e:
         flash(f'查询失败: {str(e)}', 'error')
@@ -1557,7 +1382,7 @@ def cross_task_by_template():
             flash(result['error'], 'error')
             return redirect(url_for('task_query_home'))
         
-        return render_template('cross_task_by_template.html', 
+        return render_template('query/cross_task_by_template.html', 
                              result=result, 
                              template_code=template_code)
         
@@ -1581,7 +1406,7 @@ def cross_model_process_info():
             flash(result['error'], 'error')
             return redirect(url_for('task_query_home'))
         
-        return render_template('cross_model_process_info.html', result=result)
+        return render_template('query/cross_model_process_info.html', result=result)
         
     except Exception as e:
         flash(f'查询失败: {str(e)}', 'error')
@@ -1603,7 +1428,7 @@ def cross_task_info():
             flash(result['error'], 'error')
             return redirect(url_for('task_query_home'))
         
-        return render_template('cross_task_info.html', result=result)
+        return render_template('query/cross_task_info.html', result=result)
         
     except Exception as e:
         flash(f'查询失败: {str(e)}', 'error')

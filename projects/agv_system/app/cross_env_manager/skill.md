@@ -16,6 +16,15 @@ description: 该cross_env_manager项目相关指导操作
 
 ## Example Usage
 
+## 重要文件夹
+- templates/ - 存放HTML模板文件
+   - index.html - 主页面模板
+   - components/ - 存放页面组件模板
+
+- static/ - 存放静态资源文件（CSS、JS、图片等）
+- deploy_iraypleos/ - 存放离线部署相关脚本和资源
+- test/ - 存放测试脚本和测试资源
+
 ## 离线部署相关
 
 ### 部署脚本位置
