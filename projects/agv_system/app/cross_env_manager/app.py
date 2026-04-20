@@ -387,10 +387,82 @@ def edit_template(template_id):
         
         if result is not None:
             flash('任务模板更新成功', 'success')
+            
+            # 更新子任务信息
+            update_detail_count = update_template_details(template_id, form_data)
+            if update_detail_count > 0:
+                flash(f'成功更新 {update_detail_count} 个子任务', 'success')
         else:
             flash('任务模板更新失败', 'error')
         
         return redirect(url_for('view_template', template_id=template_id))
+
+def update_template_details(template_id, form_data):
+    """更新模板的子任务信息"""
+    updated_count = 0
+    
+    # 解析表单中所有以'detail_'开头的字段
+    detail_fields = {}
+    for key, value in form_data.items():
+        if key.startswith('detail_'):
+            # 解析字段名格式: detail_{detail_id}_{field_name}
+            parts = key.split('_')
+            if len(parts) >= 3:
+                detail_id = parts[1]
+                field_name = '_'.join(parts[2:])
+                
+                if detail_id not in detail_fields:
+                    detail_fields[detail_id] = {}
+                detail_fields[detail_id][field_name] = value
+    
+    # 更新每个子任务
+    for detail_id_str, fields in detail_fields.items():
+        try:
+            detail_id = int(detail_id_str)
+            
+            # 构建更新查询
+            update_query = """
+            UPDATE fy_cross_model_process_detail 
+            SET task_seq = %s,
+                template_code = %s,
+                template_name = %s,
+                task_servicec = %s,
+                task_path = %s
+            WHERE id = %s AND model_process_id = %s
+            """
+            
+            # 获取字段值，使用空字符串作为默认值
+            task_seq = fields.get('task_seq', '0')
+            template_code = fields.get('template_code', '')
+            template_name = fields.get('template_name', '')
+            task_servicec = fields.get('task_servicec', '')
+            task_path = fields.get('task_path', '')
+            
+            # 验证task_seq是否为数字
+            try:
+                task_seq_int = int(task_seq)
+            except (ValueError, TypeError):
+                task_seq_int = 0
+            
+            params = (
+                task_seq_int,
+                template_code,
+                template_name,
+                task_servicec,
+                task_path,
+                detail_id,
+                template_id
+            )
+            
+            result = execute_query(update_query, params, fetch=False)
+            if result is not None:
+                updated_count += 1
+                
+        except (ValueError, KeyError) as e:
+            print(f"更新子任务 {detail_id_str} 时出错: {e}")
+            continue
+    
+    return updated_count
 
 @app.route('/edit_detail/<int:detail_id>', methods=['POST'])
 def edit_detail(detail_id):
