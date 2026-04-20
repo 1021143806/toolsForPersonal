@@ -10,6 +10,7 @@
 - 📝 **子任务管理**: 编辑子任务详细信息
 - 📋 **模板复制**: 基于现有模板创建新模板，自动生成ID后缀
 - 🎨 **用户友好界面**: 响应式设计，操作直观
+- 🌙 **统一主题管理**: 全页面统一的暗黑/亮色主题切换，状态自动保存
 - 📊 **数据可视化**: 清晰的表格和卡片展示
 
 ## 系统要求
@@ -220,6 +221,7 @@ graph TB
     %% 核心模块层
     FlaskApp --> Router[路由控制器]
     FlaskApp --> ConfigMgr[配置管理器]
+    FlaskApp --> ThemeMgr[主题管理器<br/>全页面统一]
     
     Router --> CoreModules[核心功能模块]
     Router --> QueryModules[查询功能模块]
@@ -252,6 +254,10 @@ graph TB
     %% 配置层
     ConfigMgr --> TOMLConfig[TOML配置文件]
     ConfigMgr --> EnvConfig[环境变量]
+    
+    %% 主题管理层
+    ThemeMgr --> LocalStorage[浏览器本地存储]
+    ThemeMgr --> AllPages[所有页面]
     
     %% 监控层
     FlaskApp --> HealthCheck[健康检查接口]
@@ -415,6 +421,13 @@ graph LR
         DotEnv --> ConfigMgr[配置管理器]
     end
     
+    %% 主题层
+    subgraph "主题层 Theme"
+        direction TB
+        ThemeMgr[主题管理器] --> LocalStorage[本地存储]
+        ThemeMgr --> CSSVars[CSS变量系统]
+    end
+    
     %% 部署层
     subgraph "部署层 Deployment"
         direction TB
@@ -425,9 +438,11 @@ graph LR
     %% 连接关系
     HTML --> Flask
     JavaScript --> Flask
+    JavaScript --> ThemeMgr
     Flask --> MySQL
     Flask --> TOML
     Flask --> Supervisor
+    ThemeMgr --> HTML
 ```
 
 ### 模块交互流程
@@ -441,9 +456,12 @@ sequenceDiagram
     participant Module as 功能模块
     participant DB as 数据库
     participant Config as 配置管理器
+    participant Theme as 主题管理器
     
     User->>Browser: 访问Web页面
-    Browser->>Flask: HTTP请求
+    Browser->>Theme: 检查本地存储的主题偏好
+    Theme-->>Browser: 返回主题设置
+    Browser->>Flask: HTTP请求（包含主题状态）
     Flask->>Router: 路由分发
     Router->>Config: 加载配置
     Config-->>Router: 返回配置
@@ -466,8 +484,15 @@ sequenceDiagram
     end
     
     Router->>Flask: 响应数据
-    Flask->>Browser: HTTP响应
-    Browser->>User: 显示页面
+    Flask->>Browser: HTTP响应（应用主题）
+    Browser->>User: 显示页面（使用用户偏好的主题）
+    
+    Note over User,Browser: 用户切换主题时
+    User->>Browser: 点击主题切换按钮
+    Browser->>Theme: 切换主题
+    Theme->>Browser: 更新页面样式
+    Theme->>Browser: 保存到localStorage
+    Browser->>User: 显示新主题
 ```
 
 ### 主要功能模块
@@ -503,6 +528,14 @@ sequenceDiagram
 - **配置验证**: 配置项格式和有效性验证
 - **配置备份**: 自动备份和历史版本管理
 - **热重载**: 支持配置热更新
+
+#### 6. 主题管理模块
+- **统一主题管理**: `ThemeManager` 类提供全页面统一的主题切换
+- **状态持久化**: 使用 `localStorage` 保存用户主题偏好
+- **实时同步**: 所有页面实时同步主题状态
+- **默认暗黑模式**: 默认使用暗黑模式，保护用户眼睛
+- **CSS变量系统**: 基于CSS自定义变量的主题系统
+- **事件驱动**: 支持 `themeChanged` 事件监听
 
 ### 数据流架构
 

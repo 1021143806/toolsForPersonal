@@ -1,14 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>跨环境任务模板详情</title>
     <link href="/static/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css">
 </head>
 <body>
     <div class="container mt-4">
-        <h1 class="text-center mb-4">跨环境任务模板详情</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">AGV任务查询系统</h1>
+            <button class="btn btn-outline-secondary" id="themeToggle">
+                <i class="bi bi-moon-stars me-2"></i>暗黑模式
+            </button>
+        </div>
         
         {% if error %}
             <div class="alert alert-danger" role="alert">
@@ -92,5 +98,7 @@
     </div>
 
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <!-- 统一的主题管理器 -->
+    <script src="/static/js/theme-manager.js"></script>
 </body>
 </html>

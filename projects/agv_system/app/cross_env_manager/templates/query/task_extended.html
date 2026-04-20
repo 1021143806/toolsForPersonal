@@ -157,9 +157,12 @@
     <!-- 页面头部 -->
     <div class="page-header">
         <div class="container text-center">
-            <h1 class="display-5 fw-bold mb-3">
-                <i class="bi bi-clipboard-check me-2"></i>任务查询
-            </h1>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">AGV任务查询系统</h1>
+            <button class="btn btn-outline-secondary" id="themeToggle">
+                <i class="bi bi-moon-stars me-2"></i>暗黑模式
+            </button>
+        </div>
             <p class="lead mb-0">一站式任务信息查询平台，支持多种查询方式和详细结果展示</p>
         </div>
     </div>
@@ -368,7 +371,9 @@
     <!-- Bootstrap JS -->
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     
-    <script>
+        <!-- 统一的主题管理器 -->
+    <script src="/static/js/theme-manager.js"></script>
+<script>
         // 初始化主题
         document.addEventListener('DOMContentLoaded', function() {
             // 自动填充示例数据

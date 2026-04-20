@@ -1,5 +1,3 @@
-// config.js - AGV跨环境任务下发系统配置文件
-// 所有区域、任务模板、URL、路径选项等均在此定义
 const config = {
     "general": {
         "title": "AGV 跨环境任务下发系统 v1.5.1.4",
@@ -659,16 +657,30 @@ const config = {
                         }
                     ]
                 },
-                "去空车_27半成品3F_to_19华消1F_449": {
+                "去空车_27半成品3F_to_19华消1FA3-1_449": {
                     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                     "code": "K_go_27BCP2F_to_19HX1F_449",
                     "requires_shelf": false,
                     "requires_task_path": false,
                     "task_path_options": []
                 },
-                "回空车_27半成品3F_to_19华消1F_450": {
+                "回空车_27半成品3F_to_19华消1FA3-1_450": {
                     "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                     "code": "K_back_27BCP2F_to_19HX1F_450",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "去空车_27半成品3F_to_19华消1FA2-1_301": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_BCPtoHX_go",
+                    "requires_shelf": false,
+                    "requires_task_path": false,
+                    "task_path_options": []
+                },
+                "回空车_27半成品3F_to_19华消1FA2-1_302": {
+                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                    "code": "K_BCPtoHX_back",
                     "requires_shelf": false,
                     "requires_task_path": false,
                     "task_path_options": []
@@ -767,6 +779,9 @@ const config = {
                     "task_path_options": []
                 }
             }
+        },
+        "test": {
+            "tasks": {}
         }
     }
 };

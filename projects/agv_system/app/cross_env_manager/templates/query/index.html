@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -133,9 +133,12 @@
     <!-- 页面头部 -->
     <div class="header">
         <div class="container text-center">
-            <h1 class="display-4 fw-bold">
-                <i class="bi bi-search"></i> AGV任务查询系统
-            </h1>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">AGV任务查询系统</h1>
+            <button class="btn btn-outline-secondary" id="themeToggle">
+                <i class="bi bi-moon-stars me-2"></i>暗黑模式
+            </button>
+        </div>
             <p class="lead">一站式AGV任务、设备、状态查询平台</p>
             <p class="mb-0">快速查询任务状态、验证设备信息、监控AGV运行状态</p>
         </div>
@@ -325,7 +328,9 @@
 
     <!-- Bootstrap JS -->
     <script src="/static/vendor/bootstrap-5.1.3/bootstrap.bundle.min.js"></script>
-    <script>
+        <!-- 统一的主题管理器 -->
+    <script src="/static/js/theme-manager.js"></script>
+<script>
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
             // 显示欢迎消息

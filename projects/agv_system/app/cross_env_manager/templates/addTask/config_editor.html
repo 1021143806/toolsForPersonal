@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -224,14 +224,19 @@
         
         <!-- 导航 -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <a href="/addtask" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-left me-2"></i>返回任务下发
-            </a>
+            <div class="d-flex gap-2">
+                <a href="/addtask" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-2"></i>返回任务下发
+                </a>
+                <a href="/" class="btn btn-outline-secondary">
+                    <i class="bi bi-house me-2"></i>返回主页
+                </a>
+            </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-info" id="refresh-btn">
                     <i class="bi bi-arrow-clockwise me-2"></i>重置演示数据
                 </button>
-                <button class="btn btn-outline-secondary" id="theme-toggle">
+                <button class="btn btn-outline-secondary" id="themeToggle">
                     <i class="bi bi-moon-stars me-2"></i>暗黑模式
                 </button>
             </div>
@@ -472,6 +477,8 @@
     </div>
 
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <!-- 统一的主题管理器 -->
+    <script src="/static/js/theme-manager.js"></script>
     <script>
         (function(){
             "use strict";
@@ -562,7 +569,7 @@
             let areaModal = null;
             let viewBackupModal = null;
 
-            // 模拟备份数据（实际应从后端获取）
+            // 备份数据（从后端获取）
             let backups = [];
 
             // DOM元素
@@ -964,9 +971,34 @@ const config = ${JSON.stringify(configData, null, 4)};`;
             }
 
             // 保存配置到源文件
-            function saveConfigToSource() {
-                syncConfigToTextarea();
-                showStatus('配置已同步到源文件编辑区', 'success');
+            async function saveConfigToSource() {
+                try {
+                    showStatus('正在保存配置到文件...', 'info');
+                    
+                    // 准备要保存的配置数据
+                    const configToSave = JSON.parse(JSON.stringify(configData));
+                    
+                    // 调用后端API保存配置
+                    const response = await fetch('/addtask/config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(configToSave)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        showStatus(`配置已保存到文件，已创建备份: ${result.backup_name}`, 'success');
+                        // 同步到文本域
+                        syncConfigToTextarea();
+                    } else {
+                        showStatus(`保存失败: ${result.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showStatus(`保存失败: ${error.message}`, 'error');
+                }
             }
 
             function exportConfigFile() {
@@ -982,9 +1014,16 @@ const config = ${JSON.stringify(configData, null, 4)};`;
             }
 
             // ---------- 备份管理 ----------
-            function generateBackupName() {
-                const now = new Date();
-                return `backup_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getTime()}`;
+            async function loadBackups() {
+                try {
+                    const response = await fetch('/addtask/config/backups');
+                    if (!response.ok) throw new Error('无法加载备份列表');
+                    backups = await response.json();
+                    renderBackupList();
+                } catch (error) {
+                    showStatus(`加载备份列表失败: ${error.message}`, 'error');
+                    backupListEl.innerHTML = '<div class="text-center py-3 text-muted"><i class="bi bi-exclamation-triangle me-2"></i>无法加载备份列表</div>';
+                }
             }
 
             function renderBackupList() {
@@ -999,8 +1038,9 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>${backup.name}</strong>
-                                    <span class="badge bg-secondary version-badge ms-2">v${backup.version || 1}</span>
+                                    <span class="badge bg-secondary version-badge ms-2">${backup.version || 'v1'}</span>
                                     <div class="text-muted small">${new Date(backup.timestamp).toLocaleString()}</div>
+                                    <div class="text-muted small">${(backup.size / 1024).toFixed(2)} KB</div>
                                 </div>
                                 <div class="d-flex gap-1">
                                     <button class="btn btn-sm btn-outline-primary restore-backup-btn" data-name="${backup.name}">
@@ -1030,46 +1070,87 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 });
             }
 
-            function createBackup(manual = true) {
-                const backup = {
-                    name: generateBackupName(),
-                    timestamp: Date.now(),
-                    version: backups.length + 1,
-                    content: JSON.stringify(configData, null, 4)
-                };
-                backups.push(backup);
-                renderBackupList();
-                showStatus(`备份 "${backup.name}" 创建成功`, 'success');
-            }
-
-            function restoreBackup(name) {
-                const backup = backups.find(b => b.name === name);
-                if (!backup) return;
-                if (!confirm(`确定恢复备份 ${name} 吗？当前未保存的更改将丢失。`)) return;
+            async function createBackup(manual = true) {
                 try {
-                    configData = JSON.parse(backup.content);
-                    currentAreaName = null; currentTaskName = null;
-                    renderAreaTree();
-                    updateRightPanel();
-                    syncConfigToTextarea();
-                    showStatus(`已恢复到备份 ${name}`, 'success');
-                } catch (e) {
-                    showStatus('恢复失败: 备份数据损坏', 'error');
+                    showStatus('正在创建备份...', 'info');
+                    const response = await fetch('/addtask/config/backup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ type: manual ? 'manual' : 'auto' })
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        showStatus(`备份 "${result.backup_name}" 创建成功`, 'success');
+                        // 重新加载备份列表
+                        await loadBackups();
+                    } else {
+                        showStatus(`创建备份失败: ${result.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showStatus(`创建备份失败: ${error.message}`, 'error');
                 }
             }
 
-            function viewBackup(name) {
-                const backup = backups.find(b => b.name === name);
-                if (!backup) return;
-                document.getElementById('backup-content-view').textContent = backup.content;
-                viewBackupModal.show();
+            async function restoreBackup(name) {
+                if (!confirm(`确定恢复备份 ${name} 吗？当前未保存的更改将丢失。`)) return;
+                
+                try {
+                    showStatus('正在恢复备份...', 'info');
+                    const response = await fetch(`/addtask/config/backup/${name}/restore`, {
+                        method: 'POST'
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        showStatus(`已恢复到备份 ${name}`, 'success');
+                        // 重新加载配置
+                        configData = await loadConfigFromFile();
+                        currentAreaName = null; currentTaskName = null;
+                        renderAreaTree();
+                        updateRightPanel();
+                        syncConfigToTextarea();
+                    } else {
+                        showStatus(`恢复备份失败: ${result.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showStatus(`恢复备份失败: ${error.message}`, 'error');
+                }
             }
 
-            function deleteBackup(name) {
+            async function viewBackup(name) {
+                try {
+                    const response = await fetch(`/addtask/config/backup/${name}`);
+                    if (!response.ok) throw new Error('无法加载备份内容');
+                    const content = await response.text();
+                    document.getElementById('backup-content-view').textContent = content;
+                    viewBackupModal.show();
+                } catch (error) {
+                    showStatus(`查看备份失败: ${error.message}`, 'error');
+                }
+            }
+
+            async function deleteBackup(name) {
                 if (!confirm(`确定删除备份 ${name} 吗？`)) return;
-                backups = backups.filter(b => b.name !== name);
-                renderBackupList();
-                showStatus(`备份 ${name} 已删除`, 'success');
+                
+                try {
+                    const response = await fetch(`/addtask/config/backup/${name}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        showStatus(`备份 ${name} 已删除`, 'success');
+                        // 重新加载备份列表
+                        await loadBackups();
+                    } else {
+                        showStatus(`删除备份失败: ${result.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showStatus(`删除备份失败: ${error.message}`, 'error');
+                }
             }
 
             function importConfigFromFile(file) {
@@ -1100,29 +1181,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
             }
 
             // ---------- 主题 ----------
-            function initTheme() {
-                const savedTheme = localStorage.getItem('config-editor-theme') || 'light';
-                document.documentElement.setAttribute('data-bs-theme', savedTheme);
-                updateThemeButton(savedTheme);
-            }
-            function toggleTheme() {
-                const current = document.documentElement.getAttribute('data-bs-theme');
-                const newTheme = current === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-bs-theme', newTheme);
-                localStorage.setItem('config-editor-theme', newTheme);
-                updateThemeButton(newTheme);
-            }
-            function updateThemeButton(theme) {
-                const icon = document.querySelector('#theme-toggle i');
-                const btn = document.querySelector('#theme-toggle');
-                if (theme === 'dark') {
-                    icon.className = 'bi bi-sun me-2';
-                    btn.innerHTML = '<i class="bi bi-sun me-2"></i>亮色模式';
-                } else {
-                    icon.className = 'bi bi-moon-stars me-2';
-                    btn.innerHTML = '<i class="bi bi-moon-stars me-2"></i>暗黑模式';
-                }
-            }
+            // 使用统一的主题管理器，无需自定义主题函数
 
             // 标签页切换
             function switchTab(tabId) {
@@ -1221,7 +1280,7 @@ const config = ${formatted};`;
                 });
                 document.getElementById('format-source-btn').addEventListener('click', formatSource);
                 document.getElementById('copy-code-btn').addEventListener('click', copySource);
-                document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+                // 主题切换由统一的主题管理器处理
                 document.getElementById('refresh-btn').addEventListener('click', () => {
                     if (confirm('确定重新加载配置文件吗？未保存的更改将丢失。')) {
                         resetDemoData();
@@ -1240,14 +1299,12 @@ const config = ${formatted};`;
                     e.target.value = '';
                 });
                 
-                // 初始化模拟备份数据（在配置加载完成后创建）
+                // 加载备份数据
                 // 备份创建将在init()函数中配置加载完成后进行
             }
 
             async function init() {
-                initTheme();
                 bindEvents();
-                renderBackupList();
                 
                 // 异步加载配置文件
                 try {
@@ -1257,8 +1314,8 @@ const config = ${formatted};`;
                     updateRightPanel();
                     syncConfigToTextarea();
                     
-                    // 创建初始备份
-                    createBackup(false);
+                    // 加载备份列表
+                    await loadBackups();
                     
                     showStatus('配置文件加载完成', 'success');
                 } catch (error) {

@@ -1717,7 +1717,7 @@ def addtask_help():
 @app.route('/config')
 def config_editor():
     """配置管理页面"""
-    return render_template('config_editor.html')
+    return render_template('addTask/config_editor.html')
 
 @app.route('/addtask/config')
 def get_addtask_config():

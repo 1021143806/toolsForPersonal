@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-bs-theme="auto">
+<html lang="zh-CN" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -361,42 +361,10 @@
     </div>
 
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/vendor/jquery/jquery-3.6.0.min.js"></script>
+    <!-- 统一的主题管理器 -->
+    <script src="/static/js/theme-manager.js"></script>
     <script>
-        // 主题切换功能
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = themeToggle.querySelector('i');
-        
-        // 检查本地存储的主题偏好
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-bs-theme', currentTheme);
-        updateThemeIcon(currentTheme);
-        
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
-            document.documentElement.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
-            
-            // 添加切换动画
-            themeToggle.classList.add('animate__animated', 'animate__flip');
-            setTimeout(() => {
-                themeToggle.classList.remove('animate__animated', 'animate__flip');
-            }, 500);
-        });
-        
-        function updateThemeIcon(theme) {
-            if (theme === 'dark') {
-                themeIcon.className = 'bi bi-sun';
-                themeToggle.title = '切换到亮色模式';
-            } else {
-                themeIcon.className = 'bi bi-moon-stars';
-                themeToggle.title = '切换到暗黑模式';
-            }
-        }
-        
         // 自动关闭警告消息
         $(document).ready(function() {
             setTimeout(function() {
