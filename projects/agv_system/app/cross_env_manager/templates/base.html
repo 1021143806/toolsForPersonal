@@ -283,6 +283,57 @@
         .pulse-animation {
             animation: pulse 2s infinite;
         }
+
+        .custom-navbar {
+            background: var(--header-bg);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .custom-navbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+
+        .custom-navbar .navbar-brand {
+            color: white !important;
+        }
+
+        .custom-navbar .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            margin: 0 0.1rem;
+            transition: all 0.3s;
+        }
+
+        .custom-navbar .nav-link:hover,
+        .custom-navbar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white !important;
+        }
+
+        .custom-navbar .navbar-toggler {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .custom-navbar .navbar-toggler-icon {
+            filter: invert(1);
+        }
+
+        .custom-navbar .navbar-toggler:focus {
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -317,30 +368,55 @@
             {% endwith %}
         </div>
 
-        <!-- 页头 -->
-        <div class="header text-center animate__animated animate__fadeInDown">
-            <div class="position-relative">
-                <h1 class="display-4 fw-bold mb-3"><i class="bi bi-diagram-3 me-2"></i> 跨环境任务模板管理系统</h1>
-                <p class="lead mb-4 opacity-75">现代化界面 · 暗黑模式支持 · 智能管理AGV跨环境任务模板</p>
-                <div class="d-flex flex-wrap justify-content-center gap-2">
-                    <a href="{{ url_for('index') }}" class="btn btn-light btn-lg px-4">
-                        <i class="bi bi-house me-2"></i> 首页
-                    </a>
-                    <a href="{{ url_for('addtask') }}" class="btn btn-outline-light btn-lg px-4">
-                        <i class="bi bi-send me-2"></i> 任务下发
-                    </a>
-                    <a href="{{ url_for('query_index') }}" class="btn btn-outline-light btn-lg px-4">
-                        <i class="bi bi-search me-2"></i> 查询功能
-                    </a>
-                    <a href="{{ url_for('show_docs') }}" class="btn btn-outline-light btn-lg px-4">
-                        <i class="bi bi-journal-text me-2"></i> 文档
-                    </a>
-                    <a href="{{ url_for('show_stats') }}" class="btn btn-outline-light btn-lg px-4">
-                        <i class="bi bi-graph-up me-2"></i> 统计
-                    </a>
+        <!-- 切换式导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-dark rounded-3 mb-4 animate__animated animate__fadeInDown custom-navbar">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                    <i class="bi bi-diagram-3 fs-2 me-2"></i>
+                    <div>
+                        <div class="fw-bold fs-4">跨环境任务模板管理系统</div>
+                        <div class="small opacity-75">现代化界面 · 暗黑模式支持 · 智能管理AGV跨环境任务模板</div>
+                    </div>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('index') }}">
+                                <i class="bi bi-house me-1"></i> 首页
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('addtask') }}">
+                                <i class="bi bi-send me-1"></i> 任务下发
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('query_index') }}">
+                                <i class="bi bi-search me-1"></i> 查询功能
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('show_docs') }}">
+                                <i class="bi bi-journal-text me-1"></i> 文档
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('show_stats') }}">
+                                <i class="bi bi-graph-up me-1"></i> 统计
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="navbar-nav">
+                        <button id="themeToggleNav" class="btn btn-outline-light btn-sm me-2" title="切换主题">
+                            <i class="bi bi-moon-stars"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </nav>
 
         <!-- 主要内容 -->
         {% block content %}{% endblock %}
@@ -418,6 +494,13 @@
                 loadingDiv.remove();
             }
         }
+
+        // 同步导航栏中的主题切换按钮
+        $(document).ready(function() {
+            $('#themeToggleNav').click(function() {
+                $('#themeToggle').click();
+            });
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
