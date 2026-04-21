@@ -284,55 +284,83 @@
             animation: pulse 2s infinite;
         }
 
-        .custom-navbar {
-            background: var(--header-bg);
-            color: white;
-            padding: 0.5rem 1rem;
+        .glass-navbar {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            transition: all var(--transition-speed);
+            z-index: 1030;
             position: relative;
-            overflow: hidden;
         }
 
-        .custom-navbar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
-            opacity: 0.3;
+        [data-bs-theme="light"] .glass-navbar {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
-        .custom-navbar .navbar-brand {
-            color: white !important;
+        [data-bs-theme="dark"] .glass-navbar {
+            background: rgba(30, 30, 30, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .custom-navbar .nav-link {
-            color: rgba(255, 255, 255, 0.85) !important;
-            border-radius: 6px;
+        .glass-navbar .navbar-brand {
+            color: var(--text-color) !important;
+        }
+
+        .glass-navbar .nav-link {
+            color: var(--text-color) !important;
+            border-radius: 8px;
             padding: 0.5rem 1rem;
             margin: 0 0.1rem;
             transition: all 0.3s;
+            font-weight: 500;
+            opacity: 0.9;
         }
 
-        .custom-navbar .nav-link:hover,
-        .custom-navbar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: white !important;
+        .glass-navbar .nav-link:hover,
+        .glass-navbar .nav-link.active {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: var(--text-color) !important;
+            opacity: 1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(13, 110, 253, 0.2);
         }
 
-        .custom-navbar .navbar-toggler {
-            border-color: rgba(255, 255, 255, 0.3);
+        .glass-navbar .navbar-toggler {
+            border-color: rgba(var(--text-color-rgb, 33, 37, 41), 0.2);
         }
 
-        .custom-navbar .navbar-toggler-icon {
-            filter: invert(1);
+        .glass-navbar .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2833, 37, 41, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+        [data-bs-theme="dark"] .glass-navbar .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
 
-        .custom-navbar .navbar-toggler:focus {
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        .glass-navbar .navbar-toggler:focus {
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        /* 移动端折叠菜单样式 */
+        @media (max-width: 991.98px) {
+            .glass-navbar .navbar-collapse {
+                background: inherit;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 0 0 12px 12px;
+                margin-top: 0.5rem;
+                padding: 1rem;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-top: none;
+            }
+            [data-bs-theme="light"] .glass-navbar .navbar-collapse {
+                border: 1px solid rgba(0, 0, 0, 0.06);
+                border-top: none;
+            }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -368,8 +396,8 @@
             {% endwith %}
         </div>
 
-        <!-- 切换式导航栏 -->
-        <nav class="navbar navbar-expand-lg navbar-dark rounded-3 mb-4 animate__animated animate__fadeInDown custom-navbar">
+        <!-- 简约玻璃态导航栏 -->
+        <nav class="navbar navbar-expand-lg glass-navbar rounded-3 mb-4 animate__animated animate__fadeInDown">
             <div class="container-fluid">
                 <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
                     <i class="bi bi-diagram-3 fs-2 me-2"></i>
@@ -409,8 +437,8 @@
                             </a>
                         </li>
                     </ul>
-                    <div class="navbar-nav">
-                        <button id="themeToggleNav" class="btn btn-outline-light btn-sm me-2" title="切换主题">
+                    <div class="navbar-nav d-flex align-items-center">
+                        <button id="themeToggleNav" class="btn btn-outline-secondary btn-sm me-2" title="切换主题">
                             <i class="bi bi-moon-stars"></i>
                         </button>
                     </div>
