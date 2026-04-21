@@ -2,20 +2,134 @@
 
 {% block title %}跨环境任务分析 · 深度查询{% endblock %}
 
+{% block extra_css %}
+<style>
+    .query-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .query-header {
+        background: var(--header-bg);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .query-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+        opacity: 0.3;
+    }
+    
+    .query-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        background: var(--card-bg);
+        box-shadow: var(--card-shadow);
+        transition: all var(--transition-speed);
+        overflow: hidden;
+    }
+    
+    .query-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--card-shadow-hover);
+    }
+    
+    .query-card-header {
+        background-color: var(--detail-card-bg);
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .query-card-body {
+        padding: 1.75rem;
+    }
+    
+    .result-card {
+        border-left: 4px solid #0d6efd;
+        margin-bottom: 1rem;
+        background-color: var(--detail-card-bg);
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+    
+    .result-card:hover {
+        transform: translateX(5px);
+    }
+    
+    .subtask-card {
+        border-left: 4px solid #198754;
+        margin-bottom: 0.75rem;
+        background-color: var(--detail-card-bg);
+        border-radius: 8px;
+    }
+    
+    .info-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .status-badge {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    
+    .history-badge {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .history-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container query-container">
     <!-- 页面标题 -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">
-            <i class="bi bi-diagram-3-fill text-primary me-2"></i>跨环境任务分析
-        </h2>
-        <div>
-            <button class="btn btn-outline-secondary me-2" id="helpToggle">
-                <i class="bi bi-question-circle"></i> 帮助
-            </button>
-            <button class="btn btn-outline-primary" onclick="window.location.reload()">
-                <i class="bi bi-arrow-clockwise"></i> 刷新
-            </button>
+    <div class="query-header animate__animated animate__fadeInDown">
+        <div class="position-relative">
+            <h1 class="display-5 fw-bold mb-3"><i class="bi bi-diagram-3 me-2"></i>跨环境任务深度分析</h1>
+            <p class="lead mb-4 opacity-75">支持任务单号或货架号查询，自动聚合跨环境子任务数据</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <button class="btn btn-light btn-lg px-4" id="helpToggle">
+                    <i class="bi bi-question-circle me-2"></i> 使用帮助
+                </button>
+                <button class="btn btn-outline-light btn-lg px-4" onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise me-2"></i> 刷新页面
+                </button>
+            </div>
         </div>
     </div>
 
@@ -23,11 +137,11 @@
     <div class="row g-4">
         <!-- 左侧：查询面板 -->
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary bg-opacity-10 border-0">
+            <div class="query-card animate__animated animate__fadeInLeft">
+                <div class="query-card-header">
                     <h5 class="mb-0"><i class="bi bi-search me-2"></i>查询条件</h5>
                 </div>
-                <div class="card-body">
+                <div class="query-card-body">
                     <!-- 查询类型切换 -->
                     <div class="query-type-toggle mb-4">
                         <div class="btn-group w-100" role="group">
@@ -130,16 +244,18 @@
             </div>
 
             <!-- 本地数据库信息卡片 -->
-            <div class="card mt-3 shadow-sm">
-                <div class="card-header bg-info bg-opacity-10 border-0">
+            <div class="query-card mt-3 animate__animated animate__fadeInUp">
+                <div class="query-card-header">
                     <h6 class="mb-0"><i class="bi bi-database me-2"></i>本地数据库</h6>
                 </div>
-                <div class="card-body small">
-                    <p class="mb-1">涉及表：</p>
-                    <span class="badge bg-secondary me-1">task_group</span>
-                    <span class="badge bg-secondary me-1">task_group_detail</span>
-                    <span class="badge bg-secondary me-1">fy_cross_model_process</span>
-                    <span class="badge bg-secondary">fy_cross_model_process_detail</span>
+                <div class="query-card-body small">
+                    <p class="mb-2">涉及表：</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-secondary">task_group</span>
+                        <span class="badge bg-secondary">task_group_detail</span>
+                        <span class="badge bg-secondary">fy_cross_model_process</span>
+                        <span class="badge bg-secondary">fy_cross_model_process_detail</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,8 +272,8 @@
 
             <!-- 结果内容 -->
             <div id="resultContainer">
-                <div class="card shadow-sm border-0 text-center py-5 bg-light bg-opacity-25">
-                    <div class="card-body">
+                <div class="query-card text-center py-5 animate__animated animate__pulse">
+                    <div class="query-card-body">
                         <i class="bi bi-search display-1 text-muted opacity-50"></i>
                         <h5 class="mt-3 text-muted">输入查询条件开始分析</h5>
                         <p class="text-muted small">支持任务单号或货架号查询，自动聚合跨环境子任务数据</p>
@@ -332,6 +448,13 @@
                 return;
             }
 
+            // 禁用输入框防止重复提交
+            orderIdInput.disabled = true;
+            shelfInput.disabled = true;
+            serverIpInput.disabled = true;
+            typeTaskRadio.disabled = true;
+            typeShelfRadio.disabled = true;
+            
             loadingIndicator.classList.remove('d-none');
             resultContainer.innerHTML = '';
             queryBtn.disabled = true;
@@ -358,6 +481,12 @@
                 `;
             } finally {
                 loadingIndicator.classList.add('d-none');
+                // 恢复输入框
+                orderIdInput.disabled = false;
+                shelfInput.disabled = false;
+                serverIpInput.disabled = false;
+                typeTaskRadio.disabled = false;
+                typeShelfRadio.disabled = false;
                 queryBtn.disabled = false;
                 queryBtn.innerHTML = '<i class="bi bi-search"></i> 开始查询';
             }
@@ -520,13 +649,18 @@
         function escapeJsonForInline(data) {
             if (data === null || data === undefined) return 'null';
             const jsonStr = JSON.stringify(data);
-            // 转义单引号，并将换行转为 \n 字符串，同时转义反斜杠
+            // 转义特殊字符用于HTML属性
+            // 在onclick属性中，我们使用单引号包裹参数，所以：
+            // 1. 转义单引号为 \\'
+            // 2. 转义双引号为 &quot; (HTML实体)
+            // 3. 转义反斜杠
+            // 4. 转义换行符
             return jsonStr
                 .replace(/\\/g, '\\\\')
                 .replace(/'/g, "\\'")
+                .replace(/"/g, '&quot;')
                 .replace(/\n/g, '\\n')
-                .replace(/\r/g, '\\r')
-                .replace(/"/g, '\\"');
+                .replace(/\r/g, '\\r');
         }
 
         // ---------- 渲染结果（每个子任务卡片化，默认展开详细信息） ----------
@@ -537,8 +671,8 @@
             
             let html = `
                 <!-- 任务总览卡片 -->
-                <div class="card shadow-sm mb-3" id="${cardIdPrefix}_overview">
-                    <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+                <div class="query-card mb-3 animate__animated animate__fadeIn" id="${cardIdPrefix}_overview">
+                    <div class="query-card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-card-list me-2"></i>任务总览</h5>
                         <div>
                             <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('总览', ${escapeJsonForInline(main)})" title="查看原始 JSON">
@@ -607,8 +741,8 @@
             // 子任务区域标题（整体可折叠，但内部每个子任务卡片独立）
             if (subTasks.length > 0) {
                 html += `
-                <div class="card shadow-sm mb-3" id="${cardIdPrefix}_subtasks_container">
-                    <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                <div class="query-card mb-3 animate__animated animate__fadeIn" id="${cardIdPrefix}_subtasks_container">
+                    <div class="query-card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-diagram-2 me-2"></i>子任务明细 (${subTasks.length})</h5>
                         <div>
                             <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('所有子任务', ${escapeJsonForInline(subTasks)})" title="查看原始 JSON">
@@ -631,8 +765,8 @@
             // 同模板其他任务卡片
             if (result.otherTasksSameTemplate && result.otherTasksSameTemplate.length > 0) {
                 html += `
-                <div class="card shadow-sm" id="${cardIdPrefix}_othertasks">
-                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                <div class="query-card animate__animated animate__fadeIn" id="${cardIdPrefix}_othertasks">
+                    <div class="query-card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>该模板其他执行中/异常任务 (${result.otherTasksSameTemplate.length})</h5>
                         <div>
                             <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('其他任务', ${escapeJsonForInline(result.otherTasksSameTemplate)})" title="查看原始 JSON">
@@ -751,15 +885,15 @@
             const taskJsonSafe = escapeJsonForInline(task);
             
             return `
-            <div class="card mb-2 border" id="${cardId}">
-                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+            <div class="subtask-card mb-2" id="${cardId}">
+                <div class="query-card-header py-2 d-flex justify-content-between align-items-center">
                     <div>
                         <span class="fw-bold">子任务 #${taskSeq}</span>
                         <span class="ms-2">${getStatusBadge(status)} ${taskStatusName !== '-' ? `<small class="text-muted">(${taskStatusName})</small>` : ''}</span>
                         <code class="ms-3">${subOrderId}</code>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('子任务 ${taskSeq}', ${taskJsonSafe})" title="查看原始 JSON">
+                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('子任务 ' + ${taskSeq}, ${taskJsonSafe})" title="查看原始 JSON">
                             <i class="bi bi-info-circle"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardId}_body" aria-expanded="true">
@@ -768,10 +902,10 @@
                     </div>
                 </div>
                 <div class="collapse show" id="${cardId}_body">
-                    <div class="card-body">
+                    <div class="query-card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <table class="table table-sm table-borderless small">
+                                <table class="table table-sm table-borderless small table-modern">
                                     <tr><th class="w-40">子任务ID</th><td><code>${subOrderId}</code></td></tr>
                                     <tr><th>服务器IP</th><td>${serverIp}</td></tr>
                                     <tr><th>所在区域ID</th><td>${areaId}</td></tr>
@@ -784,7 +918,7 @@
                                 </table>
                             </div>
                             <div class="col-md-6">
-                                <table class="table table-sm table-borderless small">
+                                <table class="table table-sm table-borderless small table-modern">
                                     <tr><th>货架模型编号</th><td>${shelfModel}</td></tr>
                                     <tr><th>货架模型</th><td>${shelfModelName}</td></tr>
                                     <tr><th>任务货架</th><td>${carrierCode}</td></tr>
@@ -807,14 +941,14 @@
                             <h6 class="mb-2"><i class="bi bi-list-task"></i> 子任务执行详情</h6>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <table class="table table-sm table-borderless small">
+                                    <table class="table table-sm table-borderless small table-modern">
                                         <tr><th>起始点</th><td><code>${startPoint}</code></td></tr>
                                         <tr><th>目标点</th><td><code>${endPoint}</code></td></tr>
                                         <tr><th>动作</th><td>${action}</td></tr>
                                     </table>
                                 </div>
                                 <div class="col-md-6">
-                                    <table class="table table-sm table-borderless small">
+                                    <table class="table table-sm table-borderless small table-modern">
                                         <tr><th>坐标 (X, Y)</th><td>${x}, ${y}</td></tr>
                                         <tr><th>角度</th><td>${angel}</td></tr>
                                         <tr><th>货架号</th><td>${shelfNum}</td></tr>
@@ -830,9 +964,6 @@
                                 `<button class="btn btn-sm btn-outline-warning" onclick="adjustPriority('${subOrderId}', '${serviceUrl}')">
                                     <i class="bi bi-arrow-up"></i> 优先执行
                                 </button>` : ''}
-                            <button class="btn btn-sm btn-outline-info ms-2" onclick="showJsonForCard('子任务 ${taskSeq} 完整数据', ${taskJsonSafe})">
-                                <i class="bi bi-filetype-json"></i> 查看完整JSON
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -847,8 +978,10 @@
             let jsonData;
             if (typeof data === 'string') {
                 try {
+                    // 将HTML实体转换回双引号
+                    const decodedData = data.replace(/&quot;/g, '"');
                     // 如果已经是JSON字符串，尝试解析
-                    jsonData = JSON.parse(data);
+                    jsonData = JSON.parse(decodedData);
                 } catch (e) {
                     console.error('JSON解析失败', e, '原始数据:', data);
                     jsonData = data; // 显示原始字符串
