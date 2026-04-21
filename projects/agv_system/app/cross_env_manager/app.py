@@ -1232,6 +1232,34 @@ def get_template_growth():
             'message': f'服务器错误: {str(e)}'
         }), 500
 
+@app.route('/api/task_group/<order_id>')
+def get_task_group_info(order_id):
+    """获取task_group和task_group_detail信息，支持本地和远程查询"""
+    try:
+        # 获取可选的服务器IP参数
+        server_ip = request.args.get('server_ip', '').strip()
+        
+        result = task_query_extended.get_task_group_by_order_id(order_id, server_ip if server_ip else None)
+        
+        if 'error' in result:
+            return jsonify({
+                'success': False,
+                'message': result['error']
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'taskGroup': result.get('taskGroup'),
+            'details': result.get('details'),
+            'source': result.get('source', 'unknown')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
 @app.route('/api/stats/detailed_analysis')
 def get_detailed_analysis():
     """获取详细分析数据"""

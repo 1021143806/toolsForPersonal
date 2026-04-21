@@ -211,7 +211,7 @@
                 <h6 class="mt-3">3. IP地址输入</h6>
                 <p>支持完整IP如 <code>10.68.2.32</code> 或仅最后一段数字 <code>32</code>，系统会自动补全为 <code>10.68.2.32</code>。</p>
                 <h6 class="mt-3">4. 查看原始JSON</h6>
-                <p>点击各卡片上的 <i class="bi bi-filetype-json"></i> 按钮，可查看对应接口返回的原始数据。</p>
+                <p>点击各卡片上的 <i class="bi bi-info-circle"></i> 按钮，可查看对应接口返回的原始数据。</p>
             </div>
         </div>
     </div>
@@ -266,7 +266,7 @@
             updateIpHint();
             renderHistoryTags();
             
-            // 从URL参数预填充（支持 ?orderId=xxx 或 ?shelf=xxx）
+            // 从URL参数预填充
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('orderId')) {
                 typeTaskRadio.checked = true;
@@ -287,23 +287,20 @@
             shelfPanel.style.display = isTask ? 'none' : 'block';
         }
 
-        // IP智能补全与显示
         function updateIpHint() {
             let ip = serverIpInput.value.trim();
-            // 如果输入纯数字且范围合理，补全前缀
             if (/^\d{1,3}$/.test(ip)) {
                 const num = parseInt(ip, 10);
                 if (num >= 0 && num <= 254) {
                     const fullIp = `10.68.2.${num}`;
                     ipHint.textContent = fullIp;
-                    serverIpInput.value = fullIp;  // 自动修正
+                    serverIpInput.value = fullIp;
                     return;
                 }
             }
             ipHint.textContent = ip || '10.68.2.32';
         }
 
-        // 获取最终使用的IP地址
         function getFinalIp() {
             let ip = serverIpInput.value.trim();
             if (/^\d{1,3}$/.test(ip)) {
@@ -315,7 +312,6 @@
             return ip || '10.68.2.32';
         }
 
-        // 构造基础URL
         function getBaseUrl() {
             const ip = getFinalIp();
             return `http://${ip}:8315`;
@@ -336,32 +332,23 @@
                 return;
             }
 
-            // 显示加载状态
             loadingIndicator.classList.remove('d-none');
             resultContainer.innerHTML = '';
             queryBtn.disabled = true;
             queryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>查询中...';
 
             try {
-                // 如果是货架查询，先通过货架找到orderId
                 if (!isTaskQuery) {
                     orderId = await findOrderIdByShelf(shelf);
                     if (!orderId) {
                         throw new Error(`未找到货架 ${shelf} 的相关任务`);
                     }
-                    // 自动填充到任务单号输入框（方便用户查看）
                     orderIdInput.value = orderId;
                 }
 
-                // 记录查询历史
                 addToHistory(isTaskQuery ? orderId : `${shelf} (货架)`);
-
-                // 执行核心查询
                 const result = await performDeepQuery(orderId);
-                
-                // 渲染结果
                 renderResult(result);
-                
             } catch (error) {
                 console.error('查询失败:', error);
                 resultContainer.innerHTML = `
@@ -376,12 +363,9 @@
             }
         }
 
-        // 通过货架号查找最近任务单号（优先级逻辑）
         async function findOrderIdByShelf(shelf) {
             const baseUrl = getBaseUrl();
-            // 状态优先级: 6(执行中) -> 7(执行失败) -> 5(发送失败) -> 9(已下发) -> 4(正在发送) -> 3(已取消) -> 2(正在取消) -> 1(未发送) -> 8(已完成)
             const statusPriority = [6, 7, 5, 9, 4, 3, 2, 1, 8];
-            
             for (const status of statusPriority) {
                 try {
                     const response = await fetch(`${baseUrl}/crossTask/query`, {
@@ -405,7 +389,6 @@
             return null;
         }
 
-        // 深度查询：聚合所有信息
         async function performDeepQuery(orderId) {
             const baseUrl = getBaseUrl();
             const result = {
@@ -419,7 +402,6 @@
                 otherTasksSameTemplate: []
             };
 
-            // 1. 获取主任务信息
             const mainRes = await fetch(`${baseUrl}/crossTask/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -434,7 +416,6 @@
 
             const mainTask = result.mainTask;
 
-            // 2. 获取子任务详情（跨环境详情接口）
             const detailRes = await fetch(`${baseUrl}/crossTask/detail`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -445,7 +426,6 @@
                 result.subTasks = detailData.data.sort((a, b) => (a.taskSeq || 0) - (b.taskSeq || 0));
             }
 
-            // 3. 查询本地数据库 (task_group / task_group_detail) - 需要后端接口支持
             if (fetchLocalDbCheck.checked) {
                 try {
                     const localRes = await fetch(`/api/task_group/${orderId}`);
@@ -455,11 +435,10 @@
                         result.localTaskGroupDetail = localData.details;
                     }
                 } catch (e) {
-                    console.warn('本地数据库查询失败（接口可能未实现）:', e);
+                    console.warn('本地数据库查询失败:', e);
                 }
             }
 
-            // 4. 获取模板关联信息
             if (fetchTemplateInfoCheck.checked && mainTask.modelProcessCode) {
                 try {
                     const tmplRes = await fetch(`/api/template/${mainTask.modelProcessCode}`);
@@ -471,9 +450,8 @@
                 }
             }
 
-            // 5. 查询同模板其他执行中/异常任务
             if (fetchOtherTasksCheck.checked && mainTask.modelProcessCode) {
-                const statuses = ['6', '7', '5', '9', '4']; // 非完成状态
+                const statuses = ['6', '7', '5', '9', '4'];
                 const promises = statuses.map(status => 
                     fetch(`${baseUrl}/crossTask/query`, {
                         method: 'POST',
@@ -499,141 +477,7 @@
             return result;
         }
 
-        // ---------- 渲染结果 ----------
-        function renderResult(result) {
-            const main = result.mainTask;
-            const subTasks = result.subTasks;
-            
-            let html = `
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-card-list me-2"></i>任务总览</h5>
-                        <button class="btn btn-sm btn-outline-secondary" onclick='showJsonModal(${JSON.stringify(main).replace(/'/g, "\\'")})'>
-                            <i class="bi bi-filetype-json"></i> 查看原始JSON
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <table class="table table-sm table-borderless">
-                                    <tr><th class="w-50">任务单号</th><td><code>${main.orderId || '-'}</code></td></tr>
-                                    <tr><th>任务状态</th><td>${getStatusBadge(main.taskStatus)}</td></tr>
-                                    <tr><th>模板名称</th><td>${main.modelProcessName || '-'}</td></tr>
-                                    <tr><th>模板代码</th><td>
-                                        <code>${main.modelProcessCode || '-'}</code>
-                                        ${result.templateInfo ? 
-                                            `<a href="/template/edit/${main.modelProcessCode}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                                                <i class="bi bi-pencil-square"></i> 编辑模板
-                                            </a>` : ''}
-                                    </td></tr>
-                                </table>
-                            </div>
-                            <div class="col-md-6">
-                                <table class="table table-sm table-borderless">
-                                    <tr><th>货架号</th><td>${main.shelfNum || '-'}</td></tr>
-                                    <tr><th>设备编号</th><td>${main.deviceNum || '-'}</td></tr>
-                                    <tr><th>服务器IP</th><td>${result.baseUrl}</td></tr>
-                                    <tr><th>创建时间</th><td>${formatTime(main.createTime)}</td></tr>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <!-- 本地数据库信息 -->
-                        ${result.localTaskGroup ? `
-                        <div class="mt-3 p-3 bg-light bg-opacity-25 rounded">
-                            <h6><i class="bi bi-database"></i> 本地数据库记录</h6>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-info" onclick='showJsonModal(${JSON.stringify(result.localTaskGroup).replace(/'/g, "\\'")})'>
-                                    查看 task_group 数据
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" onclick='showJsonModal(${JSON.stringify(result.localTaskGroupDetail).replace(/'/g, "\\'")})'>
-                                    查看 task_group_detail 数据
-                                </button>
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-
-            // 子任务聚合展示（Markdown风格表格）
-            if (subTasks.length > 0) {
-                html += `
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-success bg-opacity-10">
-                        <h5 class="mb-0"><i class="bi bi-diagram-2 me-2"></i>子任务明细 (跨服务器聚合)</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>序号</th>
-                                        <th>子任务ID</th>
-                                        <th>模板名称</th>
-                                        <th>服务器地址</th>
-                                        <th>状态</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${subTasks.map(task => `
-                                        <tr>
-                                            <td>${task.taskSeq || '-'}</td>
-                                            <td><code>${task.subOrderId || task.id || '-'}</code></td>
-                                            <td>${task.templateName || '-'}</td>
-                                            <td>${task.serviceUrl || result.baseUrl}</td>
-                                            <td>${getStatusBadge(task.status)}</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-secondary" onclick='showJsonModal(${JSON.stringify(task).replace(/'/g, "\\'")})'>
-                                                    <i class="bi bi-filetype-json"></i>
-                                                </button>
-                                                ${task.status === 6 || task.status === 9 ? 
-                                                    `<button class="btn btn-sm btn-outline-warning ms-1" onclick="adjustPriority('${task.subOrderId}', '${task.serviceUrl}')">
-                                                        <i class="bi bi-arrow-up"></i>
-                                                    </button>` : ''}
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                `;
-            }
-
-            // 同模板其他任务
-            if (result.otherTasksSameTemplate && result.otherTasksSameTemplate.length > 0) {
-                html += `
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning bg-opacity-10">
-                        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>该模板其他执行中/异常任务 (${result.otherTasksSameTemplate.length})</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group">
-                            ${result.otherTasksSameTemplate.map(t => `
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <code>${t.orderId}</code>
-                                        <span class="ms-2">${getStatusBadge(t.taskStatus)}</span>
-                                        ${t.shelfNum ? `<span class="badge bg-secondary ms-2">货架: ${t.shelfNum}</span>` : ''}
-                                    </div>
-                                    <a href="?orderId=${encodeURIComponent(t.orderId)}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-box-arrow-in-right"></i> 查看
-                                    </a>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-                `;
-            }
-
-            resultContainer.innerHTML = html;
-        }
-
-        // 辅助函数：状态徽章
+        // ---------- 辅助函数：状态徽章、时间格式化、JSON安全转义 ----------
         function getStatusBadge(status) {
             const map = {
                 1: ['未发送', 'secondary'], 2: ['正在取消', 'info'], 3: ['已取消', 'secondary'],
@@ -645,17 +489,405 @@
             return `<span class="badge bg-${color}">${text}</span>`;
         }
 
-        function formatTime(timestamp) {
-            if (!timestamp) return '-';
-            const date = new Date(timestamp * 1000);
-            return date.toLocaleString('zh-CN', { hour12: false });
+        function formatTime(value) {
+            if (!value && value !== 0) return '-';
+            
+            // 如果是数字字符串或数字
+            if (typeof value === 'number' || /^\d+$/.test(value)) {
+                const num = parseInt(value, 10);
+                // 10位数字视为秒时间戳 (2001-2286年范围)
+                if (num > 1000000000 && num < 9999999999) {
+                    const date = new Date(num * 1000);
+                    return date.toLocaleString('zh-CN', { hour12: false });
+                }
+                // 13位数字视为毫秒时间戳
+                if (num > 9999999999) {
+                    const date = new Date(num);
+                    return date.toLocaleString('zh-CN', { hour12: false });
+                }
+            }
+            
+            // 尝试作为日期字符串解析
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleString('zh-CN', { hour12: false });
+            }
+            
+            // 都失败则返回原值
+            return String(value);
+        }
+
+        function escapeJsonForInline(data) {
+            if (data === null || data === undefined) return 'null';
+            const jsonStr = JSON.stringify(data);
+            // 转义单引号，并将换行转为 \n 字符串，同时转义反斜杠
+            return jsonStr
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/"/g, '\\"');
+        }
+
+        // ---------- 渲染结果（每个子任务卡片化，默认展开详细信息） ----------
+        function renderResult(result) {
+            const main = result.mainTask;
+            const subTasks = result.subTasks;
+            const cardIdPrefix = `card_${result.orderId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            let html = `
+                <!-- 任务总览卡片 -->
+                <div class="card shadow-sm mb-3" id="${cardIdPrefix}_overview">
+                    <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-card-list me-2"></i>任务总览</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('总览', ${escapeJsonForInline(main)})" title="查看原始 JSON">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardIdPrefix}_overview_body" aria-expanded="true">
+                                <i class="bi bi-chevron-up collapse-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="${cardIdPrefix}_overview_body">
+                        <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr><th class="w-40">任务单号</th><td><code>${main.orderId || '-'}</code></td></tr>
+                                    <tr><th>任务状态</th><td>${getStatusBadge(main.taskStatus)} ${main.taskStatusName ? `<small class="text-muted">(${main.taskStatusName})</small>` : ''}</td></tr>
+                                    <tr><th>模板名称</th><td>${main.modelProcessName || '-'}</td></tr>
+                                    <tr><th>模板代码</th><td>
+                                        <code>${main.modelProcessCode || '-'}</code>
+                                        ${result.templateInfo ? 
+                                            `<a href="/template/edit/${main.modelProcessCode}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                                <i class="bi bi-pencil-square"></i> 编辑模板
+                                            </a>` : ''}
+                                    </td></tr>
+                                    <tr><th>所在区域ID</th><td>${main.areaId || '-'}</td></tr>
+                                    <tr><th>分派的AGV</th><td>${main.robotNum || main.deviceNum || '-'}</td></tr>
+                                    <tr><th>设备序列号</th><td>${main.robotId || main.deviceCode || '-'}</td></tr>
+                                    <tr><th>设备IP</th><td>${main.deviceIp || '-'}</td></tr>
+                                    <tr><th>路径点集</th><td><code>${main.pathPoints || '-'}</code></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr><th>AGV设备类型</th><td>${main.robotType || '-'}</td></tr>
+                                    <tr><th>货架模型编号</th><td>${main.shelfModel || '-'}</td></tr>
+                                    <tr><th>货架模型</th><td>${main.shelfModelName || '-'}</td></tr>
+                                    <tr><th>任务货架</th><td>${main.carrierCode || main.shelfNum || '-'}</td></tr>
+                                    <tr><th>错误描述</th><td>${main.errorDesc || '-'}</td></tr>
+                                    <tr><th>创建时间</th><td>${formatTime(main.createTime)}</td></tr>
+                                    <tr><th>开始时间</th><td>${formatTime(main.startTime)}</td></tr>
+                                    <tr><th>结束时间</th><td>${formatTime(main.endTime)}</td></tr>
+                                    <tr><th>服务器IP</th><td>${result.baseUrl}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                            
+                            ${result.localTaskGroup ? `
+                            <div class="mt-3 p-3 bg-light bg-opacity-25 rounded">
+                                <h6><i class="bi bi-database"></i> 本地数据库记录</h6>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-task_group", ${escapeJsonForInline(result.localTaskGroup)})'>
+                                        查看 task_group 数据
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-task_group_detail", ${escapeJsonForInline(result.localTaskGroupDetail)})'>
+                                        查看 task_group_detail 数据
+                                    </button>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 子任务区域标题（整体可折叠，但内部每个子任务卡片独立）
+            if (subTasks.length > 0) {
+                html += `
+                <div class="card shadow-sm mb-3" id="${cardIdPrefix}_subtasks_container">
+                    <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-diagram-2 me-2"></i>子任务明细 (${subTasks.length})</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('所有子任务', ${escapeJsonForInline(subTasks)})" title="查看原始 JSON">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardIdPrefix}_subtasks_container_body" aria-expanded="true">
+                                <i class="bi bi-chevron-up collapse-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="${cardIdPrefix}_subtasks_container_body">
+                        <div class="card-body">
+                            ${subTasks.map((task, index) => renderSubTaskCard(task, index, result.baseUrl)).join('')}
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+
+            // 同模板其他任务卡片
+            if (result.otherTasksSameTemplate && result.otherTasksSameTemplate.length > 0) {
+                html += `
+                <div class="card shadow-sm" id="${cardIdPrefix}_othertasks">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>该模板其他执行中/异常任务 (${result.otherTasksSameTemplate.length})</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('其他任务', ${escapeJsonForInline(result.otherTasksSameTemplate)})" title="查看原始 JSON">
+                                <i class="bi bi-info-circle"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardIdPrefix}_othertasks_body" aria-expanded="true">
+                                <i class="bi bi-chevron-up collapse-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="${cardIdPrefix}_othertasks_body">
+                        <div class="card-body">
+                            <div class="list-group">
+                                ${result.otherTasksSameTemplate.map(t => `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <code>${t.orderId}</code>
+                                            <span class="ms-2">${getStatusBadge(t.taskStatus)}</span>
+                                            ${t.shelfNum ? `<span class="badge bg-secondary ms-2">货架: ${t.shelfNum}</span>` : ''}
+                                        </div>
+                                        <a href="?orderId=${encodeURIComponent(t.orderId)}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-box-arrow-in-right"></i> 查看
+                                        </a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+
+            resultContainer.innerHTML = html;
+
+            // 监听所有折叠事件以更新图标
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+                const targetId = btn.getAttribute('data-bs-target');
+                const target = document.querySelector(targetId);
+                if (target) {
+                    target.addEventListener('show.bs.collapse', () => {
+                        btn.innerHTML = '<i class="bi bi-chevron-up collapse-icon"></i>';
+                    });
+                    target.addEventListener('hide.bs.collapse', () => {
+                        btn.innerHTML = '<i class="bi bi-chevron-down collapse-icon"></i>';
+                    });
+                }
+            });
+        }
+
+        // 渲染单个子任务卡片（完整字段显示，按照FindTheTask.php逻辑）
+        function renderSubTaskCard(task, index, baseUrl) {
+            const cardId = `subtask_${task.id || index}`;
+            
+            // 辅助函数：从多个候选字段名中获取第一个存在的值
+            const getField = (...names) => {
+                for (let name of names) {
+                    if (task[name] !== undefined && task[name] !== null && task[name] !== '') {
+                        return task[name];
+                    }
+                }
+                return null;
+            };
+            
+            // 基础字段
+            const subOrderId = getField('subOrderId', 'sub_order_id', 'taskId', 'task_id') || task.id || '-';
+            const taskSeq = getField('taskSeq', 'task_seq', 'sequence', 'seq') || index + 1;
+            const serviceUrl = getField('serviceUrl', 'service_url', 'serverUrl', 'server_url') || baseUrl;
+            
+            // 从serviceUrl提取服务器IP
+            let serverIp = '-';
+            try {
+                if (serviceUrl && serviceUrl !== '-') {
+                    const url = new URL(serviceUrl);
+                    serverIp = url.hostname;
+                }
+            } catch (e) {
+                serverIp = serviceUrl;
+            }
+            
+            // 任务信息字段（按照PHP文件中的字段）
+            const areaId = getField('area_id', 'areaId') || '-';
+            const templateCode = getField('template_code', 'templateCode', 'model_process_code') || '-';
+            const robotNum = getField('robot_num', 'robotNum') || '-';
+            const robotId = getField('robot_id', 'robotId', 'device_code', 'deviceCode') || '-';
+            const deviceIp = getField('device_ip', 'deviceIp', 'DEVICE_IP') || '-';
+            const pathPoints = getField('path_points', 'pathPoints') || '-';
+            const robotType = getField('robot_type', 'robotType') || '-';
+            const shelfModel = getField('shelf_model', 'shelfModel') || '-';
+            const shelfModelName = getField('shelf_model_name', 'shelfModelName') || '-';
+            const carrierCode = getField('carrier_code', 'carrierCode') || '-';
+            const errorDesc = getField('error_desc', 'errorDesc') || '-';
+            const createTime = getField('create_time', 'createTime');
+            const startTime = getField('start_time', 'startTime');
+            const endTime = getField('end_time', 'endTime');
+            const status = getField('status', 'taskStatus', 'task_status') || 0;
+            const taskStatusName = getField('task_status_name', 'taskStatusName') || '-';
+            const orderId = getField('order_id', 'orderId') || '-';
+            const outOrderId = getField('out_order_id', 'outOrderId') || '-';
+            const tgId = getField('tg_id', 'tgId', 'id') || '-';
+            
+            // 子任务特定字段
+            const startPoint = getField('start_point', 'startPoint') || '-';
+            const endPoint = getField('end_point', 'endPoint') || '-';
+            const action = getField('action', 'actionType') || '-';
+            const angel = getField('angel', 'angle') || '-';
+            const x = getField('x', 'posX') || '-';
+            const y = getField('y', 'posY') || '-';
+            const shelfNum = getField('shelf_num', 'shelfNum') || '-';
+            
+            // 格式化时间
+            const formattedCreate = formatTime(createTime);
+            const formattedStart = formatTime(startTime);
+            const formattedEnd = formatTime(endTime);
+            
+            // 注意：内联事件中调用 showJsonForCard 时，需要对 JSON 字符串进行安全转义
+            const taskJsonSafe = escapeJsonForInline(task);
+            
+            return `
+            <div class="card mb-2 border" id="${cardId}">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold">子任务 #${taskSeq}</span>
+                        <span class="ms-2">${getStatusBadge(status)} ${taskStatusName !== '-' ? `<small class="text-muted">(${taskStatusName})</small>` : ''}</span>
+                        <code class="ms-3">${subOrderId}</code>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('子任务 ${taskSeq}', ${taskJsonSafe})" title="查看原始 JSON">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardId}_body" aria-expanded="true">
+                            <i class="bi bi-chevron-up collapse-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="collapse show" id="${cardId}_body">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless small">
+                                    <tr><th class="w-40">子任务ID</th><td><code>${subOrderId}</code></td></tr>
+                                    <tr><th>服务器IP</th><td>${serverIp}</td></tr>
+                                    <tr><th>所在区域ID</th><td>${areaId}</td></tr>
+                                    <tr><th>任务模板</th><td>${templateCode}</td></tr>
+                                    <tr><th>分派的AGV</th><td>${robotNum}</td></tr>
+                                    <tr><th>设备序列号</th><td>${robotId}</td></tr>
+                                    <tr><th>设备IP</th><td>${deviceIp}</td></tr>
+                                    <tr><th>路径点集</th><td><code>${pathPoints}</code></td></tr>
+                                    <tr><th>AGV设备类型</th><td>${robotType}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless small">
+                                    <tr><th>货架模型编号</th><td>${shelfModel}</td></tr>
+                                    <tr><th>货架模型</th><td>${shelfModelName}</td></tr>
+                                    <tr><th>任务货架</th><td>${carrierCode}</td></tr>
+                                    <tr><th>错误描述</th><td>${errorDesc}</td></tr>
+                                    <tr><th>创建时间</th><td>${formattedCreate}</td></tr>
+                                    <tr><th>开始时间</th><td>${formattedStart}</td></tr>
+                                    <tr><th>结束时间</th><td>${formattedEnd}</td></tr>
+                                    <tr><th>任务状态值</th><td>${status}</td></tr>
+                                    <tr><th>任务状态</th><td>${taskStatusName}</td></tr>
+                                    <tr><th>order_id</th><td>${orderId}</td></tr>
+                                    <tr><th>out_order_id</th><td>${outOrderId}</td></tr>
+                                    <tr><th>tg_id</th><td>${tgId}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- 子任务特定信息 -->
+                        ${startPoint !== '-' || endPoint !== '-' || action !== '-' || angel !== '-' || x !== '-' || y !== '-' || shelfNum !== '-' ? `
+                        <div class="mt-3 pt-3 border-top">
+                            <h6 class="mb-2"><i class="bi bi-list-task"></i> 子任务执行详情</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless small">
+                                        <tr><th>起始点</th><td><code>${startPoint}</code></td></tr>
+                                        <tr><th>目标点</th><td><code>${endPoint}</code></td></tr>
+                                        <tr><th>动作</th><td>${action}</td></tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless small">
+                                        <tr><th>坐标 (X, Y)</th><td>${x}, ${y}</td></tr>
+                                        <tr><th>角度</th><td>${angel}</td></tr>
+                                        <tr><th>货架号</th><td>${shelfNum}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- 操作按钮区 -->
+                        <div class="mt-3 pt-3 border-top">
+                            ${status == 6 || status == 9 ? 
+                                `<button class="btn btn-sm btn-outline-warning" onclick="adjustPriority('${subOrderId}', '${serviceUrl}')">
+                                    <i class="bi bi-arrow-up"></i> 优先执行
+                                </button>` : ''}
+                            <button class="btn btn-sm btn-outline-info ms-2" onclick="showJsonForCard('子任务 ${taskSeq} 完整数据', ${taskJsonSafe})">
+                                <i class="bi bi-filetype-json"></i> 查看完整JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
         }
 
         // ---------- JSON 模态框操作 ----------
-        window.showJsonModal = function(data) {
-            currentJsonData = data;
-            document.getElementById('jsonContent').textContent = JSON.stringify(data, null, 2);
-            jsonModal.show();
+        window.showJsonForCard = function(title, data) {
+            console.log('showJsonForCard called', title, typeof data, data); // 调试用
+            
+            let jsonData;
+            if (typeof data === 'string') {
+                try {
+                    // 如果已经是JSON字符串，尝试解析
+                    jsonData = JSON.parse(data);
+                } catch (e) {
+                    console.error('JSON解析失败', e, '原始数据:', data);
+                    jsonData = data; // 显示原始字符串
+                }
+            } else {
+                jsonData = data;
+            }
+            
+            const modalTitle = document.querySelector('#jsonModal .modal-title');
+            if (modalTitle) {
+                modalTitle.innerHTML = `<i class="bi bi-filetype-json me-2"></i>原始数据 - ${title}`;
+            }
+            
+            const jsonContent = document.getElementById('jsonContent');
+            if (jsonContent) {
+                try {
+                    jsonContent.textContent = JSON.stringify(jsonData, null, 2);
+                } catch (e) {
+                    console.error('JSON序列化失败', e);
+                    jsonContent.textContent = String(jsonData);
+                }
+            }
+            
+            // 确保模态框实例存在
+            if (!jsonModal) {
+                const modalElement = document.getElementById('jsonModal');
+                if (modalElement) {
+                    jsonModal = new bootstrap.Modal(modalElement);
+                } else {
+                    console.error('找不到JSON模态框元素');
+                    return;
+                }
+            }
+            
+            try {
+                jsonModal.show();
+            } catch (e) {
+                console.error('显示模态框失败', e);
+            }
         };
 
         function copyJsonToClipboard() {
@@ -665,7 +897,7 @@
             });
         }
 
-        // 优先级调整（示例，需根据实际接口调整）
+        // 优先级调整
         window.adjustPriority = async function(subOrderId, serviceUrl) {
             if (!confirm('确定要提高该子任务的优先级吗？')) return;
             try {

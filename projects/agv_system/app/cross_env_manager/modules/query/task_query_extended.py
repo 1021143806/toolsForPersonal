@@ -75,8 +75,190 @@ def get_task_info_by_order_id(order_id, server_ip=None):
     except Exception as e:
         return {"error": f"查询失败: {str(e)}"}
     finally:
-        if server_ip:  # 只有生产环境连接需要手动关闭
-            conn.close()
+        conn.close()
+
+def get_task_group_by_order_id(order_id, server_ip=None):
+    """
+    根据订单ID获取task_group和task_group_detail信息
+    支持本地数据库和远程服务器查询
+    按照FindTheTask.php的逻辑完善查询
+    """
+    from modules.database.connection import get_db_connection
+    
+    # 首先尝试查询本地数据库
+    conn = get_db_connection()
+    if conn is None:
+        return {"error": "数据库连接失败"}
+    
+    try:
+        with conn.cursor() as cursor:
+            # 查询task_group信息（按照PHP文件的逻辑）
+            sql = "SELECT * FROM task_group WHERE third_order_id = %s OR order_id = %s OR out_order_id = %s"
+            cursor.execute(sql, (order_id, order_id, order_id))
+            task_group = cursor.fetchone()
+            
+            if task_group:
+                # 关联查询其他信息（按照PHP文件的逻辑）
+                # 1. 查询设备IP
+                device_ip = None
+                if task_group.get('robot_id'):
+                    try:
+                        sql = "SELECT DEVICE_IP FROM agv_robot WHERE DEVICE_CODE = %s"
+                        cursor.execute(sql, (task_group['robot_id'],))
+                        device_ip_result = cursor.fetchone()
+                        if device_ip_result:
+                            device_ip = device_ip_result['DEVICE_IP']
+                    except Exception as e:
+                        print(f"查询设备IP失败: {e}")
+                
+                # 2. 查询货架模型名称
+                shelf_model_name = None
+                if task_group.get('shelf_model'):
+                    try:
+                        sql = "SELECT name FROM load_config WHERE model = %s"
+                        cursor.execute(sql, (task_group['shelf_model'],))
+                        shelf_model_result = cursor.fetchone()
+                        if shelf_model_result:
+                            shelf_model_name = shelf_model_result['name']
+                    except Exception as e:
+                        print(f"查询货架模型名称失败: {e}")
+                
+                # 3. 查询任务状态名称
+                task_status_name = None
+                if task_group.get('status') is not None:
+                    try:
+                        sql = "SELECT task_status_name FROM task_status_config WHERE task_status = %s"
+                        cursor.execute(sql, (task_group['status'],))
+                        status_result = cursor.fetchone()
+                        if status_result:
+                            task_status_name = status_result['task_status_name']
+                    except Exception as e:
+                        print(f"查询任务状态名称失败: {e}")
+                
+                # 添加关联查询结果到task_group
+                task_group['device_ip'] = device_ip
+                task_group['shelf_model_name'] = shelf_model_name
+                task_group['task_status_name'] = task_status_name
+                
+                # 查询task_group_detail信息
+                task_group_details = []
+                try:
+                    sql = """
+                    SELECT 
+                        id, tg_id, task_seq, start_point, end_point, 
+                        x, y, action, angel, shelf_num, robot_id,
+                        robot_num, start_time, end_time, status,
+                        area_id, task_type, point_type, need_trigger,
+                        notify_third, shelf_model
+                    FROM task_group_detail 
+                    WHERE tg_id = %s 
+                    ORDER BY task_seq
+                    """
+                    cursor.execute(sql, (task_group['id'],))
+                    task_group_details = cursor.fetchall()
+                    
+                    # 为每个子任务查询关联信息
+                    for detail in task_group_details:
+                        # 查询子任务设备IP
+                        if detail.get('robot_id'):
+                            try:
+                                sql = "SELECT DEVICE_IP FROM agv_robot WHERE DEVICE_CODE = %s"
+                                cursor.execute(sql, (detail['robot_id'],))
+                                detail_device_ip = cursor.fetchone()
+                                if detail_device_ip:
+                                    detail['device_ip'] = detail_device_ip['DEVICE_IP']
+                            except Exception as e:
+                                print(f"查询子任务设备IP失败: {e}")
+                        
+                        # 查询子任务状态名称
+                        if detail.get('status') is not None:
+                            try:
+                                sql = "SELECT task_status_name FROM task_status_config WHERE task_status = %s"
+                                cursor.execute(sql, (detail['status'],))
+                                detail_status = cursor.fetchone()
+                                if detail_status:
+                                    detail['task_status_name'] = detail_status['task_status_name']
+                            except Exception as e:
+                                print(f"查询子任务状态名称失败: {e}")
+                                
+                except Exception as detail_error:
+                    # 如果查询失败，尝试简单查询
+                    try:
+                        sql = "SELECT * FROM task_group_detail WHERE tg_id = %s ORDER BY task_seq"
+                        cursor.execute(sql, (task_group['id'],))
+                        task_group_details = cursor.fetchall()
+                    except Exception as e2:
+                        print(f"注意: task_group_detail表查询失败: {e2}")
+                        task_group_details = []
+                
+                return {
+                    "taskGroup": task_group,
+                    "details": task_group_details,
+                    "source": "local"
+                }
+            
+    except Exception as e:
+        print(f"本地数据库查询失败: {e}")
+    finally:
+        conn.close()
+    
+    # 如果本地没有找到，尝试查询远程服务器（跨环境任务）
+    try:
+        if not server_ip:
+            server_ip = "10.68.2.32"
+        
+        # 连接到生产环境数据库
+        prod_conn = connect_to_production_db(server_ip)
+        
+        with prod_conn.cursor() as cursor:
+            # 查询fy_cross_task表
+            sql = "SELECT * FROM fy_cross_task WHERE orderId = %s"
+            cursor.execute(sql, (order_id,))
+            cross_task = cursor.fetchone()
+            
+            if cross_task:
+                # 查询子任务详情
+                sql = "SELECT * FROM fy_cross_task_detail WHERE order_id = %s"
+                cursor.execute(sql, (order_id,))
+                cross_task_details = cursor.fetchall()
+                
+                # 转换为task_group格式（兼容前端显示）
+                task_group = {
+                    "id": cross_task.get('id'),
+                    "third_order_id": cross_task.get('orderId'),
+                    "order_id": cross_task.get('orderId'),
+                    "model_process_code": cross_task.get('model_process_code'),
+                    "status": cross_task.get('task_status'),
+                    "create_time": cross_task.get('create_time'),
+                    "start_time": cross_task.get('start_time'),
+                    "end_time": cross_task.get('end_time'),
+                    "source": "cross_task"
+                }
+                
+                # 转换子任务格式
+                details = []
+                for detail in cross_task_details:
+                    details.append({
+                        "id": detail.get('id'),
+                        "sub_order_id": detail.get('sub_order_id'),
+                        "service_url": detail.get('service_url'),
+                        "create_time": detail.get('create_time'),
+                        "source": "cross_task_detail"
+                    })
+                
+                return {
+                    "taskGroup": task_group,
+                    "details": details,
+                    "source": "remote"
+                }
+            else:
+                return {"error": "未找到对应的任务记录（本地和远程）"}
+                
+    except Exception as e:
+        print(f"远程服务器查询失败: {e}")
+        return {"error": f"远程服务器查询失败: {str(e)}"}
+    
+    return {"error": "未找到对应的任务记录"}
 
 def get_cross_task_info(order_id, server_ip=None):
     """
