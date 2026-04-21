@@ -20,6 +20,8 @@ import sys
 import argparse
 from datetime import datetime
 from dotenv import load_dotenv
+import logging
+from flask import template_rendered
 
 # 导入查询功能模块
 try:
@@ -158,6 +160,94 @@ flask_secret_key = (flask_config.get('secret_key') or
                    'cross_env_manager_secret_key_2026')
 app.secret_key = flask_secret_key
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# 项目根目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def find_project_root(base_dir):
+    """查找项目根目录（包含projects目录的路径）"""
+    current = base_dir
+    # 向上遍历目录树，直到找到包含projects目录的路径
+    while current != os.path.dirname(current):  # 直到根目录
+        projects_dir = os.path.join(current, 'projects')
+        if os.path.exists(projects_dir) and os.path.isdir(projects_dir):
+            return current
+        current = os.path.dirname(current)
+    # 如果没找到，返回base_dir的父目录的父目录（假设标准结构）
+    return os.path.dirname(os.path.dirname(os.path.dirname(base_dir)))
+
+# 项目根目录（/main/app/toolsForPersonal）
+PROJECT_ROOT = find_project_root(BASE_DIR)
+
+def format_template_path(template_filename):
+    """格式化模板路径为Linux目录样式，例如：@projects/agv_system/app/cross_env_manager/templates/xxx.html"""
+    if not template_filename:
+        return template_filename
+    
+    try:
+        # 计算相对于项目根目录的路径
+        rel_path = os.path.relpath(template_filename, PROJECT_ROOT)
+        
+        # 如果路径以projects/开头，添加@前缀
+        if rel_path.startswith('projects/'):
+            return f"@{rel_path}"
+        else:
+            # 否则返回原始相对路径
+            return rel_path
+    except (ValueError, OSError):
+        # 如果计算相对路径失败，返回原始文件名
+        return template_filename
+
+# 配置访问日志 - 记录IP地址和访问的模板路径
+def log_template_rendered(sender, template, context, **extra):
+    """记录模板渲染事件"""
+    # 获取客户端IP地址
+    client_ip = request.remote_addr if request else 'N/A'
+    # 获取代理IP（如果有）
+    if request and request.headers.get('X-Forwarded-For'):
+        client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    
+    # 获取模板路径
+    template_path = template.name
+    # 尝试获取绝对路径并格式化为Linux目录样式
+    try:
+        if hasattr(template, 'filename') and template.filename:
+            # 格式化模板路径为Linux目录样式
+            template_path = format_template_path(template.filename)
+    except (ValueError, AttributeError):
+        pass
+    
+    # 记录模板渲染信息
+    app.logger.info(f"模板渲染: IP={client_ip}, 模板路径={template_path}")
+
+def log_request_info():
+    """记录请求信息"""
+    client_ip = request.remote_addr
+    if request.headers.get('X-Forwarded-For'):
+        client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    app.logger.info(f"请求开始: IP={client_ip}, 路径={request.path}, 方法={request.method}")
+
+def log_response_info(response):
+    """记录响应信息"""
+    client_ip = request.remote_addr
+    if request.headers.get('X-Forwarded-For'):
+        client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    app.logger.info(f"请求完成: IP={client_ip}, 路径={request.path}, 状态码={response.status_code}")
+    return response
+
+# 设置日志格式
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# 连接模板渲染信号
+template_rendered.connect(log_template_rendered, app)
+
+# 注册请求钩子
+app.before_request(log_request_info)
+app.after_request(log_response_info)
 
 # 数据库配置 - 从配置、环境变量或默认值读取
 # 注意：配置文件中数据库配置在[database]部分

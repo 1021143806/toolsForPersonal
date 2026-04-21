@@ -11,6 +11,7 @@ description: 该cross_env_manager项目相关指导操作
 # Instructions
 
 在该文件夹内编写技能相关的代码和资源文件，技能的具体实现可以根据项目需求进行设计和开发。
+以及需要查看日志时需要查看该 skill
 
 
 
@@ -97,7 +98,8 @@ cd /main/app/toolsForPersonal/projects/agv_system/app/cross_env_manager
 5. 添加子任务
 6. 删除子任务
 
-检查日志：/main/app/log/cross_env_manager.log，确认没有错误日志输出。
+检查日志：/main/app/log/cross_env_manager.log
+确认没有错误日志输出。
 
 ### 1.3项目功能整合
 
