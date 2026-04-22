@@ -1749,27 +1749,72 @@ def get_addtask_config():
 
 @app.route('/addtask/config', methods=['POST'])
 def save_addtask_config():
-    """保存配置"""
+    """保存配置（支持版本控制和提交消息）"""
     try:
         new_config = request.json
         config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
+        
+        # 提取提交消息（可选）
+        message = request.json.get('message', '').strip()
+        
+        # 读取当前配置文件以获取当前版本号
+        current_version = 0
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # 尝试解析JSON来提取_version字段
+                import json
+                match = re.search(r'const config = ({.*?});', content, re.DOTALL)
+                if match:
+                    try:
+                        config_obj = json.loads(match.group(1))
+                        current_version = config_obj.get('_version', 0)
+                    except json.JSONDecodeError:
+                        pass
+        
+        # 检查客户端版本
+        client_version = request.json.get('_client_version')  # 可选字段
+        if client_version is not None:
+            if int(client_version) != current_version:
+                return jsonify({
+                    'success': False, 
+                    'error': '版本冲突',
+                    'message': f'当前配置文件版本为 {current_version}，您提交的版本为 {client_version}。请刷新页面后重试。',
+                    'current_version': current_version,
+                    'client_version': client_version
+                }), 409
         
         # 创建备份目录
         backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         
-        # 创建自动备份
+        # 创建自动备份（带提交消息）
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_name = f"config_backup_{timestamp}.js"
         backup_path = os.path.join(backup_dir, backup_name)
         
-        # 备份当前配置
+        # 备份当前配置（添加提交消息作为注释）
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
                 current_content = f.read()
+            
+            # 添加提交消息作为注释
+            if message:
+                commit_line = f"// commit: {message}\n"
+            else:
+                commit_line = "// commit: (no message)\n"
+            content_with_comment = commit_line + current_content
+            
             with open(backup_path, 'w', encoding='utf-8') as f:
-                f.write(current_content)
+                f.write(content_with_comment)
+        
+        # 设置新版本号（递增）
+        new_version = current_version + 1
+        # 确保新配置对象不包含_version字段（我们将添加自己的）
+        if '_version' in new_config:
+            del new_config['_version']
+        new_config['_version'] = new_version
         
         # 保存新配置
         import json
@@ -1777,13 +1822,18 @@ def save_addtask_config():
         with open(config_path, 'w', encoding='utf-8') as f:
             f.write(config_content)
         
-        return jsonify({'success': True, 'backup_name': backup_name})
+        return jsonify({
+            'success': True, 
+            'backup_name': backup_name,
+            'new_version': new_version,
+            'message': message if message else '(no message)'
+        })
     except Exception as e:
         return jsonify({'error': f'保存配置失败: {str(e)}'}), 500
 
 @app.route('/addtask/config/backups')
 def list_backups():
-    """列出所有备份文件"""
+    """列出所有备份文件（包含提交消息）"""
     try:
         backup_dir = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups')
         backups = []
@@ -1797,9 +1847,20 @@ def list_backups():
                     # 从文件名提取版本信息
                     version_match = filename.split('_')[-1].replace('.js', '')
                     
+                    # 提取提交消息（文件第一行）
+                    message = ''
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            first_line = f.readline()
+                            if first_line.startswith('// commit:'):
+                                message = first_line[10:].strip()
+                    except Exception:
+                        pass  # 忽略读取错误
+                    
                     backups.append({
                         'name': filename,
                         'version': version_match,
+                        'message': message,
                         'timestamp': stat.st_mtime * 1000,  # 转换为毫秒
                         'size': stat.st_size
                     })
@@ -1810,9 +1871,10 @@ def list_backups():
 
 @app.route('/addtask/config/backup', methods=['POST'])
 def create_backup():
-    """创建手动备份"""
+    """创建手动备份（支持提交消息）"""
     try:
         backup_type = request.json.get('type', 'manual')
+        message = request.json.get('message', '').strip()
         config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
         backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
@@ -1825,8 +1887,14 @@ def create_backup():
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
+            # 添加提交消息作为注释
+            if message:
+                commit_line = f"// commit: {message}\n"
+            else:
+                commit_line = "// commit: (no message)\n"
+            content_with_comment = commit_line + content
             with open(backup_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+                f.write(content_with_comment)
         
         return jsonify({'success': True, 'backup_name': backup_name})
     except Exception as e:
@@ -1887,6 +1955,11 @@ def delete_backup(backup_name):
 def health_check():
     """健康检查接口 - 用于服务器监控"""
     return '1000', 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/test/tree_diagram')
+def test_tree_diagram():
+    """测试树状图可视化页面"""
+    return render_template('test_tree_diagram.html')
 
 if __name__ == '__main__':
     # 创建模板目录
