@@ -173,6 +173,8 @@
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <!-- 统一的主题管理器 -->
     <script src="/static/js/theme-manager.js"></script>
+    <!-- gitgraph.js for Git-style backup visualization (放在底部避免影响其他功能) -->
+    <script src="/static/vendor/gitgraph/gitgraph.js"></script>
     <script>
         (function(){
             "use strict";
@@ -430,6 +432,136 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 configContent.value = configStr;
             }
 
+            // 确保配置兼容性（自动补全缺失字段）
+            function ensureConfigCompatibility(config) {
+                // 深拷贝配置
+                const compatibleConfig = JSON.parse(JSON.stringify(config));
+                
+                // 1. 确保有 _version 字段（版本管理）
+                if (compatibleConfig._version === undefined) {
+                    compatibleConfig._version = 0;
+                    console.log('自动添加 _version 字段: 0');
+                }
+                
+                // 2. 确保有 general 字段
+                if (!compatibleConfig.general || typeof compatibleConfig.general !== 'object') {
+                    compatibleConfig.general = {
+                        title: "AGV 跨环境任务下发系统",
+                        footer_text: "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+                    };
+                }
+                
+                // 3. 确保 general 有必要的字段
+                if (!compatibleConfig.general.title) {
+                    compatibleConfig.general.title = "AGV 跨环境任务下发系统";
+                }
+                if (!compatibleConfig.general.footer_text) {
+                    compatibleConfig.general.footer_text = "任务下发系统 © 2025 | 运营 AGV 组提供技术支持";
+                }
+                
+                // 4. 确保 areas 字段存在且是对象
+                if (!compatibleConfig.areas || typeof compatibleConfig.areas !== 'object') {
+                    compatibleConfig.areas = {};
+                }
+                
+                // 5. 遍历所有区域，确保每个区域有 tasks 字段
+                for (const areaName in compatibleConfig.areas) {
+                    const area = compatibleConfig.areas[areaName];
+                    if (!area.tasks || typeof area.tasks !== 'object') {
+                        area.tasks = {};
+                    }
+                    
+                    // 6. 遍历区域内的所有任务，确保任务有必要的字段
+                    for (const taskName in area.tasks) {
+                        const task = area.tasks[taskName];
+                        
+                        // 确保有 base_url 字段
+                        if (!task.base_url) {
+                            task.base_url = '';
+                        }
+                        
+                        // 确保有 code 字段
+                        if (!task.code) {
+                            task.code = '';
+                        }
+                        
+                        // 确保有 requires_shelf 字段
+                        if (task.requires_shelf === undefined) {
+                            task.requires_shelf = false;
+                        }
+                        
+                        // 确保有 requires_task_path 字段
+                        if (task.requires_task_path === undefined) {
+                            task.requires_task_path = false;
+                        }
+                        
+                        // 确保有 task_path_options 字段（如果是数组）
+                        if (!Array.isArray(task.task_path_options)) {
+                            task.task_path_options = [];
+                        }
+                        
+                        // 确保 task_path_options 中的每个选项都有 value 和 label
+                        task.task_path_options = task.task_path_options.map(option => {
+                            if (typeof option === 'object' && option !== null) {
+                                return {
+                                    value: option.value || '',
+                                    label: option.label || ''
+                                };
+                            }
+                            return { value: '', label: '' };
+                        });
+                    }
+                }
+                
+                return compatibleConfig;
+            }
+            
+            // 测试配置兼容性函数（开发调试用）
+            function testConfigCompatibility() {
+                // 模拟用户提供的配置文件（缺少 _version 字段）
+                const testConfig = {
+                    "general": {
+                        "title": "AGV 跨环境任务下发系统 v1.5.1.4",
+                        "footer_text": "任务下发系统 © 2025 | 运营 AGV 组提供技术支持"
+                    },
+                    "areas": {
+                        "A1-1 PCBA": {
+                            "tasks": {
+                                "送满A1pcba1F去A2华昱欣3F": {
+                                    "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
+                                    "code": "HJBY_31A1DZ1F_to_19A2HYX3F_go",
+                                    "requires_shelf": true,
+                                    "requires_task_path": false,
+                                    "task_path_options": []
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                console.log('测试配置兼容性...');
+                console.log('原始配置:', testConfig);
+                console.log('是否有 _version 字段?', testConfig._version !== undefined);
+                
+                const compatibleConfig = ensureConfigCompatibility(testConfig);
+                console.log('兼容性处理后配置:', compatibleConfig);
+                console.log('处理后是否有 _version 字段?', compatibleConfig._version !== undefined);
+                console.log('_version 值:', compatibleConfig._version);
+                
+                // 验证配置结构
+                const isValid = (
+                    compatibleConfig._version !== undefined &&
+                    compatibleConfig.general &&
+                    compatibleConfig.general.title &&
+                    compatibleConfig.general.footer_text &&
+                    compatibleConfig.areas &&
+                    typeof compatibleConfig.areas === 'object'
+                );
+                
+                console.log('配置验证结果:', isValid ? '通过' : '失败');
+                return isValid;
+            }
+
             // 从文本域解析配置
             function parseConfigFromTextarea() {
                 try {
@@ -438,7 +570,10 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     if (!match) throw new Error('找不到 config 对象');
                     const parsed = JSON.parse(match[1]);
                     if (!parsed.areas || typeof parsed.areas !== 'object') throw new Error('缺少 areas 字段');
-                    configData = parsed;
+                    
+                    // 自动补全缺失的字段（向后兼容）
+                    configData = ensureConfigCompatibility(parsed);
+                    
                     renderAreaTree();
                     if (currentAreaName && !configData.areas[currentAreaName]) {
                         currentAreaName = null;
@@ -672,15 +807,24 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 if (persistResult.success) {
                     showStatus('任务已保存并持久化到文件', 'success');
                     showSuccessModal('任务修改成功并已保存到文件！');
-                } else {
-                    if (persistResult.error === '版本冲突') {
-                        showStatus(`保存失败：${persistResult.message}，请刷新页面后重试`, 'error');
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
-                            await resetDemoData();
-                        }
                     } else {
-                        showStatus(`任务已保存到内存，但持久化失败: ${persistResult.error}`, 'error');
-                    }
+                        if (persistResult.error === '版本冲突') {
+                            showStatus(`保存失败：${persistResult.message}`, 'error');
+                            
+                            const userChoice = confirm(
+                                `检测到版本冲突！\n\n` +
+                                `服务器版本: ${persistResult.current_version}\n` +
+                                `您的版本: ${persistResult.client_version}\n\n` +
+                                `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                                `点击"取消"保留您的更改在内存中，稍后重试。`
+                            );
+                            
+                            if (userChoice) {
+                                await resetDemoData();
+                            }
+                        } else {
+                            showStatus(`任务已保存到内存，但持久化失败: ${persistResult.error}`, 'error');
+                        }
                 }
             }
 
@@ -696,8 +840,17 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 const persistResult = await persistConfig();
                 if (!persistResult.success) {
                     if (persistResult.error === '版本冲突') {
-                        showStatus(`任务删除已保存到内存，但持久化失败：${persistResult.message}，请刷新页面后重试`, 'error');
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
+                        showStatus(`任务删除已保存到内存，但持久化失败：${persistResult.message}`, 'error');
+                        
+                        const userChoice = confirm(
+                            `检测到版本冲突！\n\n` +
+                            `服务器版本: ${persistResult.current_version}\n` +
+                            `您的版本: ${persistResult.client_version}\n\n` +
+                            `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                            `点击"取消"保留您的更改在内存中，稍后重试。`
+                        );
+                        
+                        if (userChoice) {
                             await resetDemoData();
                         }
                     } else {
@@ -732,8 +885,17 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 const persistResult = await persistConfig();
                 if (!persistResult.success) {
                     if (persistResult.error === '版本冲突') {
-                        showStatus(`任务创建已保存到内存，但持久化失败：${persistResult.message}，请刷新页面后重试`, 'error');
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
+                        showStatus(`任务创建已保存到内存，但持久化失败：${persistResult.message}`, 'error');
+                        
+                        const userChoice = confirm(
+                            `检测到版本冲突！\n\n` +
+                            `服务器版本: ${persistResult.current_version}\n` +
+                            `您的版本: ${persistResult.client_version}\n\n` +
+                            `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                            `点击"取消"保留您的更改在内存中，稍后重试。`
+                        );
+                        
+                        if (userChoice) {
                             await resetDemoData();
                         }
                     } else {
@@ -782,8 +944,17 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 const persistResult = await persistConfig();
                 if (!persistResult.success) {
                     if (persistResult.error === '版本冲突') {
-                        showStatus(`区域修改已保存到内存，但持久化失败：${persistResult.message}，请刷新页面后重试`, 'error');
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
+                        showStatus(`区域修改已保存到内存，但持久化失败：${persistResult.message}`, 'error');
+                        
+                        const userChoice = confirm(
+                            `检测到版本冲突！\n\n` +
+                            `服务器版本: ${persistResult.current_version}\n` +
+                            `您的版本: ${persistResult.client_version}\n\n` +
+                            `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                            `点击"取消"保留您的更改在内存中，稍后重试。`
+                        );
+                        
+                        if (userChoice) {
                             await resetDemoData();
                         }
                     } else {
@@ -804,8 +975,17 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 const persistResult = await persistConfig();
                 if (!persistResult.success) {
                     if (persistResult.error === '版本冲突') {
-                        showStatus(`区域删除已保存到内存，但持久化失败：${persistResult.message}，请刷新页面后重试`, 'error');
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
+                        showStatus(`区域删除已保存到内存，但持久化失败：${persistResult.message}`, 'error');
+                        
+                        const userChoice = confirm(
+                            `检测到版本冲突！\n\n` +
+                            `服务器版本: ${persistResult.current_version}\n` +
+                            `您的版本: ${persistResult.client_version}\n\n` +
+                            `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                            `点击"取消"保留您的更改在内存中，稍后重试。`
+                        );
+                        
+                        if (userChoice) {
                             await resetDemoData();
                         }
                     } else {
@@ -857,10 +1037,23 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         // 版本冲突
                         const currentVersion = result.current_version;
                         const clientVersion = result.client_version;
-                        showStatus(`版本冲突：当前配置版本为 ${currentVersion}，您提交的版本为 ${clientVersion}。请刷新页面后重试。`, 'error');
-                        // 可以在这里添加冲突解决UI，例如提示用户刷新或强制覆盖
-                        if (confirm('检测到版本冲突，是否刷新页面以获取最新配置？')) {
+                        showStatus(`版本冲突：当前配置版本为 ${currentVersion}，您提交的版本为 ${clientVersion}。`, 'error');
+                        
+                        // 提供更多选项给用户
+                        const userChoice = confirm(
+                            `检测到版本冲突！\n\n` +
+                            `服务器版本: ${currentVersion}\n` +
+                            `您的版本: ${clientVersion}\n\n` +
+                            `点击"确定"刷新页面获取最新配置（您的更改将丢失）。\n` +
+                            `点击"取消"保留您的更改在编辑器中，稍后重试。`
+                        );
+                        
+                        if (userChoice) {
+                            // 用户选择刷新页面
                             await resetDemoData();
+                        } else {
+                            // 用户选择保留更改，不刷新页面
+                            showStatus('您的更改已保留在编辑器中，请稍后重试保存。', 'info');
                         }
                     } else {
                         showStatus(`保存失败: ${result.error || '未知错误'}`, 'error');
@@ -890,10 +1083,13 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     if (!response.ok) throw new Error('无法加载备份列表');
                     backups = await response.json();
                     renderBackupList();
-                    // 如果当前是树状图视图，也渲染树状图
+                    // 如果当前是Git图形视图，也渲染Git图形
                     const treeViewContainer = document.getElementById('tree-view-container');
-                    if (treeViewContainer.style.display === 'block') {
-                        renderBackupTree();
+                    const listViewContainer = document.getElementById('list-view-container');
+                    // 检查树状图视图是否可见（没有设置为none）
+                    if (treeViewContainer && (treeViewContainer.style.display !== 'none' && 
+                        (treeViewContainer.style.display === 'block' || treeViewContainer.style.display === ''))) {
+                        renderGitGraph();
                     }
                 } catch (error) {
                     showStatus(`加载备份列表失败: ${error.message}`, 'error');
@@ -988,8 +1184,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 if (saveCommitMessageModal) saveCommitMessageModal.show();
             }
 
-        // 渲染备份树状图（优化垂直布局）
-        function renderBackupTree() {
+        // 渲染Git风格的备份历史图
+        function renderGitGraph() {
             const container = document.getElementById('backup-tree-container');
             if (!container || backups.length === 0) {
                 container.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>暂无备份数据</div>';
@@ -999,246 +1195,286 @@ const config = ${JSON.stringify(configData, null, 4)};`;
             // 清空容器
             container.innerHTML = '';
             
-            // 添加缩放控制按钮
-            const zoomControls = document.createElement('div');
-            zoomControls.className = 'tree-zoom-controls';
-            zoomControls.innerHTML = `
-                <button class="tree-zoom-btn" id="tree-zoom-in" title="放大"><i class="bi bi-zoom-in"></i></button>
-                <button class="tree-zoom-btn" id="tree-zoom-out" title="缩小"><i class="bi bi-zoom-out"></i></button>
-                <button class="tree-zoom-btn" id="tree-reset-zoom" title="重置缩放"><i class="bi bi-arrow-clockwise"></i></button>
+            // 添加控制按钮
+            const controls = document.createElement('div');
+            controls.className = 'gitgraph-controls';
+            controls.innerHTML = `
+                <button class="btn btn-sm btn-outline-secondary" id="gitgraph-refresh-btn" title="刷新图形">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+                <button class="btn btn-sm btn-outline-info" id="gitgraph-export-btn" title="导出为图片">
+                    <i class="bi bi-download"></i> 导出
+                </button>
+                <div class="form-check form-switch d-inline-block ms-2">
+                    <input class="form-check-input" type="checkbox" id="gitgraph-show-details" checked>
+                    <label class="form-check-label small" for="gitgraph-show-details">显示详情</label>
+                </div>
             `;
-            container.appendChild(zoomControls);
+            container.appendChild(controls);
             
-            // 创建SVG容器
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            const svg = d3.select(container)
-                .append('svg')
-                .attr('width', width)
-                .attr('height', height)
-                .attr('viewBox', `0 0 ${width} ${height}`)
-                .attr('preserveAspectRatio', 'xMidYMid meet');
+            // 创建Git图形容器
+            const graphContainer = document.createElement('div');
+            graphContainer.id = 'gitgraph-container';
+            graphContainer.style.width = '100%';
+            //graphContainer.style.maxHeight = '600px';
+            graphContainer.style.height = 'auto';
+            //graphContainer.style.minHeight = '400px';
+            graphContainer.style.overflow = 'auto';
+            graphContainer.style.border = '1px solid var(--border-color)';
+            graphContainer.style.borderRadius = '8px';
+            graphContainer.style.padding = '20px';
+            graphContainer.style.backgroundColor = 'var(--bg-color)';
+            container.appendChild(graphContainer);
             
-            // 创建工具提示
-            const tooltip = d3.select('body')
-                .append('div')
-                .attr('class', 'tree-tooltip')
-                .style('opacity', 0);
+            // 准备Git图形数据
+            const gitData = prepareGitGraphData();
             
-            // 准备树状图数据
-            const treeData = prepareTreeData();
-            
-            // 创建树布局 - 使用垂直布局（从上到下）
-            const treeLayout = d3.tree()
-                .size([height - 100, width - 150]);  // 调整尺寸，留出边距
-            
-            const root = d3.hierarchy(treeData);
-            const treeNodes = treeLayout(root);
-            
-            // 绘制连接线（垂直布局）
-            svg.selectAll('.tree-link')
-                .data(treeNodes.links())
-                .enter()
-                .append('path')
-                .attr('class', 'tree-link')
-                .attr('d', d3.linkVertical()
-                    .x(d => d.x)
-                    .y(d => d.y));
-            
-            // 绘制节点
-            const node = svg.selectAll('.tree-node')
-                .data(treeNodes.descendants())
-                .enter()
-                .append('g')
-                .attr('class', 'tree-node')
-                .attr('transform', d => `translate(${d.y},${d.x})`)
-                .on('click', function(event, d) {
-                    // 点击节点时恢复备份
-                    if (d.data.name && d.data.name !== 'root') {
-                        restoreBackup(d.data.name);
+            // 创建Git图形
+            try {
+                // 检查gitgraph.js是否可用
+                if (typeof GitGraph === 'undefined') {
+                    throw new Error('gitgraph.js库未加载，请检查路径');
+                }
+                
+                // 创建Git图形实例
+                const gitgraph = new GitGraph({
+                    element: graphContainer,
+                    template: 'metro', // 使用metro模板
+                    orientation: 'vertical', // 垂直布局，避免文字重叠
+                    mode: 'compact', // 紧凑模式
+                    author: 'AGV配置系统',
+                    initCommitOffsetX: 50,
+                    initCommitOffsetY: 50,
+                    commitMessage: {
+                        display: true,
+                        displayAuthor: true,  // 显示作者（备份类型）
+                        displayHash: true,    // 显示哈希（版本号）
+                        displayBranch: true
                     }
-                })
-                .on('mouseover', function(event, d) {
-                    if (d.data.name && d.data.name !== 'root') {
-                        tooltip.transition()
-                            .duration(200)
-                            .style('opacity', .9);
-                        
-                        // 根据备份类型确定颜色标签
-                        const backupType = d.data.name.includes('manual') ? '手动备份' : '自动备份';
-                        const typeColor = d.data.name.includes('manual') ? 'var(--primary-color)' : 'var(--info-color)';
-                        
-                        tooltip.html(`
-                            <div style="border-left: 4px solid ${typeColor}; padding-left: 8px;">
-                                <strong>${d.data.name}</strong><br>
-                                <span style="color: ${typeColor}; font-size: 11px;">${backupType}</span><br>
-                                <small>${new Date(d.data.timestamp).toLocaleString()}</small><br>
-                                <small>版本: ${d.data.version || 'v1'}</small><br>
-                                <small>${d.data.message || '无描述'}</small>
-                            </div>
-                        `)
-                            .style('left', (event.pageX + 10) + 'px')
-                            .style('top', (event.pageY - 28) + 'px');
-                    } else if (d.data.name === 'root') {
-                        tooltip.transition()
-                            .duration(200)
-                            .style('opacity', .9);
-                        tooltip.html(`
-                            <div style="border-left: 4px solid var(--success-color); padding-left: 8px;">
-                                <strong>当前配置</strong><br>
-                                <small>版本: ${configData._version || 0}</small><br>
-                                <small>点击备份节点可恢复历史版本</small>
-                            </div>
-                        `)
-                            .style('left', (event.pageX + 10) + 'px')
-                            .style('top', (event.pageY - 28) + 'px');
-                    }
-                })
-                .on('mouseout', function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style('opacity', 0);
                 });
-            
-            // 绘制节点圆圈（根据备份类型使用不同颜色）
-            node.append('circle')
-                .attr('class', d => d.data.name === 'root' ? 'tree-node-circle tree-current-node' : 'tree-node-circle')
-                .attr('r', d => d.data.name === 'root' ? 12 : 8)
-                .attr('fill', d => {
-                    if (d.data.name === 'root') return 'var(--success-color)';
+                
+                // 创建主分支
+                const master = gitgraph.branch('master');
+                
+                // 首先添加当前配置作为特殊提交（放在最底部）
+                master.commit({
+                    subject: `当前配置 (v${configData._version || 0})`,
+                    author: '当前版本',
+                    timestamp: new Date().toISOString(),
+                    hash: 'HEAD',
+                    style: {
+                        color: '#28a745',
+                        dot: {
+                            size: 12,
+                            strokeWidth: 3,
+                            strokeColor: '#28a745'
+                        },
+                        message: {
+                            color: 'var(--success-color)',
+                            font: 'bold 12px Arial, sans-serif'
+                        }
+                    },
+                    onClick: function() {
+                        showSuccessModal('这是当前配置版本，无法恢复');
+                    }
+                });
+                
+                // 然后按时间顺序添加备份提交（从新到旧，最新的在最上面）
+                gitData.commits.forEach((commit, index) => {
                     // 根据备份类型设置颜色
-                    if (d.data.name.includes('manual')) return 'var(--primary-color)';
-                    if (d.data.name.includes('auto')) return 'var(--info-color)';
-                    return 'var(--warning-color)';
-                })
-                .attr('stroke', d => d.data.name === 'root' ? 'var(--success-color)' : 'var(--border-color)')
-                .attr('stroke-width', 1.5);
-            
-            // 绘制节点文本（优化显示）
-            node.append('text')
-                .attr('class', 'tree-node-text')
-                .attr('dx', 15)  // 文本在节点右侧
-                .attr('dy', 4)
-                .attr('text-anchor', 'start')
-                .text(d => {
-                    if (d.data.name === 'root') return `当前配置 (v${configData._version || 0})`;
+                    let commitColor = '#2cbe4e'; // 默认绿色
+                    if (commit.type === 'manual') {
+                        commitColor = '#0366d6'; // 手动备份蓝色
+                    } else if (commit.type === 'auto') {
+                        commitColor = '#6f42c1'; // 自动备份紫色
+                    }
                     
-                    // 显示更友好的备份名称
-                    let displayName = d.data.name;
+                    // 创建提交
+                    master.commit({
+                        subject: commit.subject,
+                        author: commit.author,
+                        timestamp: commit.timestamp,
+                        hash: commit.hash,
+                        style: {
+                            color: commitColor,
+                            dot: {
+                                size: 10,
+                                strokeWidth: 2,
+                                strokeColor: commitColor
+                            },
+                            message: {
+                                color: 'var(--text-color)',
+                                font: '12px Arial, sans-serif'
+                            },
+                            branch: {
+                                lineWidth: 3,
+                                spacingX: 60,
+                                color: commitColor
+                            }
+                        },
+                        onClick: function() {
+                            // 点击提交时恢复备份
+                            if (confirm(`确定恢复备份 ${commit.backupName} 吗？当前未保存的更改将丢失。`)) {
+                                restoreBackup(commit.backupName);
+                            }
+                        },
+                        onMouseOver: function() {
+                            // 显示工具提示
+                            const tooltip = document.createElement('div');
+                            tooltip.id = 'gitgraph-tooltip';
+                            tooltip.style.position = 'absolute';
+                            tooltip.style.backgroundColor = 'var(--bg-color)';
+                            tooltip.style.border = '1px solid var(--border-color)';
+                            tooltip.style.borderRadius = '4px';
+                            tooltip.style.padding = '10px';
+                            tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                            tooltip.style.zIndex = '1000';
+                            tooltip.style.maxWidth = '300px';
+                            tooltip.innerHTML = `
+                                <div style="border-left: 4px solid ${commitColor}; padding-left: 8px;">
+                                    <strong>${commit.backupName}</strong><br>
+                                    <span style="color: ${commitColor}; font-size: 11px;">${commit.type === 'manual' ? '手动备份' : '自动备份'}</span><br>
+                                    <small>时间: ${new Date(commit.timestamp).toLocaleString()}</small><br>
+                                    <small>版本: ${commit.version || 'v1'}</small><br>
+                                    <small>描述: ${commit.message || '无描述'}</small><br>
+                                    <small>大小: ${(commit.size / 1024).toFixed(2)} KB</small>
+                                </div>
+                            `;
+                            document.body.appendChild(tooltip);
+                            
+                            // 定位工具提示
+                            const rect = this.element.getBoundingClientRect();
+                            tooltip.style.left = (rect.right + 10) + 'px';
+                            tooltip.style.top = (rect.top - 10) + 'px';
+                        },
+                        onMouseOut: function() {
+                            // 移除工具提示
+                            const tooltip = document.getElementById('gitgraph-tooltip');
+                            if (tooltip) {
+                                tooltip.remove();
+                            }
+                        }
+                    });
+                });
+                
+                // 添加图例
+                const legend = document.createElement('div');
+                legend.className = 'gitgraph-legend';
+                legend.style.marginTop = '20px';
+                legend.style.padding = '10px';
+                legend.style.backgroundColor = 'var(--bg-secondary)';
+                legend.style.borderRadius = '4px';
+                legend.style.fontSize = '12px';
+                legend.innerHTML = `
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 12px; height: 12px; background-color: #28a745; border-radius: 50%; margin-right: 8px;"></div>
+                            <span>当前配置</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 10px; height: 10px; background-color: #0366d6; border-radius: 50%; margin-right: 8px;"></div>
+                            <span>手动备份</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 10px; height: 10px; background-color: #6f42c1; border-radius: 50%; margin-right: 8px;"></div>
+                            <span>自动备份</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 10px; height: 10px; background-color: #2cbe4e; border-radius: 50%; margin-right: 8px;"></div>
+                            <span>其他备份</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>点击备份节点可恢复历史版本
+                    </div>
+                `;
+                container.appendChild(legend);
+                
+                // 绑定控制按钮事件
+                document.getElementById('gitgraph-refresh-btn')?.addEventListener('click', () => {
+                    renderGitGraph();
+                    showStatus('Git图形已刷新', 'success');
+                });
+                
+                document.getElementById('gitgraph-export-btn')?.addEventListener('click', () => {
+                    // 导出功能占位符
+                    showSuccessModal('导出功能开发中...');
+                });
+                
+                document.getElementById('gitgraph-show-details')?.addEventListener('change', (e) => {
+                    // 切换详情显示
+                    const showDetails = e.target.checked;
+                    // 这里可以添加显示/隐藏详细信息的逻辑
+                    showStatus(showDetails ? '已显示详细信息' : '已隐藏详细信息', 'info');
+                });
+                
+            } catch (error) {
+                console.error('渲染Git图形失败:', error);
+                graphContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Git图形渲染失败: ${error.message}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="renderGitGraph()">重试</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+            // 准备Git图形数据
+            function prepareGitGraphData() {
+                // 按时间排序（从新到旧）- 最新的备份在前
+                const sortedBackups = [...backups].sort((a, b) => b.timestamp - a.timestamp);
+                
+                // 转换为Git提交格式
+                const commits = sortedBackups.map(backup => {
+                    // 确定备份类型
+                    let type = 'other';
+                    if (backup.name.includes('manual')) type = 'manual';
+                    else if (backup.name.includes('auto')) type = 'auto';
                     
-                    // 移除前缀
-                    displayName = displayName.replace('config_manual_', '手动_');
-                    displayName = displayName.replace('config_auto_', '自动_');
-                    displayName = displayName.replace('.js', '');
+                    // 生成友好的提交主题
+                    let subject = backup.name;
+                    subject = subject.replace('config_manual_', '手动备份: ');
+                    subject = subject.replace('config_auto_', '自动备份: ');
+                    subject = subject.replace('.js', '');
                     
                     // 提取时间戳部分
-                    const timestampMatch = displayName.match(/(\d{8}_\d{6})$/);
+                    const timestampMatch = subject.match(/(\d{8}_\d{6})$/);
                     if (timestampMatch) {
                         const timestamp = timestampMatch[1];
-                        // 格式化为更易读的时间
                         const dateStr = timestamp.substring(0, 8);
                         const timeStr = timestamp.substring(9);
-                        displayName = displayName.replace(timestamp, `${dateStr} ${timeStr}`);
+                        subject = subject.replace(timestamp, `${dateStr} ${timeStr}`);
                     }
                     
                     // 限制长度
-                    return displayName.length > 20 ? displayName.substring(0, 20) + '...' : displayName;
-                });
-            
-            // 添加图例
-            const legend = svg.append('g')
-                .attr('transform', `translate(10, ${height - 30})`);
-            
-            // 当前配置图例
-            legend.append('circle')
-                .attr('cx', 0)
-                .attr('cy', 0)
-                .attr('r', 6)
-                .attr('fill', 'var(--success-color)')
-                .attr('stroke', 'var(--border-color)')
-                .attr('stroke-width', 1);
-            
-            legend.append('text')
-                .attr('x', 15)
-                .attr('y', 4)
-                .attr('class', 'tree-node-text')
-                .text('当前配置');
-            
-            // 手动备份图例
-            legend.append('circle')
-                .attr('cx', 100)
-                .attr('cy', 0)
-                .attr('r', 6)
-                .attr('fill', 'var(--primary-color)')
-                .attr('stroke', 'var(--border-color)')
-                .attr('stroke-width', 1);
-            
-            legend.append('text')
-                .attr('x', 115)
-                .attr('y', 4)
-                .attr('class', 'tree-node-text')
-                .text('手动备份');
-            
-            // 自动备份图例
-            legend.append('circle')
-                .attr('cx', 200)
-                .attr('cy', 0)
-                .attr('r', 6)
-                .attr('fill', 'var(--info-color)')
-                .attr('stroke', 'var(--border-color)')
-                .attr('stroke-width', 1);
-            
-            legend.append('text')
-                .attr('x', 215)
-                .attr('y', 4)
-                .attr('class', 'tree-node-text')
-                .text('自动备份');
-            
-            // 添加缩放控制功能
-            let currentScale = 1;
-            const minScale = 0.5;
-            const maxScale = 3;
-            const scaleStep = 0.2;
-            
-            function updateZoom() {
-                svg.attr('transform', `scale(${currentScale})`);
-            }
-            
-            // 绑定缩放控制按钮事件
-            document.getElementById('tree-zoom-in')?.addEventListener('click', () => {
-                if (currentScale < maxScale) {
-                    currentScale += scaleStep;
-                    updateZoom();
-                }
-            });
-            
-            document.getElementById('tree-zoom-out')?.addEventListener('click', () => {
-                if (currentScale > minScale) {
-                    currentScale -= scaleStep;
-                    updateZoom();
-                }
-            });
-            
-            document.getElementById('tree-reset-zoom')?.addEventListener('click', () => {
-                currentScale = 1;
-                updateZoom();
-            });
-            
-            // 添加鼠标滚轮缩放支持
-            container.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.ctrlKey) {
-                    if (e.deltaY < 0 && currentScale < maxScale) {
-                        currentScale += scaleStep;
-                    } else if (e.deltaY > 0 && currentScale > minScale) {
-                        currentScale -= scaleStep;
+                    if (subject.length > 30) {
+                        subject = subject.substring(0, 30) + '...';
                     }
-                    updateZoom();
-                }
-            }, { passive: false });
-        }
+                    
+                    return {
+                        backupName: backup.name,
+                        subject: subject,
+                        author: type === 'manual' ? '手动备份' : '自动备份',
+                        timestamp: backup.timestamp,
+                        hash: `v${backup.version || '1'}`,
+                        type: type,
+                        version: backup.version,
+                        message: backup.message,
+                        size: backup.size
+                    };
+                });
+                
+                return {
+                    commits: commits,
+                    total: commits.length,
+                    latestTimestamp: commits.length > 0 ? commits[0].timestamp : null  // 第一个是最新的
+                };
+            }
 
-            // 准备树状图数据
+            // 准备树状图数据（保留原函数，但不再使用）
             function prepareTreeData() {
                 // 按时间排序
                 const sortedBackups = [...backups].sort((a, b) => a.timestamp - b.timestamp);
@@ -1266,12 +1502,12 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 const viewTreeBtn = document.getElementById('view-tree-btn');
                 
                 if (treeViewContainer.style.display === 'none') {
-                    // 切换到树状图视图
+                    // 切换到Git图形视图
                     listViewContainer.style.display = 'none';
                     treeViewContainer.style.display = 'block';
                     viewListBtn.classList.remove('active');
                     viewTreeBtn.classList.add('active');
-                    renderBackupTree();
+                    renderGitGraph();
                 } else {
                     // 切换到列表视图
                     listViewContainer.style.display = 'block';
@@ -1355,7 +1591,10 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                             parsed = JSON.parse(match[1]);
                         }
                         if (!parsed.areas) throw new Error('缺少 areas 字段');
-                        configData = parsed;
+                        
+                        // 自动补全缺失的字段（向后兼容）
+                        configData = ensureConfigCompatibility(parsed);
+                        
                         currentAreaName = null; currentTaskName = null;
                         renderAreaTree();
                         updateRightPanel();
@@ -1502,8 +1741,8 @@ const config = ${formatted};`;
                 document.getElementById('view-list-btn').addEventListener('click', toggleTreeView);
                 document.getElementById('view-tree-btn').addEventListener('click', toggleTreeView);
                 document.getElementById('refresh-tree-btn').addEventListener('click', () => {
-                    renderBackupTree();
-                    showStatus('树状图已刷新', 'success');
+                    renderGitGraph();
+                    showStatus('Git图形已刷新', 'success');
                 });
             }
 
@@ -1520,6 +1759,22 @@ const config = ${formatted};`;
                     
                     // 加载备份列表
                     await loadBackups();
+                    
+                    // 确保树状图视图正确显示
+                    // 检查树状图视图按钮是否激活，如果是则确保树状图被渲染
+                    const viewTreeBtn = document.getElementById('view-tree-btn');
+                    const treeViewContainer = document.getElementById('tree-view-container');
+                    if (viewTreeBtn && viewTreeBtn.classList.contains('active') && treeViewContainer) {
+                        // 确保树状图容器可见
+                        treeViewContainer.style.display = 'block';
+                        // 确保列表视图隐藏
+                        const listViewContainer = document.getElementById('list-view-container');
+                        if (listViewContainer) {
+                            listViewContainer.style.display = 'none';
+                        }
+                        // 渲染Git图形
+                        renderGitGraph();
+                    }
                     
                     showStatus('配置文件加载完成', 'success');
                 } catch (error) {
