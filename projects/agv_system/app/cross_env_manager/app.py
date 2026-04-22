@@ -1759,6 +1759,7 @@ def save_addtask_config():
         
         # 读取当前配置文件以获取当前版本号
         current_version = 0
+        parent_version = None
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -1788,23 +1789,27 @@ def save_addtask_config():
         backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         
-        # 创建自动备份（带提交消息）
+        # 创建自动备份（带提交消息和父版本信息）
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_name = f"config_backup_{timestamp}.js"
         backup_path = os.path.join(backup_dir, backup_name)
         
-        # 备份当前配置（添加提交消息作为注释）
+        # 备份当前配置（添加提交消息和父版本信息作为注释）
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
                 current_content = f.read()
             
-            # 添加提交消息作为注释
+            # 添加提交消息和父版本信息作为注释
             if message:
                 commit_line = f"// commit: {message}\n"
             else:
                 commit_line = "// commit: (no message)\n"
-            content_with_comment = commit_line + current_content
+            
+            # 添加父版本信息
+            parent_line = f"// parent_version: {current_version}\n"
+            
+            content_with_comment = commit_line + parent_line + current_content
             
             with open(backup_path, 'w', encoding='utf-8') as f:
                 f.write(content_with_comment)
@@ -1826,6 +1831,7 @@ def save_addtask_config():
             'success': True, 
             'backup_name': backup_name,
             'new_version': new_version,
+            'parent_version': current_version,
             'message': message if message else '(no message)'
         })
     except Exception as e:
@@ -1833,7 +1839,7 @@ def save_addtask_config():
 
 @app.route('/addtask/config/backups')
 def list_backups():
-    """列出所有备份文件（包含提交消息）"""
+    """列出所有备份文件（包含提交消息和父版本信息）"""
     try:
         backup_dir = os.path.join(os.path.dirname(__file__), 'static', 'js', 'backups')
         backups = []
@@ -1847,20 +1853,46 @@ def list_backups():
                     # 从文件名提取版本信息
                     version_match = filename.split('_')[-1].replace('.js', '')
                     
-                    # 提取提交消息（文件第一行）
+                    # 提取提交消息和父版本信息（文件前两行）
                     message = ''
+                    parent_version = None
                     try:
                         with open(filepath, 'r', encoding='utf-8') as f:
-                            first_line = f.readline()
-                            if first_line.startswith('// commit:'):
-                                message = first_line[10:].strip()
+                            lines = f.readlines()
+                            if len(lines) > 0 and lines[0].startswith('// commit:'):
+                                message = lines[0][10:].strip()
+                            if len(lines) > 1 and lines[1].startswith('// parent_version:'):
+                                parent_str = lines[1][18:].strip()
+                                if parent_str and parent_str != 'None':
+                                    try:
+                                        parent_version = int(parent_str)
+                                    except ValueError:
+                                        parent_version = None
                     except Exception:
                         pass  # 忽略读取错误
+                    
+                    # 尝试从配置内容中提取版本号
+                    config_version = 0
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            import json
+                            match = re.search(r'const config = ({.*?});', content, re.DOTALL)
+                            if match:
+                                try:
+                                    config_obj = json.loads(match.group(1))
+                                    config_version = config_obj.get('_version', 0)
+                                except json.JSONDecodeError:
+                                    pass
+                    except Exception:
+                        pass
                     
                     backups.append({
                         'name': filename,
                         'version': version_match,
+                        'config_version': config_version,
                         'message': message,
+                        'parent_version': parent_version,
                         'timestamp': stat.st_mtime * 1000,  # 转换为毫秒
                         'size': stat.st_size
                     })
@@ -1871,13 +1903,28 @@ def list_backups():
 
 @app.route('/addtask/config/backup', methods=['POST'])
 def create_backup():
-    """创建手动备份（支持提交消息）"""
+    """创建手动备份（支持提交消息和父版本信息）"""
     try:
         backup_type = request.json.get('type', 'manual')
         message = request.json.get('message', '').strip()
         config_path = os.path.join(os.path.dirname(__file__), 'static', 'js', 'config.js')
         backup_dir = os.path.join(os.path.dirname(config_path), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
+        
+        # 读取当前配置文件以获取当前版本号
+        current_version = 0
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # 尝试解析JSON来提取_version字段
+                import json
+                match = re.search(r'const config = ({.*?});', content, re.DOTALL)
+                if match:
+                    try:
+                        config_obj = json.loads(match.group(1))
+                        current_version = config_obj.get('_version', 0)
+                    except json.JSONDecodeError:
+                        pass
         
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1887,16 +1934,20 @@ def create_backup():
         if os.path.exists(config_path):
             with open(config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            # 添加提交消息作为注释
+            # 添加提交消息和父版本信息作为注释
             if message:
                 commit_line = f"// commit: {message}\n"
             else:
                 commit_line = "// commit: (no message)\n"
-            content_with_comment = commit_line + content
+            
+            # 添加父版本信息
+            parent_line = f"// parent_version: {current_version}\n"
+            
+            content_with_comment = commit_line + parent_line + content
             with open(backup_path, 'w', encoding='utf-8') as f:
                 f.write(content_with_comment)
         
-        return jsonify({'success': True, 'backup_name': backup_name})
+        return jsonify({'success': True, 'backup_name': backup_name, 'parent_version': current_version})
     except Exception as e:
         return jsonify({'error': f'创建备份失败: {str(e)}'}), 500
 
@@ -1956,10 +2007,10 @@ def health_check():
     """健康检查接口 - 用于服务器监控"""
     return '1000', 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
-@app.route('/test/tree_diagram')
-def test_tree_diagram():
-    """测试树状图可视化页面"""
-    return render_template('test_tree_diagram.html')
+@app.route('/test/version_tree')
+def test_version_tree():
+    """测试版本历史树状图页面"""
+    return render_template('test_version_tree.html')
 
 if __name__ == '__main__':
     # 创建模板目录
