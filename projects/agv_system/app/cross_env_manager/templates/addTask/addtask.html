@@ -341,6 +341,150 @@
             background: rgba(255,255,255,0.1);
             color: white;
         }
+
+        /* Markdown内容样式 (从docs.html复制) */
+        .markdown-content {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color) !important;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+            line-height: 1.25;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.3em;
+            color: var(--text-color);
+        }
+        
+        .markdown-content h1 { font-size: 2em; }
+        .markdown-content h2 { font-size: 1.5em; }
+        .markdown-content h3 { font-size: 1.25em; }
+        .markdown-content h4 { font-size: 1em; }
+        .markdown-content h5 { font-size: 0.875em; }
+        .markdown-content h6 { font-size: 0.85em; color: var(--text-color); opacity: 0.8; }
+        
+        .markdown-content p {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--text-color);
+        }
+        
+        .markdown-content ul,
+        .markdown-content ol {
+            padding-left: 2em;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        .markdown-content li {
+            margin-bottom: 0.25em;
+            color: var(--text-color);
+        }
+        
+        .markdown-content code {
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: var(--detail-card-bg);
+            color: var(--text-color);
+            border-radius: 3px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+        
+        .markdown-content pre {
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: var(--detail-card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            margin-bottom: 16px;
+        }
+        
+        .markdown-content pre code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            word-break: normal;
+            white-space: pre;
+            background: transparent;
+            border: 0;
+            color: var(--text-color);
+        }
+        
+        .markdown-content table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            margin-bottom: 16px;
+            border-spacing: 0;
+            border-collapse: collapse;
+            border: 1px solid var(--border-color);
+        }
+        
+        .markdown-content table th {
+            font-weight: 600;
+            padding: 6px 13px;
+            border: 1px solid var(--border-color);
+            background-color: var(--detail-card-bg);
+            color: var(--text-color);
+        }
+        
+        .markdown-content table td {
+            padding: 6px 13px;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .markdown-content table tr {
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .markdown-content table tr:nth-child(2n) {
+            background-color: var(--detail-card-bg);
+        }
+        
+        .markdown-content blockquote {
+            padding: 0 1em;
+            color: var(--text-color);
+            opacity: 0.8;
+            border-left: 0.25em solid var(--border-color);
+            margin: 0 0 16px 0;
+            background-color: var(--detail-card-bg);
+        }
+        
+        .markdown-content img {
+            max-width: 100%;
+            box-sizing: content-box;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        
+        .markdown-content a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        [data-bs-theme="dark"] .markdown-content a {
+            color: #6ea8fe;
+        }
     </style>
 </head>
 <body>
@@ -487,7 +631,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="help-modal-body" class="help-content">
+                    <div id="help-modal-body" class="markdown-content p-4 border rounded">
                         <p>正在加载帮助文档...</p>
                     </div>
                 </div>
@@ -982,16 +1126,6 @@
                 } else {
                     html += `<div class="mt-3 text-muted small"><i class="bi bi-info-circle me-1"></i>暂无子任务详情</div>`;
                 }
-                subs.forEach((t,idx)=>{
-                    const canPriority = [4,9].includes(t.status);
-                    html += `<div class="task-item ${idx===0?'border-primary':''}"><div class="d-flex justify-content-between"><strong>子任务 ${t.taskSeq}</strong><span class="task-status status-${t.status}">${getStatusText(t.status)}</span></div>
-                        <div class="small mt-2"><span class="fw-semibold">模板:</span> ${t.templateName}</div>
-                        <div class="small"><span class="fw-semibold">子任务ID:</span> ${t.subOrderId}</div>
-                        <div class="small"><span class="fw-semibold">服务地址:</span> ${t.serviceUrl}</div>
-                        <div class="small"><span class="fw-semibold">任务路径:</span> ${t.taskPath||'无'}</div>
-                        ${idx===0 ? `<button class="btn btn-sm ${canPriority?'btn-warning':'btn-secondary'} mt-2" onclick="updateTaskPriority('${t.subOrderId}','${t.serviceUrl}',${t.status})" ${!canPriority?'disabled':''}><i class="bi bi-star-fill me-1"></i>优先执行</button>`:''}
-                    </div>`;
-                });
                 taskDetails.innerHTML = html;
             }
 
@@ -1058,19 +1192,85 @@
                 if (!helpModalBody.dataset.loaded) {
                     try {
                         const res = await fetch('/addtask/help');
-                        const md = await res.text();
-                        helpModalBody.innerHTML = simpleMarkdown(md);
+                        const html = await res.text();
+                        helpModalBody.innerHTML = html;
                         helpModalBody.dataset.loaded = true;
-                    } catch(e) { helpModalBody.innerHTML = `<p class="text-danger">加载失败: ${e.message}</p>`; }
+                        
+                        // 添加交互功能：代码复制、标题锚点等
+                        addMarkdownInteractiveFeatures();
+                    } catch(e) { 
+                        helpModalBody.innerHTML = `<p class="text-danger">加载失败: ${e.message}</p>`;
+                    }
                 }
                 helpModal.show();
             }
 
-            function simpleMarkdown(md) {
-                return md.replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^### (.*$)/gm,'<h3>$1</h3>')
-                    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>')
-                    .replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
-                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+            // 添加Markdown交互功能
+            function addMarkdownInteractiveFeatures() {
+                // 为所有标题添加锚点
+                document.querySelectorAll('#help-modal-body h1, #help-modal-body h2, #help-modal-body h3, #help-modal-body h4, #help-modal-body h5, #help-modal-body h6').forEach(heading => {
+                    const id = heading.textContent.toLowerCase().replace(/[^\w]+/g, '-');
+                    heading.id = id;
+                    
+                    // 添加锚点链接
+                    const anchor = document.createElement('a');
+                    anchor.href = `#${id}`;
+                    anchor.className = 'heading-anchor ms-2';
+                    anchor.innerHTML = '<i class="bi bi-link-45deg"></i>';
+                    anchor.style.opacity = '0.5';
+                    anchor.style.textDecoration = 'none';
+                    anchor.style.fontSize = '0.8em';
+                    
+                    heading.appendChild(anchor);
+                    
+                    // 鼠标悬停时显示锚点
+                    heading.addEventListener('mouseenter', () => {
+                        anchor.style.opacity = '1';
+                    });
+                    heading.addEventListener('mouseleave', () => {
+                        anchor.style.opacity = '0.5';
+                    });
+                });
+                
+                // 复制代码块功能
+                document.querySelectorAll('#help-modal-body pre').forEach(pre => {
+                    const button = document.createElement('button');
+                    button.className = 'btn btn-sm btn-outline-secondary position-absolute';
+                    button.style.top = '8px';
+                    button.style.right = '8px';
+                    button.innerHTML = '<i class="bi bi-clipboard"></i>';
+                    button.title = '复制代码';
+                    
+                    pre.style.position = 'relative';
+                    pre.appendChild(button);
+                    
+                    button.addEventListener('click', () => {
+                        const code = pre.querySelector('code')?.textContent || pre.textContent;
+                        navigator.clipboard.writeText(code).then(() => {
+                            button.innerHTML = '<i class="bi bi-check"></i>';
+                            button.className = 'btn btn-sm btn-success position-absolute';
+                            setTimeout(() => {
+                                button.innerHTML = '<i class="bi bi-clipboard"></i>';
+                                button.className = 'btn btn-sm btn-outline-secondary position-absolute';
+                            }, 2000);
+                        });
+                    });
+                });
+                
+                // 平滑滚动到锚点
+                document.querySelectorAll('#help-modal-body a[href^="#"]').forEach(anchor => {
+                    anchor.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href').substring(1);
+                        const targetElement = document.getElementById(targetId);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    });
+                });
             }
 
             // 显示任务JSON数据

@@ -1725,7 +1725,12 @@ def addtask_help():
         readme_path = os.path.join(os.path.dirname(__file__), 'templates', 'addTask', 'readme.md')
         with open(readme_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        return content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        
+        # 将Markdown转换为HTML（使用与/docs相同的渲染逻辑）
+        import markdown
+        html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
+        
+        return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
     except Exception as e:
         return f"无法加载帮助文档: {str(e)}", 500
 

@@ -243,7 +243,7 @@
                             "A2-2 存储备料": {
                                 "tasks": {
                                     "上架任务": {
-                                        "base_url": "http://10.68.2.17:7000/ics/taskOrder/addTask",
+                                        "base_url": "http://10.68.2.32:7000/ics/taskOrder/addTask",
                                         "code": "shangjiafangxia",
                                         "requires_shelf": true,
                                         "requires_task_path": true,
@@ -870,7 +870,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     counter++;
                 }
                 tasks[newName] = {
-                    base_url: '',
+                    base_url: 'http://10.68.2.32:7000/ics/taskOrder/addTask',
                     code: '',
                     requires_shelf: false,
                     requires_task_path: false,
