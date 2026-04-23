@@ -175,7 +175,7 @@
             const commitOptions = {
                 ...options,
                 branch: this,
-                color: this.color
+                color: options.color || this.color
             };
             
             const commit = this.gitgraph._addCommit(commitOptions);
@@ -274,6 +274,10 @@
             
             group.appendChild(circle);
             
+            // 计算文本起始X位置
+            let textStartX = 25;
+            let actionBtnX = 0;
+            
             // 创建提交消息
             if (this.gitgraph.config.commitMessage.display && this.options.subject) {
                 const config = this.gitgraph.config.commitMessage;
@@ -310,16 +314,15 @@
                     }
                     
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    text.setAttribute('x', 25); // 从提交点右侧25px开始
+                    text.setAttribute('x', textStartX);
                     text.setAttribute('y', startY + (index * lineHeight));
                     text.setAttribute('class', 'gitgraph-commit-message');
                     text.setAttribute('fill', 'var(--text-color)');
                     text.setAttribute('font-family', 'Arial, sans-serif');
-                    text.setAttribute('font-size', index === 0 ? '13px' : '11px'); // 第一行大一点
-                    text.setAttribute('font-weight', index === 0 ? 'bold' : 'normal'); // 第一行加粗
+                    text.setAttribute('font-size', index === 0 ? '13px' : '11px');
+                    text.setAttribute('font-weight', index === 0 ? 'bold' : 'normal');
                     text.textContent = displayLine;
                     
-                    // 添加标题样式
                     if (index === 0) {
                         text.setAttribute('class', 'gitgraph-commit-title');
                     }
@@ -327,11 +330,15 @@
                     group.appendChild(text);
                 });
                 
-                // 添加背景矩形（可选，用于更好的可读性）
+                // 计算操作按钮位置（在文本最宽处右侧）
+                const maxLineWidth = Math.max(...lines.map(l => l.length)) * 7.5;
+                actionBtnX = textStartX + maxLineWidth + 15;
+                
+                // 添加背景矩形
                 if (lines.length > 1) {
-                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     const rectWidth = 220;
                     const rectHeight = startY + (lines.length * lineHeight) - 5;
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     rect.setAttribute('x', 15);
                     rect.setAttribute('y', 5);
                     rect.setAttribute('width', rectWidth);
@@ -343,10 +350,66 @@
                     rect.setAttribute('rx', '4');
                     rect.setAttribute('ry', '4');
                     rect.setAttribute('class', 'gitgraph-commit-background');
-                    
-                    // 将背景插入到第一个元素之前
                     group.insertBefore(rect, circle.nextSibling);
                 }
+            }
+            
+            // 添加操作按钮（查看、删除）
+            if (this.options.actions) {
+                const btnY = 12;
+                let btnX = actionBtnX || 200;
+                
+                this.options.actions.forEach((action, idx) => {
+                    const btnGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    btnGroup.setAttribute('class', 'gitgraph-action-btn');
+                    btnGroup.setAttribute('cursor', 'pointer');
+                    
+                    // 按钮背景圆
+                    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    bg.setAttribute('x', btnX);
+                    bg.setAttribute('y', btnY - 8);
+                    bg.setAttribute('width', 22);
+                    bg.setAttribute('height', 22);
+                    bg.setAttribute('rx', '4');
+                    bg.setAttribute('ry', '4');
+                    bg.setAttribute('fill', 'transparent');
+                    bg.setAttribute('stroke', 'transparent');
+                    bg.setAttribute('stroke-width', '1');
+                    btnGroup.appendChild(bg);
+                    
+                    // 按钮图标文字
+                    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    icon.setAttribute('x', btnX + 11);
+                    icon.setAttribute('y', btnY + 5);
+                    icon.setAttribute('text-anchor', 'middle');
+                    icon.setAttribute('font-size', '14px');
+                    icon.setAttribute('fill', 'var(--text-color)');
+                    icon.setAttribute('opacity', '0.5');
+                    icon.setAttribute('cursor', 'pointer');
+                    icon.textContent = action.icon;
+                    btnGroup.appendChild(icon);
+                    
+                    // 悬停效果
+                    btnGroup.addEventListener('mouseenter', () => {
+                        icon.setAttribute('opacity', '1');
+                        bg.setAttribute('fill', 'var(--bg-color)');
+                        bg.setAttribute('stroke', 'var(--border-color)');
+                    });
+                    btnGroup.addEventListener('mouseleave', () => {
+                        icon.setAttribute('opacity', '0.5');
+                        bg.setAttribute('fill', 'transparent');
+                        bg.setAttribute('stroke', 'transparent');
+                    });
+                    
+                    // 点击事件
+                    btnGroup.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (action.onClick) action.onClick();
+                    });
+                    
+                    group.appendChild(btnGroup);
+                    btnX += 28;
+                });
             }
             
             this.element = group;

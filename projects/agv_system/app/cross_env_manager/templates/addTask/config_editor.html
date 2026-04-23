@@ -1031,6 +1031,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         syncConfigToTextarea();
                         // 更新版本徽章
                         updateVersionBadge();
+                        // 刷新备份列表和树状图
+                        await loadBackups();
                         // ★ 弹窗提示
                         showSuccessModal('配置已成功保存到源文件！');
                     } else if (response.status === 409) {
@@ -1085,10 +1087,8 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     renderBackupList();
                     // 如果当前是Git图形视图，也渲染Git图形
                     const treeViewContainer = document.getElementById('tree-view-container');
-                    const listViewContainer = document.getElementById('list-view-container');
-                    // 检查树状图视图是否可见（没有设置为none）
-                    if (treeViewContainer && (treeViewContainer.style.display !== 'none' && 
-                        (treeViewContainer.style.display === 'block' || treeViewContainer.style.display === ''))) {
+                    // 检查树状图视图是否可见（display不为none即视为可见）
+                    if (treeViewContainer && treeViewContainer.style.display !== 'none') {
                         renderGitGraph();
                     }
                 } catch (error) {
@@ -1187,178 +1187,89 @@ const config = ${JSON.stringify(configData, null, 4)};`;
         // 渲染Git风格的备份历史图
         function renderGitGraph() {
             const container = document.getElementById('backup-tree-container');
-            if (!container || backups.length === 0) {
-                container.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>暂无备份数据</div>';
+            if (!container) return;
+            
+            // 清除容器中的默认加载提示（模板中的"加载备份树状图..."）
+            // 但保留已创建的 controls、graphContainer、legend 结构
+            const existingControls = container.querySelector('.gitgraph-controls');
+            const existingGraph = document.getElementById('gitgraph-container');
+            const existingLegend = container.querySelector('.gitgraph-legend');
+            
+            // 如果没有任何子结构，说明是首次加载，清除默认内容
+            if (!existingControls && !existingGraph && !existingLegend) {
+                container.innerHTML = '';
+            }
+            
+            // 没有备份数据时，只更新图形容器内的提示
+            if (backups.length === 0) {
+                let graphContainer = document.getElementById('gitgraph-container');
+                if (!graphContainer) {
+                    graphContainer = document.createElement('div');
+                    graphContainer.id = 'gitgraph-container';
+                    graphContainer.style.cssText = 'width:100%;height:auto;overflow:auto;border:1px solid var(--border-color);border-radius:8px;padding:20px;background-color:var(--bg-color);';
+                    container.appendChild(graphContainer);
+                }
+                graphContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-inbox me-2"></i>暂无备份数据</div>';
                 return;
             }
 
-            // 清空容器
-            container.innerHTML = '';
-            
-            // 添加控制按钮
-            const controls = document.createElement('div');
-            controls.className = 'gitgraph-controls';
-            controls.innerHTML = `
-                <button class="btn btn-sm btn-outline-secondary" id="gitgraph-refresh-btn" title="刷新图形">
-                    <i class="bi bi-arrow-clockwise"></i> 刷新
-                </button>
-                <button class="btn btn-sm btn-outline-info" id="gitgraph-export-btn" title="导出为图片">
-                    <i class="bi bi-download"></i> 导出
-                </button>
-                <div class="form-check form-switch d-inline-block ms-2">
-                    <input class="form-check-input" type="checkbox" id="gitgraph-show-details" checked>
-                    <label class="form-check-label small" for="gitgraph-show-details">显示详情</label>
-                </div>
-            `;
-            container.appendChild(controls);
-            
-            // 创建Git图形容器
-            const graphContainer = document.createElement('div');
-            graphContainer.id = 'gitgraph-container';
-            graphContainer.style.width = '100%';
-            //graphContainer.style.maxHeight = '600px';
-            graphContainer.style.height = 'auto';
-            //graphContainer.style.minHeight = '400px';
-            graphContainer.style.overflow = 'auto';
-            graphContainer.style.border = '1px solid var(--border-color)';
-            graphContainer.style.borderRadius = '8px';
-            graphContainer.style.padding = '20px';
-            graphContainer.style.backgroundColor = 'var(--bg-color)';
-            container.appendChild(graphContainer);
-            
-            // 准备Git图形数据
-            const gitData = prepareGitGraphData();
-            
-            // 创建Git图形
-            try {
-                // 检查gitgraph.js是否可用
-                if (typeof GitGraph === 'undefined') {
-                    throw new Error('gitgraph.js库未加载，请检查路径');
-                }
+            // 获取或创建控制按钮（只创建一次）
+            let controls = container.querySelector('.gitgraph-controls');
+            if (!controls) {
+                controls = document.createElement('div');
+                controls.className = 'gitgraph-controls';
+                controls.innerHTML = `
+                    <button class="btn btn-sm btn-outline-secondary" id="gitgraph-refresh-btn" title="刷新图形">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" id="gitgraph-export-btn" title="导出为图片">
+                        <i class="bi bi-download"></i> 导出
+                    </button>
+                    <div class="form-check form-switch d-inline-block ms-2">
+                        <input class="form-check-input" type="checkbox" id="gitgraph-show-details" checked>
+                        <label class="form-check-label small" for="gitgraph-show-details">显示详情</label>
+                    </div>
+                `;
+                container.appendChild(controls);
                 
-                // 创建Git图形实例
-                const gitgraph = new GitGraph({
-                    element: graphContainer,
-                    template: 'metro', // 使用metro模板
-                    orientation: 'vertical', // 垂直布局，避免文字重叠
-                    mode: 'compact', // 紧凑模式
-                    author: 'AGV配置系统',
-                    initCommitOffsetX: 50,
-                    initCommitOffsetY: 50,
-                    commitMessage: {
-                        display: true,
-                        displayAuthor: true,  // 显示作者（备份类型）
-                        displayHash: true,    // 显示哈希（版本号）
-                        displayBranch: true
-                    }
+                // 绑定控制按钮事件（只绑定一次）
+                document.getElementById('gitgraph-refresh-btn')?.addEventListener('click', () => {
+                    renderGitGraph();
+                    showStatus('Git图形已刷新', 'success');
                 });
                 
-                // 创建主分支
-                const master = gitgraph.branch('master');
-                
-                // 首先添加当前配置作为特殊提交（放在最底部）
-                master.commit({
-                    subject: `当前配置 (v${configData._version || 0})`,
-                    author: '当前版本',
-                    timestamp: new Date().toISOString(),
-                    hash: 'HEAD',
-                    style: {
-                        color: '#28a745',
-                        dot: {
-                            size: 12,
-                            strokeWidth: 3,
-                            strokeColor: '#28a745'
-                        },
-                        message: {
-                            color: 'var(--success-color)',
-                            font: 'bold 12px Arial, sans-serif'
-                        }
-                    },
-                    onClick: function() {
-                        showSuccessModal('这是当前配置版本，无法恢复');
-                    }
+                document.getElementById('gitgraph-export-btn')?.addEventListener('click', () => {
+                    showSuccessModal('导出功能开发中...');
                 });
                 
-                // 然后按时间顺序添加备份提交（从新到旧，最新的在最上面）
-                gitData.commits.forEach((commit, index) => {
-                    // 根据备份类型设置颜色
-                    let commitColor = '#2cbe4e'; // 默认绿色
-                    if (commit.type === 'manual') {
-                        commitColor = '#0366d6'; // 手动备份蓝色
-                    } else if (commit.type === 'auto') {
-                        commitColor = '#6f42c1'; // 自动备份紫色
-                    }
-                    
-                    // 创建提交
-                    master.commit({
-                        subject: commit.subject,
-                        author: commit.author,
-                        timestamp: commit.timestamp,
-                        hash: commit.hash,
-                        style: {
-                            color: commitColor,
-                            dot: {
-                                size: 10,
-                                strokeWidth: 2,
-                                strokeColor: commitColor
-                            },
-                            message: {
-                                color: 'var(--text-color)',
-                                font: '12px Arial, sans-serif'
-                            },
-                            branch: {
-                                lineWidth: 3,
-                                spacingX: 60,
-                                color: commitColor
-                            }
-                        },
-                        onClick: function() {
-                            // 点击提交时恢复备份
-                            if (confirm(`确定恢复备份 ${commit.backupName} 吗？当前未保存的更改将丢失。`)) {
-                                restoreBackup(commit.backupName);
-                            }
-                        },
-                        onMouseOver: function() {
-                            // 显示工具提示
-                            const tooltip = document.createElement('div');
-                            tooltip.id = 'gitgraph-tooltip';
-                            tooltip.style.position = 'absolute';
-                            tooltip.style.backgroundColor = 'var(--bg-color)';
-                            tooltip.style.border = '1px solid var(--border-color)';
-                            tooltip.style.borderRadius = '4px';
-                            tooltip.style.padding = '10px';
-                            tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-                            tooltip.style.zIndex = '1000';
-                            tooltip.style.maxWidth = '300px';
-                            tooltip.innerHTML = `
-                                <div style="border-left: 4px solid ${commitColor}; padding-left: 8px;">
-                                    <strong>${commit.backupName}</strong><br>
-                                    <span style="color: ${commitColor}; font-size: 11px;">${commit.type === 'manual' ? '手动备份' : '自动备份'}</span><br>
-                                    <small>时间: ${new Date(commit.timestamp).toLocaleString()}</small><br>
-                                    <small>版本: ${commit.version || 'v1'}</small><br>
-                                    <small>描述: ${commit.message || '无描述'}</small><br>
-                                    <small>大小: ${(commit.size / 1024).toFixed(2)} KB</small>
-                                </div>
-                            `;
-                            document.body.appendChild(tooltip);
-                            
-                            // 定位工具提示
-                            const rect = this.element.getBoundingClientRect();
-                            tooltip.style.left = (rect.right + 10) + 'px';
-                            tooltip.style.top = (rect.top - 10) + 'px';
-                        },
-                        onMouseOut: function() {
-                            // 移除工具提示
-                            const tooltip = document.getElementById('gitgraph-tooltip');
-                            if (tooltip) {
-                                tooltip.remove();
-                            }
-                        }
-                    });
+                document.getElementById('gitgraph-show-details')?.addEventListener('change', (e) => {
+                    renderGitGraph();
+                    showStatus(e.target.checked ? '已显示详细信息' : '已隐藏详细信息', 'info');
                 });
-                
-                // 添加图例
-                const legend = document.createElement('div');
+            }
+            
+            // 获取或创建Git图形容器（只创建一次）
+            let graphContainer = document.getElementById('gitgraph-container');
+            if (!graphContainer) {
+                graphContainer = document.createElement('div');
+                graphContainer.id = 'gitgraph-container';
+                graphContainer.style.width = '100%';
+                graphContainer.style.height = 'auto';
+                graphContainer.style.overflow = 'auto';
+                graphContainer.style.border = '1px solid var(--border-color)';
+                graphContainer.style.borderRadius = '8px';
+                graphContainer.style.padding = '20px';
+                graphContainer.style.backgroundColor = 'var(--bg-color)';
+                container.appendChild(graphContainer);
+            } else {
+                // 只清空图形内容，保留容器本身
+                graphContainer.innerHTML = '';
+            }
+            
+            // 获取或创建图例容器（只创建一次）
+            let legend = container.querySelector('.gitgraph-legend');
+            if (!legend) {
+                legend = document.createElement('div');
                 legend.className = 'gitgraph-legend';
                 legend.style.marginTop = '20px';
                 legend.style.padding = '10px';
@@ -1389,23 +1300,102 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     </div>
                 `;
                 container.appendChild(legend);
+            }
+            
+            // 准备Git图形数据
+            const gitData = prepareGitGraphData();
+            
+            // 创建Git图形
+            try {
+                if (typeof GitGraph === 'undefined') {
+                    throw new Error('gitgraph.js库未加载，请检查路径');
+                }
                 
-                // 绑定控制按钮事件
-                document.getElementById('gitgraph-refresh-btn')?.addEventListener('click', () => {
-                    renderGitGraph();
-                    showStatus('Git图形已刷新', 'success');
+                // 获取显示详情开关状态
+                const showDetails = document.getElementById('gitgraph-show-details')?.checked ?? true;
+
+                // 创建Git图形实例
+                const gitgraph = new GitGraph({
+                    element: graphContainer,
+                    template: 'metro',
+                    orientation: 'vertical',
+                    mode: 'compact',
+                    author: 'AGV配置系统',
+                    initCommitOffsetX: 50,
+                    initCommitOffsetY: 50,
+                    commitMessage: {
+                        display: true,
+                        displayAuthor: showDetails,
+                        displayHash: showDetails,
+                        displayBranch: true
+                    }
                 });
                 
-                document.getElementById('gitgraph-export-btn')?.addEventListener('click', () => {
-                    // 导出功能占位符
-                    showSuccessModal('导出功能开发中...');
+                const master = gitgraph.branch('master');
+                
+                master.commit({
+                    color: '#28a745',
+                    subject: `当前配置 (v${configData._version || 0})`,
+                    author: '当前版本',
+                    timestamp: new Date().toISOString(),
+                    hash: 'HEAD',
+                    style: {
+                        dot: { size: 12, strokeWidth: 3, strokeColor: '#28a745' },
+                        message: { color: 'var(--success-color)', font: 'bold 12px Arial, sans-serif' }
+                    },
+                    onClick: function() {
+                        showSuccessModal('这是当前配置版本，无法恢复');
+                    }
                 });
                 
-                document.getElementById('gitgraph-show-details')?.addEventListener('change', (e) => {
-                    // 切换详情显示
-                    const showDetails = e.target.checked;
-                    // 这里可以添加显示/隐藏详细信息的逻辑
-                    showStatus(showDetails ? '已显示详细信息' : '已隐藏详细信息', 'info');
+                gitData.commits.forEach((commit) => {
+                    let commitColor = '#2cbe4e';
+                    if (commit.type === 'manual') commitColor = '#0366d6';
+                    else if (commit.type === 'auto') commitColor = '#6f42c1';
+                    
+                    master.commit({
+                        color: commitColor,
+                        subject: commit.subject,
+                        author: commit.author,
+                        timestamp: commit.timestamp,
+                        hash: commit.hash,
+                        style: {
+                            dot: { size: 10, strokeWidth: 2, strokeColor: commitColor },
+                            message: { color: 'var(--text-color)', font: '12px Arial, sans-serif' },
+                            branch: { lineWidth: 3, spacingX: 60, color: commitColor }
+                        },
+                        actions: [
+                            { icon: '👁', onClick: () => viewBackup(commit.backupName) },
+                            { icon: '🗑', onClick: () => deleteBackup(commit.backupName) }
+                        ],
+                        onClick: function() {
+                            if (confirm(`确定恢复备份 ${commit.backupName} 吗？当前未保存的更改将丢失。`)) {
+                                restoreBackup(commit.backupName);
+                            }
+                        },
+                        onMouseOver: function() {
+                            const tooltip = document.createElement('div');
+                            tooltip.id = 'gitgraph-tooltip';
+                            tooltip.style.cssText = 'position:absolute;background:var(--bg-color);border:1px solid var(--border-color);border-radius:4px;padding:10px;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:1000;max-width:300px;';
+                            tooltip.innerHTML = `
+                                <div style="border-left:4px solid ${commitColor};padding-left:8px;">
+                                    <strong>${commit.backupName}</strong><br>
+                                    <span style="color:${commitColor};font-size:11px;">${commit.type === 'manual' ? '手动备份' : '自动备份'}</span><br>
+                                    <small>时间: ${new Date(commit.timestamp).toLocaleString()}</small><br>
+                                    <small>版本: ${commit.version || 'v1'}</small><br>
+                                    <small>描述: ${commit.message || '无描述'}</small><br>
+                                    <small>大小: ${(commit.size / 1024).toFixed(2)} KB</small>
+                                </div>`;
+                            document.body.appendChild(tooltip);
+                            const rect = this.element.getBoundingClientRect();
+                            tooltip.style.left = (rect.right + 10) + 'px';
+                            tooltip.style.top = (rect.top - 10) + 'px';
+                        },
+                        onMouseOut: function() {
+                            const tooltip = document.getElementById('gitgraph-tooltip');
+                            if (tooltip) tooltip.remove();
+                        }
+                    });
                 });
                 
             } catch (error) {
@@ -1432,12 +1422,13 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                     // 确定备份类型
                     let type = 'other';
                     if (backup.name.includes('manual')) type = 'manual';
-                    else if (backup.name.includes('auto')) type = 'auto';
+                    else if (backup.name.includes('auto') || backup.name.includes('backup')) type = 'auto';
                     
                     // 生成友好的提交主题
                     let subject = backup.name;
                     subject = subject.replace('config_manual_', '手动备份: ');
                     subject = subject.replace('config_auto_', '自动备份: ');
+                    subject = subject.replace('config_backup_', '自动备份: ');
                     subject = subject.replace('.js', '');
                     
                     // 提取时间戳部分

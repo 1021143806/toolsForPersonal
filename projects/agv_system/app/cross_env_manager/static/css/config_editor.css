@@ -514,3 +514,18 @@ body {
         ry: 3 !important;
     }
 }
+
+/* Git图形操作按钮样式 */
+.gitgraph-action-btn {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gitgraph-action-btn:hover text {
+    opacity: 1 !important;
+}
+
+.gitgraph-action-btn:hover rect {
+    fill: var(--bg-color) !important;
+    stroke: var(--border-color) !important;
+}

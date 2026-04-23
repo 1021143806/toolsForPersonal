@@ -1797,7 +1797,7 @@ def save_addtask_config():
         # 创建自动备份（带提交消息和父版本信息）
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_name = f"config_backup_{timestamp}.js"
+        backup_name = f"config_auto_{timestamp}.js"
         backup_path = os.path.join(backup_dir, backup_name)
         
         # 备份当前配置（添加提交消息和父版本信息作为注释）
