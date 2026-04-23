@@ -1802,9 +1802,12 @@ def save_addtask_config():
                     except json.JSONDecodeError:
                         pass
         
-        # 检查客户端版本
+        # 检查客户端版本（导入时跳过版本检查）
         client_version = request.json.get('_client_version')  # 可选字段
-        if client_version is not None:
+        is_import = request.json.get('_is_import', False)  # 导入标志
+        force_overwrite = request.json.get('_force_overwrite', False)  # 强制覆盖标志
+        
+        if client_version is not None and not (is_import or force_overwrite):
             if int(client_version) != current_version:
                 return jsonify({
                     'success': False, 
