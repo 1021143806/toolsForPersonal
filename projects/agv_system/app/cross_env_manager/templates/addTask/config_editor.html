@@ -1035,6 +1035,7 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         await loadBackups();
                         // ★ 弹窗提示
                         showSuccessModal('配置已成功保存到源文件！');
+                        return { success: true, backup_name: result.backup_name };
                     } else if (response.status === 409) {
                         // 版本冲突
                         const currentVersion = result.current_version;
@@ -1057,11 +1058,14 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                             // 用户选择保留更改，不刷新页面
                             showStatus('您的更改已保留在编辑器中，请稍后重试保存。', 'info');
                         }
+                        return { success: false, error: '版本冲突', message: result.message };
                     } else {
                         showStatus(`保存失败: ${result.error || '未知错误'}`, 'error');
+                        return { success: false, error: result.error || '未知错误' };
                     }
                 } catch (error) {
                     showStatus(`保存失败: ${error.message}`, 'error');
+                    return { success: false, error: error.message };
                 }
             }
 
@@ -1568,9 +1572,9 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                 }
             }
 
-            function importConfigFromFile(file) {
+            async function importConfigFromFile(file) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     try {
                         const content = e.target.result;
                         let parsed;
@@ -1590,8 +1594,102 @@ const config = ${JSON.stringify(configData, null, 4)};`;
                         renderAreaTree();
                         updateRightPanel();
                         syncConfigToTextarea();
-                        showStatus('配置文件导入成功', 'success');
-                        showSuccessModal('配置文件导入成功！');
+                        
+                        // 询问用户是否保存到文件
+                        const shouldSave = confirm(`配置文件 "${file.name}" 导入成功！\n\n是否要保存到当前配置文件？\n点击"确定"将覆盖当前配置，点击"取消"仅预览。`);
+                        
+                        if (shouldSave) {
+                            showStatus('正在保存导入的配置到文件...', 'info');
+                            try {
+                                // 导入时强制设置版本号为0，避免版本冲突
+                                const importedConfig = JSON.parse(JSON.stringify(configData));
+                                importedConfig._version = 0;
+                                importedConfig._client_version = 0;
+                                importedConfig._commit_message = `导入配置文件: ${file.name}`;
+                                
+                                // 添加导入标志，告诉后端跳过版本检查
+                                importedConfig._is_import = true;
+                                
+                                // 调用后端API保存，使用_is_import标志跳过版本检查
+                                const response = await fetch('/addtask/config', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify(importedConfig)
+                                });
+                                
+                                const result = await response.json();
+                                console.log('导入保存结果:', result);
+                                
+                                if (response.ok && result.success) {
+                                    // 更新本地配置数据
+                                    configData = importedConfig;
+                                    configData._version = result.new_version || 1;
+                                    
+                                    // 刷新界面
+                                    syncConfigToTextarea();
+                                    updateVersionBadge();
+                                    await loadBackups();
+                                    
+                                    showStatus('配置文件已导入并保存到文件', 'success');
+                                    showSuccessModal('配置文件已导入并保存到文件！');
+                                } else if (response.status === 409) {
+                                    // 版本冲突 - 询问用户是否强制覆盖
+                                    const forceOverwrite = confirm(
+                                        `检测到版本冲突！\n\n` +
+                                        `当前配置文件版本: ${result.current_version}\n` +
+                                        `导入文件版本: ${result.client_version}\n\n` +
+                                        `点击"确定"强制覆盖当前配置（创建备份）。\n` +
+                                        `点击"取消"保留当前配置，仅预览导入内容。`
+                                    );
+                                    
+                                    if (forceOverwrite) {
+                                        // 强制覆盖：删除_version字段，让后端生成新版本
+                                        delete importedConfig._version;
+                                        delete importedConfig._client_version;
+                                        importedConfig._is_import = true;
+                                        importedConfig._force_overwrite = true;
+                                        
+                                        const forceResponse = await fetch('/addtask/config', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify(importedConfig)
+                                        });
+                                        
+                                        const forceResult = await forceResponse.json();
+                                        if (forceResponse.ok && forceResult.success) {
+                                            configData = importedConfig;
+                                            configData._version = forceResult.new_version || 1;
+                                            syncConfigToTextarea();
+                                            updateVersionBadge();
+                                            await loadBackups();
+                                            showStatus('配置文件已强制覆盖并保存到文件', 'success');
+                                            showSuccessModal('配置文件已强制覆盖并保存到文件！');
+                                        } else {
+                                            showStatus(`强制覆盖失败: ${forceResult.error || '未知错误'}`, 'error');
+                                            alert(`强制覆盖失败: ${forceResult.error || '未知错误'}\n\n配置已导入到编辑器，请手动点击"保存配置"按钮。`);
+                                        }
+                                    } else {
+                                        showStatus('配置文件导入成功（仅预览模式）', 'success');
+                                        showSuccessModal('配置文件导入成功！当前为预览模式，请手动点击"保存配置"按钮以应用到文件。');
+                                    }
+                                } else {
+                                    const errorMsg = result ? (result.error || result.message || '未知错误') : '保存失败';
+                                    showStatus(`配置文件导入成功，但保存到文件失败: ${errorMsg}`, 'error');
+                                    alert(`保存失败: ${errorMsg}\n\n配置已导入到编辑器，请手动点击"保存配置"按钮。`);
+                                }
+                            } catch (saveError) {
+                                console.error('保存配置时出错:', saveError);
+                                showStatus(`保存配置时出错: ${saveError.message}`, 'error');
+                                alert(`保存配置时出错: ${saveError.message}\n\n配置已导入到编辑器，请手动点击"保存配置"按钮。`);
+                            }
+                        } else {
+                            showStatus('配置文件导入成功（仅预览模式）', 'success');
+                            showSuccessModal('配置文件导入成功！当前为预览模式，请手动保存以应用到文件。');
+                        }
                     } catch (err) {
                         showStatus('导入失败: ' + err.message, 'error');
                     }

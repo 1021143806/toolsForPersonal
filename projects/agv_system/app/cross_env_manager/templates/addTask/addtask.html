@@ -485,6 +485,31 @@
         [data-bs-theme="dark"] .markdown-content a {
             color: #6ea8fe;
         }
+
+        /* 任务分组样式 */
+        optgroup {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        optgroup[label*="空车"] {
+            color: #0dcaf0; /* 蓝色表示空车 */
+        }
+
+        optgroup[label*="非空车"] {
+            color: #20c997; /* 绿色表示非空车 */
+        }
+
+        /* 选项样式 */
+        option {
+            padding: 8px 12px;
+            font-size: 0.95rem;
+        }
+
+        /* 分组标题样式 */
+        optgroup option {
+            padding-left: 20px;
+        }
     </style>
 </head>
 <body>
@@ -1066,11 +1091,35 @@
                 taskSelect.innerHTML = '<option value="">请选择任务模板</option>';
                 if (area && config.areas[area]) {
                     const tasks = config.areas[area].tasks;
+                    
+                    // 创建空车任务分组
+                    const emptyGroup = document.createElement('optgroup');
+                    emptyGroup.label = '🚚 空车任务';
+                    
+                    // 创建非空车任务分组
+                    const loadedGroup = document.createElement('optgroup');
+                    loadedGroup.label = '📦 非空车任务';
+                    
+                    // 分离任务
                     for (const taskName in tasks) {
+                        const task = tasks[taskName];
                         const option = document.createElement('option');
                         option.value = taskName;
                         option.textContent = taskName;
-                        taskSelect.appendChild(option);
+                        
+                        if (task.requires_shelf) {
+                            loadedGroup.appendChild(option);
+                        } else {
+                            emptyGroup.appendChild(option);
+                        }
+                    }
+                    
+                    // 添加分组到下拉框
+                    if (emptyGroup.children.length > 0) {
+                        taskSelect.appendChild(emptyGroup);
+                    }
+                    if (loadedGroup.children.length > 0) {
+                        taskSelect.appendChild(loadedGroup);
                     }
                 }
                 updateFormFields();
