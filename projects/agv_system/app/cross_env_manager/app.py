@@ -11,7 +11,7 @@ from pymysql.cursors import DictCursor
 支持TOML配置文件和命令行参数指定配置文件
 """
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 # import mysql.connector  # 已由pymysql替代
 # from MySQLdb import Error  # 使用pymysql的错误
 import re
@@ -22,6 +22,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import logging
 from flask import template_rendered
+from functools import wraps
 
 # 导入查询功能模块
 try:
@@ -272,6 +273,26 @@ DB_CONFIG = {
                os.getenv('DB_CHARSET') or 
                'utf8mb4')
 }
+
+# 登录认证配置
+# 简单用户认证 - 使用配置中的用户名和密码
+LOGIN_CONFIG = {
+    'username': (flask_config.get('login_username') or 
+                os.getenv('LOGIN_USERNAME') or 
+                'admin'),
+    'password': (flask_config.get('login_password') or 
+                os.getenv('LOGIN_PASSWORD') or 
+                'admin123')
+}
+
+def login_required(f):
+    """登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': '需要登录'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 def get_db_connection():
     """获取数据库连接"""
@@ -1715,7 +1736,10 @@ def get_join_qr_node_stats_api():
 @app.route('/addtask')
 def addtask():
     """AGV任务下发页面"""
-    return render_template('addTask/addtask.html')
+    # 传递登录状态到模板
+    return render_template('addTask/addtask.html', 
+                          logged_in=session.get('logged_in', False),
+                          username=session.get('username', ''))
 
 @app.route('/addtask/help')
 def addtask_help():
@@ -2006,6 +2030,55 @@ def delete_backup(backup_name):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'删除备份失败: {str(e)}'}), 500
+
+# ==================== 登录认证路由 ====================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """用户登录"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        # 验证用户名和密码
+        if username == LOGIN_CONFIG['username'] and password == LOGIN_CONFIG['password']:
+            session['logged_in'] = True
+            session['username'] = username
+            session['login_time'] = datetime.now().isoformat()
+            return jsonify({
+                'success': True,
+                'message': '登录成功',
+                'username': username
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '用户名或密码错误'
+            }), 401
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'登录失败: {str(e)}'
+        }), 500
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    """用户注销"""
+    session.clear()
+    return jsonify({
+        'success': True,
+        'message': '已注销'
+    })
+
+@app.route('/api/auth/status')
+def auth_status():
+    """获取认证状态"""
+    return jsonify({
+        'logged_in': session.get('logged_in', False),
+        'username': session.get('username', ''),
+        'login_time': session.get('login_time', '')
+    })
 
 @app.route('/actuator/health')
 def health_check():

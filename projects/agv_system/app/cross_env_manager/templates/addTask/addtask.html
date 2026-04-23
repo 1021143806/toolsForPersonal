@@ -642,6 +642,37 @@
         </div>
     </div>
 
+    <!-- 登录模态框 -->
+    <div class="modal fade" id="login-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-fill me-2"></i>用户登录</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="login-username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="login-username" placeholder="请输入用户名" autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="login-password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="login-password" placeholder="请输入密码" autocomplete="current-password">
+                        <div class="form-text">请联系管理员获取登录凭据</div>
+                    </div>
+                    <div class="alert alert-danger mt-3" id="login-error" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="login-submit">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" id="login-spinner"></span>
+                        登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 密码验证模态框 -->
     <div class="modal fade" id="password-modal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -807,7 +838,209 @@
                 });
 
                 document.getElementById('help-toggle').addEventListener('click', showHelpModal);
-                document.getElementById('config-toggle').addEventListener('click', showPasswordModal);
+                
+                // 只有在配置管理按钮存在时才添加事件监听器
+                const configToggle = document.getElementById('config-toggle');
+                if (configToggle) {
+                    configToggle.addEventListener('click', function() {
+                        // 登录后直接打开配置管理页面，无需二次密码验证
+                        window.open('/config', '_blank');
+                    });
+                }
+                
+                // 登录相关事件监听
+                setupLoginHandlers();
+            }
+
+            // ==================== 登录相关函数 ====================
+            
+            function setupLoginHandlers() {
+                // 登录按钮点击事件
+                const loginBtn = document.getElementById('login-btn');
+                if (loginBtn) {
+                    loginBtn.addEventListener('click', function() {
+                        // 模态框已通过data-bs-target自动打开
+                    });
+                }
+                
+                // 登录提交按钮
+                const loginSubmitBtn = document.getElementById('login-submit');
+                if (loginSubmitBtn) {
+                    loginSubmitBtn.addEventListener('click', handleLogin);
+                }
+                
+                // 注销按钮
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', handleLogout);
+                }
+                
+                // 监听登录模态框中的回车键
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter' && e.target.closest('#login-modal .modal-body')) {
+                            handleLogin();
+                        }
+                    });
+                }
+                
+                // 检查登录状态
+                checkAuthStatus();
+            }
+            
+            async function handleLogin() {
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value.trim();
+                const loginError = document.getElementById('login-error');
+                const loginSpinner = document.getElementById('login-spinner');
+                const loginSubmitBtn = document.getElementById('login-submit');
+                
+                if (!username || !password) {
+                    showLoginError('请输入用户名和密码');
+                    return;
+                }
+                
+                // 显示加载状态
+                loginSpinner.classList.remove('d-none');
+                loginSubmitBtn.disabled = true;
+                loginError.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 登录成功，关闭模态框并刷新页面
+                        const loginModal = bootstrap.Modal.getInstance(document.getElementById('login-modal'));
+                        if (loginModal) {
+                            loginModal.hide();
+                        }
+                        
+                        // 显示成功消息
+                        showAlert('登录成功！', 'success');
+                        
+                        // 刷新页面以更新登录状态
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showLoginError(data.error || '登录失败');
+                    }
+                } catch (error) {
+                    showLoginError('网络错误，请检查连接');
+                    console.error('登录错误:', error);
+                } finally {
+                    // 恢复按钮状态
+                    loginSpinner.classList.add('d-none');
+                    loginSubmitBtn.disabled = false;
+                }
+            }
+            
+            async function handleLogout() {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showAlert('已成功注销', 'info');
+                        // 刷新页面以更新登录状态
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert('注销失败: ' + (data.error || '未知错误'), 'danger');
+                    }
+                } catch (error) {
+                    showAlert('网络错误，请检查连接', 'danger');
+                    console.error('注销错误:', error);
+                }
+            }
+            
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch('/api/auth/status');
+                    const data = await response.json();
+                    
+                    // 更新页面上的登录状态显示
+                    updateLoginUI(data.logged_in, data.username);
+                    
+                    // 根据登录状态控制按钮显示
+                    toggleButtonsByLoginStatus(data.logged_in);
+                } catch (error) {
+                    console.error('检查登录状态错误:', error);
+                }
+            }
+            
+            function updateLoginUI(loggedIn, username) {
+                // 这个函数主要用于动态更新（如果页面不是通过模板渲染）
+                // 对于模板渲染的页面，登录状态已经在服务器端渲染
+                console.log('登录状态:', loggedIn ? `已登录 (${username})` : '未登录');
+            }
+            
+            function toggleButtonsByLoginStatus(loggedIn) {
+                // 根据登录状态显示/隐藏按钮
+                // 这里可以添加需要根据登录状态控制的按钮
+                const taskItems = document.querySelectorAll('.task-item');
+                
+                taskItems.forEach(item => {
+                    // 如果已登录，添加点击跳转功能
+                    if (loggedIn) {
+                        item.style.cursor = 'pointer';
+                        item.addEventListener('click', function() {
+                            const taskId = this.dataset.taskId;
+                            if (taskId) {
+                                // 跳转到任务查询页面
+                                window.open(`/task_query?task_id=${taskId}`, '_blank');
+                            }
+                        });
+                    } else {
+                        item.style.cursor = 'default';
+                        // 移除事件监听器
+                        const newItem = item.cloneNode(true);
+                        item.parentNode.replaceChild(newItem, item);
+                    }
+                });
+            }
+            
+            function showLoginError(message) {
+                const loginError = document.getElementById('login-error');
+                loginError.textContent = message;
+                loginError.style.display = 'block';
+            }
+            
+            function showAlert(message, type = 'info') {
+                const alertContainer = document.querySelector('.alert-container');
+                if (!alertContainer) return;
+                
+                const alertId = 'alert-' + Date.now();
+                const alertHtml = `
+                    <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show animate__animated animate__fadeInRight" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                
+                alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+                
+                // 5秒后自动消失
+                setTimeout(() => {
+                    const alert = document.getElementById(alertId);
+                    if (alert) {
+                        alert.classList.remove('show');
+                        setTimeout(() => alert.remove(), 300);
+                    }
+                }, 5000);
             }
 
             function validateShelfLock() {
