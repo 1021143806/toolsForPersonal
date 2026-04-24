@@ -794,6 +794,66 @@
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <!-- 统一的主题管理器 -->
     <script src="/static/js/theme-manager.js"></script>
+    <!-- Mermaid JS (支持流程图渲染) -->
+    <script src="/static/vendor/mermaid/mermaid.min.js"></script>
+    <script>
+        // 全局 Mermaid 渲染函数（供其他脚本调用）
+        window.renderMermaidDiagrams = function(container) {
+            if (typeof mermaid === 'undefined') return;
+            container = container || '#help-modal-body';
+            try {
+                // 将 <pre><code class="language-mermaid"> 转换为 <div class="mermaid">
+                document.querySelectorAll(container + ' pre code.language-mermaid').forEach(function(code) {
+                    var pre = code.parentElement;
+                    if (!pre) return;
+                    var div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = code.textContent;
+                    pre.replaceWith(div);
+                });
+                // 使用 mermaid.run() 渲染所有未处理的 .mermaid 元素
+                var els = document.querySelectorAll(container + ' .mermaid:not([data-processed])');
+                if (els.length > 0) {
+                    // 将 NodeList 转为数组，逐个渲染以确保兼容性
+                    var nodes = Array.prototype.slice.call(els);
+                    nodes.forEach(function(node) {
+                        mermaid.run({ nodes: [node] }).catch(function(e) {
+                            console.warn('Mermaid 渲染警告:', e);
+                            // 渲染失败时显示原始代码
+                            node.innerHTML = '<pre style="color:var(--text-color);background:var(--detail-card-bg);padding:1rem;border-radius:8px;font-size:0.85rem;overflow:auto;"><code>' + 
+                                node.textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+                            node.setAttribute('data-processed', 'true');
+                        });
+                    });
+                }
+            } catch(e) {
+                console.warn('Mermaid 渲染失败:', e);
+            }
+        };
+        // 延迟初始化 Mermaid（等待 theme-manager 应用主题）
+        function initMermaid() {
+            if (typeof mermaid === 'undefined') return;
+            var theme = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'default';
+            mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'loose' });
+        }
+        // 如果 DOM 已完成，立即初始化；否则等 DOMContentLoaded
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initMermaid();
+        } else {
+            document.addEventListener('DOMContentLoaded', initMermaid);
+        }
+        // 监听主题变化（使用全局函数）
+        document.addEventListener('themeChanged', function(e) {
+            if (typeof mermaid === 'undefined') return;
+            var theme = e.detail.theme === 'dark' ? 'dark' : 'default';
+            mermaid.initialize({ theme: theme, securityLevel: 'loose' });
+            document.querySelectorAll('#help-modal-body .mermaid[data-processed]').forEach(function(el) {
+                el.removeAttribute('data-processed');
+                el.innerHTML = '';
+            });
+            window.renderMermaidDiagrams('#help-modal-body');
+        });
+    </script>
     <script>
         // 业务逻辑 (保留原有全部逻辑，仅调整DOM操作适配新结构)
         (function() {
@@ -1635,11 +1695,22 @@
                         
                         // 添加交互功能：代码复制、标题锚点等
                         addMarkdownInteractiveFeatures();
+                        
+                        // 渲染 Mermaid 流程图
+                        if (typeof window.renderMermaidDiagrams === 'function') {
+                            window.renderMermaidDiagrams('#help-modal-body');
+                        }
                     } catch(e) { 
                         helpModalBody.innerHTML = `<p class="text-danger">加载失败: ${e.message}</p>`;
                     }
                 }
                 helpModal.show();
+                // 模态框显示后重新渲染，确保尺寸正确
+                setTimeout(function() {
+                    if (typeof window.renderMermaidDiagrams === 'function') {
+                        window.renderMermaidDiagrams('#help-modal-body');
+                    }
+                }, 300);
             }
 
             // 添加Markdown交互功能

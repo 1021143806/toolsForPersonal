@@ -466,8 +466,61 @@
 
     <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="/static/vendor/jquery/jquery-3.6.0.min.js"></script>
+    <!-- Mermaid JS (支持流程图渲染) -->
+    <script src="/static/vendor/mermaid/mermaid.min.js"></script>
     <!-- 统一的主题管理器 -->
     <script src="/static/js/theme-manager.js"></script>
+    <script>
+        // 渲染 Markdown 内容中的 Mermaid 流程图
+        function renderMermaidDiagrams() {
+            if (typeof mermaid === 'undefined') return;
+            try {
+                // 将 <pre><code class="mermaid"> 转换为 <div class="mermaid">
+                document.querySelectorAll('.markdown-content pre code.language-mermaid').forEach(code => {
+                    const pre = code.parentElement;
+                    if (!pre) return;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = code.textContent;
+                    pre.replaceWith(div);
+                });
+                const els = document.querySelectorAll('.markdown-content .mermaid:not([data-processed])');
+                if (els.length > 0) {
+                    // 逐个渲染以确保兼容性
+                    Array.prototype.slice.call(els).forEach(node => {
+                        mermaid.run({ nodes: [node] }).catch(e => {
+                            console.warn('Mermaid 渲染警告:', e);
+                            node.innerHTML = '<pre style="color:var(--text-color);background:var(--detail-card-bg);padding:1rem;border-radius:8px;font-size:0.85rem;overflow:auto;"><code>' + 
+                                node.textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+                            node.setAttribute('data-processed', 'true');
+                        });
+                    });
+                }
+            } catch(e) {
+                console.warn('Mermaid 渲染失败:', e);
+            }
+        }
+        // 初始化 Mermaid
+        mermaid.initialize({ 
+            startOnLoad: false,
+            securityLevel: 'loose',
+            theme: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'default'
+        });
+        // 页面加载后渲染 Mermaid 流程图
+        document.addEventListener('DOMContentLoaded', renderMermaidDiagrams);
+        // 监听主题变化
+        document.addEventListener('themeChanged', function(e) {
+            mermaid.initialize({
+                theme: e.detail.theme === 'dark' ? 'dark' : 'default',
+                securityLevel: 'loose'
+            });
+            document.querySelectorAll('.markdown-content .mermaid[data-processed]').forEach(el => {
+                el.removeAttribute('data-processed');
+                el.innerHTML = '';
+            });
+            renderMermaidDiagrams();
+        });
+    </script>
     <script>
         // 自动关闭警告消息
         $(document).ready(function() {

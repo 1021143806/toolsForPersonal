@@ -1750,6 +1750,20 @@ def addtask_help():
         with open(readme_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # 预处理：将Mermaid代码块直接转换为HTML，避免markdown库转义其中的HTML实体
+        # markdown库的fenced_code扩展会对代码块内容做HTML实体转义（如 --> → --&gt;）
+        # 而Mermaid 10.9.5需要原始语法文本，因此先提取并直接输出为HTML
+        def mermaid_to_html(match):
+            code_content = match.group(1)
+            return f'<pre><code class="language-mermaid">{code_content}</code></pre>'
+        
+        content = re.sub(
+            r'```mermaid\n(.*?)```',
+            mermaid_to_html,
+            content,
+            flags=re.DOTALL
+        )
+        
         # 将Markdown转换为HTML（使用与/docs相同的渲染逻辑）
         import markdown
         html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
