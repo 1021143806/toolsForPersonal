@@ -1281,6 +1281,105 @@ def get_task_group_info(order_id):
             'message': f'服务器错误: {str(e)}'
         }), 500
 
+@app.route('/api/task/resend', methods=['POST'])
+def resend_task():
+    """跨环境任务重发接口"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'code': 'INVALID_REQUEST',
+                'message': '请求体不能为空'
+            }), 400
+        
+        order_id = data.get('orderId', '').strip()
+        sub_order_id = data.get('subOrderId', '').strip()
+        task_seq = data.get('taskSeq')
+        server_ip = data.get('serverIp', '10.68.2.32').strip()
+        
+        if not order_id or not sub_order_id or task_seq is None:
+            return jsonify({
+                'success': False,
+                'code': 'MISSING_PARAMS',
+                'message': '缺少必要参数: orderId, subOrderId, taskSeq'
+            }), 400
+        
+        # 确保 task_seq 是整数
+        try:
+            task_seq = int(task_seq)
+        except (ValueError, TypeError):
+            return jsonify({
+                'success': False,
+                'code': 'INVALID_PARAMS',
+                'message': f'taskSeq 必须是整数: {task_seq}'
+            }), 400
+        
+        result = task_query_extended.resend_cross_task(
+            order_id, sub_order_id, task_seq, server_ip
+        )
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'code': 'SERVER_ERROR',
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
+@app.route('/api/task/force_complete', methods=['POST'])
+def force_complete_task():
+    """跨环境任务异常完成接口（仅将子任务状态置为3）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'code': 'INVALID_REQUEST',
+                'message': '请求体不能为空'
+            }), 400
+        
+        order_id = data.get('orderId', '').strip()
+        sub_order_id = data.get('subOrderId', '').strip()
+        task_seq = data.get('taskSeq')
+        server_ip = data.get('serverIp', '10.68.2.32').strip()
+        
+        if not order_id or not sub_order_id or task_seq is None:
+            return jsonify({
+                'success': False,
+                'code': 'MISSING_PARAMS',
+                'message': '缺少必要参数: orderId, subOrderId, taskSeq'
+            }), 400
+        
+        try:
+            task_seq = int(task_seq)
+        except (ValueError, TypeError):
+            return jsonify({
+                'success': False,
+                'code': 'INVALID_PARAMS',
+                'message': f'taskSeq 必须是整数: {task_seq}'
+            }), 400
+        
+        result = task_query_extended.force_complete_cross_task(
+            order_id, sub_order_id, task_seq, server_ip
+        )
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'code': 'SERVER_ERROR',
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+
 @app.route('/api/stats/detailed_analysis')
 def get_detailed_analysis():
     """获取详细分析数据"""

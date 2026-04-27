@@ -197,3 +197,38 @@ venv/bin/python3 test/???.py
 
 ### 其他
 语法高亮已删除
+
+### 重要更新（2026-04-27）
+
+#### 1. 统一查询页面字段显示修复
+- 修复了 `templates/query/unified_home.html` 中数据显示不全的问题
+- 根因：远程API（/crossTask/query, /crossTask/detail）返回驼峰命名（deviceNum, taskPath, templateCode），前端getField()缺少这些字段名
+- 修复：renderSubTaskCard() 添加 deviceNum/taskPath 候选字段；renderResult() 主任务总览添加 templateCode/taskPath 等后备字段名
+- 新增显示字段：变更状态(changeStatus)、更新时间(updateTime)
+
+#### 2. 跨环境任务重发功能
+- **后端API**: `POST /api/task/resend` (app.py)
+- **后端逻辑**: `modules/query/task_query_extended.py` → `resend_cross_task()` + `_generate_new_sub_order_id()`
+- **前端按钮**: unified_home.html 子任务卡片操作按钮区，根据状态显示不同按钮
+  - status=3(已取消) → 橙色"重发"按钮
+  - status=7(失败) → 红色"重发"按钮
+  - status=4/6/9(异常) → 红色"强制重发"按钮（大模板改为5，子模板改为5，sub_order_id+1）
+  - status=5(重发中) → 灰色禁用"重发中..." + 红色"异常完成"按钮（仅将子模板状态改为3）
+- **前端函数**: `window.resendTask(subOrderId, orderId, taskSeq)` 和 `window.forceCompleteTask(subOrderId, orderId, taskSeq)`
+- **重发流程**: 前置任务检查(task_seq-1是否执行中) → 检查大模板状态 → 检查子模板状态 → 生成新sub_order_id(子ID+1) → 修改数据库
+- **支持状态**: 大模板3/5/6/7/9, 子模板3/4/6/7/9
+- **成功后3秒自动刷新查询**
+
+#### 3. API接口文档
+- 创建了 `doc/API.md`，覆盖所有56个路由
+- 分9大类：页面路由、模板管理API、任务查询API、任务重发API、统计API、Join QR Node API、配置管理API、认证API、系统API
+- 包含请求参数、响应示例、状态码说明、数据库表说明
+
+#### 4. 设计文档
+- `plans/resend_logic_detail.md` - 重发逻辑详细设计（含合并后的统一流程）
+- `plans/cross_env_retry_frontend_plan.md` - 重发功能前端方案设计
+- `plans/query_display_fix_plan.md` - 查询页面修复计划
+
+### ds说
+- 2026-04-27: 跨环境任务重发功能已完成前后端实现。重发逻辑中前置任务检查放在最前面（不通过则不执行任何修改），逻辑1和逻辑2已合并为统一流程。sub_order_id递增规则为解析{orderId}_{taskSeq}_{subId}后subId+1。API文档已整理到doc/API.md。
+- 2026-04-27: 查询页面字段显示问题已修复，根因是前端getField()查找的字段名与远程API返回的驼峰命名不匹配。修复方案是添加候选字段名而非修改API，保持向后兼容。

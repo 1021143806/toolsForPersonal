@@ -455,3 +455,251 @@ def get_cross_model_process_info(template_code, server_ip="10.68.2.32"):
         return {"error": f"查询失败: {str(e)}"}
     finally:
         conn.close()
+
+
+def resend_cross_task(order_id, sub_order_id, task_seq, server_ip="10.68.2.32"):
+    """
+    跨环境任务重发逻辑（统一逻辑1+逻辑2+逻辑3）
+    
+    流程：
+    1. 前置任务检查（task_seq-1 是否还在执行中）
+    2. 检查大模板状态
+    3. 检查子模板状态
+    4. 生成新的 sub_order_id（子ID+1）
+    5. 修改数据库状态
+    
+    返回: dict { success, message, newSubOrderId?, code?, precedingTaskId?, serverUrl? }
+    """
+    conn = connect_to_production_db(server_ip)
+    
+    try:
+        with conn.cursor() as cursor:
+            # ========== 步骤1: 前置任务检查（放到最前面） ==========
+            if task_seq > 1:
+                preceding_seq = task_seq - 1
+                sql = """
+                    SELECT sub_order_id, service_url, status 
+                    FROM fy_cross_task_detail 
+                    WHERE order_id = %s AND task_seq = %s
+                """
+                cursor.execute(sql, (order_id, preceding_seq))
+                preceding_task = cursor.fetchone()
+                
+                if preceding_task and preceding_task['status'] in (4, 6, 9):
+                    # 上一条任务仍在执行中，不允许重发
+                    return {
+                        "success": False,
+                        "code": "PRECEDING_TASK_ACTIVE",
+                        "precedingTaskId": preceding_task['sub_order_id'],
+                        "serverUrl": preceding_task['service_url'],
+                        "message": (
+                            f"上一条任务（task_seq={preceding_seq}）仍在执行中"
+                            f"（status={preceding_task['status']}），"
+                            f"请先到对应服务器查询或取消该任务后再重发"
+                        )
+                    }
+            
+            # ========== 步骤2: 检查大模板状态 ==========
+            sql = "SELECT task_status FROM fy_cross_task WHERE orderId = %s"
+            cursor.execute(sql, (order_id,))
+            main_task = cursor.fetchone()
+            
+            if not main_task:
+                return {
+                    "success": False,
+                    "code": "TASK_NOT_FOUND",
+                    "message": f"未找到大模板任务: {order_id}"
+                }
+            
+            main_status = main_task['task_status']
+            
+            # 允许重发的大模板状态: 3(已取消), 5(重发中), 7(失败), 6(已下发-逻辑3), 9(已下发-逻辑3)
+            if main_status not in (3, 5, 6, 7, 9):
+                return {
+                    "success": False,
+                    "code": "INVALID_STATUS",
+                    "message": f"大模板状态不允许重发（当前状态: {main_status}）"
+                }
+            
+            # ========== 步骤3: 检查子模板状态 ==========
+            sql = """
+                SELECT * FROM fy_cross_task_detail 
+                WHERE order_id = %s AND task_seq = %s
+            """
+            cursor.execute(sql, (order_id, task_seq))
+            sub_task = cursor.fetchone()
+            
+            if not sub_task:
+                return {
+                    "success": False,
+                    "code": "SUBTASK_NOT_FOUND",
+                    "message": f"未找到子任务: order_id={order_id}, task_seq={task_seq}"
+                }
+            
+            sub_status = sub_task['status']
+            current_sub_order_id = sub_task['sub_order_id']
+            
+            # 允许重发的子模板状态: 3(已取消), 7(失败), 4,6,9(逻辑3)
+            if sub_status not in (3, 4, 6, 7, 9):
+                return {
+                    "success": False,
+                    "code": "INVALID_STATUS",
+                    "message": f"子任务状态不允许重发（当前状态: {sub_status}）"
+                }
+            
+            # 逻辑3特殊处理: 检查是否有多个执行中的子任务
+            if sub_status in (4, 6, 9):
+                sql = """
+                    SELECT COUNT(*) as cnt FROM fy_cross_task_detail 
+                    WHERE order_id = %s AND status IN (4, 6, 9)
+                """
+                cursor.execute(sql, (order_id,))
+                active_count = cursor.fetchone()['cnt']
+                
+                if active_count > 1:
+                    # 多个执行中任务，异常情况
+                    sql = """
+                        SELECT sub_order_id, task_seq, status, service_url, error_desc
+                        FROM fy_cross_task_detail 
+                        WHERE order_id = %s AND status IN (4, 6, 9)
+                    """
+                    cursor.execute(sql, (order_id,))
+                    active_tasks = cursor.fetchall()
+                    
+                    return {
+                        "success": False,
+                        "code": "MULTIPLE_ACTIVE",
+                        "message": (
+                            "该异常任务可能与跨环境模块负荷异常或重启导致，"
+                            "反馈研发后可使用该功能进行恢复。"
+                            f"当前有 {active_count} 个执行中的子任务"
+                        ),
+                        "activeTasks": active_tasks
+                    }
+            
+            # ========== 步骤4: 生成新的 sub_order_id ==========
+            new_sub_order_id = _generate_new_sub_order_id(current_sub_order_id)
+            if not new_sub_order_id:
+                return {
+                    "success": False,
+                    "code": "PARSE_ERROR",
+                    "message": f"无法解析 sub_order_id: {current_sub_order_id}"
+                }
+            
+            # ========== 步骤5: 执行重发（修改数据库） ==========
+            
+            # 5.1 判断是否需要修改大模板状态
+            # 大模板状态为 3,6,9 时需要改为5；已经是5,7时不需要改
+            if main_status in (3, 6, 9):
+                sql = "UPDATE fy_cross_task SET task_status = 5 WHERE orderId = %s"
+                cursor.execute(sql, (order_id,))
+            
+            # 5.2 更新子模板
+            sql = """
+                UPDATE fy_cross_task_detail 
+                SET sub_order_id = %s, status = 5, error_desc = '重发中'
+                WHERE order_id = %s AND task_seq = %s
+            """
+            cursor.execute(sql, (new_sub_order_id, order_id, task_seq))
+            conn.commit()
+            
+            return {
+                "success": True,
+                "newSubOrderId": new_sub_order_id,
+                "message": f"重发成功，新子任务ID: {new_sub_order_id}，3秒后将自动刷新"
+            }
+            
+    except Exception as e:
+        conn.rollback()
+        return {
+            "success": False,
+            "code": "SERVER_ERROR",
+            "message": f"重发失败: {str(e)}"
+        }
+    finally:
+        conn.close()
+
+
+def _generate_new_sub_order_id(sub_order_id):
+    """
+    生成新的 sub_order_id，将最后一段数字+1
+    
+    格式: {orderId}_{taskSeq}_{subId}
+    例如: "1.7771976967327742E12_2_5450" → "1.7771976967327742E12_2_5451"
+    """
+    try:
+        # 从右边找到最后一个下划线
+        last_underscore = sub_order_id.rfind('_')
+        if last_underscore == -1:
+            return None
+        
+        prefix = sub_order_id[:last_underscore + 1]
+        sub_id_str = sub_order_id[last_underscore + 1:]
+        
+        # 尝试解析为数字
+        sub_id = int(sub_id_str)
+        new_sub_id = sub_id + 1
+        
+        return f"{prefix}{new_sub_id}"
+    except (ValueError, TypeError):
+        # 如果不是纯数字，追加 _1
+        return f"{sub_order_id}_1"
+
+
+def force_complete_cross_task(order_id, sub_order_id, task_seq, server_ip="10.68.2.32"):
+    """
+    异常完成：仅将子模板状态置为3（已取消）
+    
+    适用场景：重发中（status=5）的子任务卡住时，手动标记为已取消
+    
+    不修改大模板状态，不修改 sub_order_id
+    """
+    conn = connect_to_production_db(server_ip)
+    
+    try:
+        with conn.cursor() as cursor:
+            # 检查子模板状态
+            sql = """
+                SELECT status, sub_order_id FROM fy_cross_task_detail 
+                WHERE order_id = %s AND task_seq = %s
+            """
+            cursor.execute(sql, (order_id, task_seq))
+            sub_task = cursor.fetchone()
+            
+            if not sub_task:
+                return {
+                    "success": False,
+                    "code": "SUBTASK_NOT_FOUND",
+                    "message": f"未找到子任务: order_id={order_id}, task_seq={task_seq}"
+                }
+            
+            if sub_task['status'] != 5:
+                return {
+                    "success": False,
+                    "code": "INVALID_STATUS",
+                    "message": f"仅允许对重发中（status=5）的子任务执行异常完成操作（当前状态: {sub_task['status']}）"
+                }
+            
+            # 仅修改子模板状态为3
+            sql = """
+                UPDATE fy_cross_task_detail 
+                SET status = 3, error_desc = '异常完成'
+                WHERE order_id = %s AND task_seq = %s
+            """
+            cursor.execute(sql, (order_id, task_seq))
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": f"异常完成成功，子任务 {sub_order_id} 状态已改为3（已取消），3秒后将自动刷新"
+            }
+            
+    except Exception as e:
+        conn.rollback()
+        return {
+            "success": False,
+            "code": "SERVER_ERROR",
+            "message": f"操作失败: {str(e)}"
+        }
+    finally:
+        conn.close()

@@ -981,10 +981,29 @@
                         ` : ''}
                         
                         <!-- 操作按钮区 -->
-                        <div class="mt-3 pt-3 border-top">
+                        <div class="mt-3 pt-3 border-top d-flex flex-wrap gap-2">
                             ${status == 6 || status == 9 ? 
                                 `<button class="btn btn-sm btn-outline-warning" onclick="adjustPriority('${subOrderId}', '${serviceUrl}')">
                                     <i class="bi bi-arrow-up"></i> 优先执行
+                                </button>` : ''}
+                            ${status == 3 ? 
+                                `<button class="btn btn-sm btn-outline-warning" onclick="resendTask('${subOrderId}', '${orderId}', ${taskSeq})" title="已取消任务重发">
+                                    <i class="bi bi-arrow-repeat"></i> 重发
+                                </button>` : ''}
+                            ${status == 7 ? 
+                                `<button class="btn btn-sm btn-outline-danger" onclick="resendTask('${subOrderId}', '${orderId}', ${taskSeq})" title="失败任务重发">
+                                    <i class="bi bi-arrow-repeat"></i> 重发
+                                </button>` : ''}
+                            ${(status == 4 || status == 6 || status == 9) ? 
+                                `<button class="btn btn-sm btn-outline-danger" onclick="resendTask('${subOrderId}', '${orderId}', ${taskSeq})" title="强制重发（修改大模板和子模板状态为5，sub_order_id+1）">
+                                    <i class="bi bi-arrow-repeat"></i> 强制重发
+                                </button>` : ''}
+                            ${status == 5 ? 
+                                `<button class="btn btn-sm btn-outline-secondary" disabled title="正在重发中">
+                                    <i class="bi bi-hourglass-split"></i> 重发中...
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="forceCompleteTask('${subOrderId}', '${orderId}', ${taskSeq})" title="异常完成（仅将子任务状态置为3）">
+                                    <i class="bi bi-check-circle"></i> 异常完成
                                 </button>` : ''}
                         </div>
                     </div>
@@ -1071,6 +1090,86 @@
                 }
             } catch (e) {
                 alert('请求失败: ' + e.message);
+            }
+        };
+
+        // 任务重发
+        window.resendTask = async function(subOrderId, orderId, taskSeq) {
+            const confirmMsg = `确定要重发该子任务吗？\n\n` +
+                `子任务ID: ${subOrderId}\n` +
+                `任务单号: ${orderId}\n` +
+                `任务序号: ${taskSeq}\n\n` +
+                `点击确定后将执行重发操作。`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch('/api/task/resend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        subOrderId: subOrderId,
+                        taskSeq: taskSeq
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    // 3秒后自动重新查询
+                    setTimeout(() => executeQuery(), 3000);
+                } else {
+                    if (data.code === 'PRECEDING_TASK_ACTIVE') {
+                        alert('⚠️ 上一条任务仍在执行中，无法重发\n\n' +
+                            `上一条任务ID: ${data.precedingTaskId}\n` +
+                            `服务器地址: ${data.serverUrl}\n\n` +
+                            '请先到对应服务器查询或取消该任务后再重发。');
+                    } else if (data.code === 'MULTIPLE_ACTIVE') {
+                        alert('⚠️ ' + data.message + '\n\n' +
+                            '调试信息:\n' +
+                            (data.activeTasks || []).map(t => 
+                                `  task_seq=${t.task_seq} sub_order_id=${t.sub_order_id} status=${t.status}`
+                            ).join('\n'));
+                    } else {
+                        alert('❌ 重发失败: ' + (data.message || '未知错误'));
+                    }
+                }
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
+            }
+        };
+
+        // 异常完成（仅将子任务状态置为3）
+        window.forceCompleteTask = async function(subOrderId, orderId, taskSeq) {
+            const confirmMsg = `确定要将该子任务标记为异常完成吗？\n\n` +
+                `子任务ID: ${subOrderId}\n` +
+                `任务单号: ${orderId}\n` +
+                `任务序号: ${taskSeq}\n\n` +
+                `此操作仅将子任务状态改为3（已取消），不修改大模板和sub_order_id。`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch('/api/task/force_complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        subOrderId: subOrderId,
+                        taskSeq: taskSeq
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    setTimeout(() => executeQuery(), 3000);
+                } else {
+                    alert('❌ 操作失败: ' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
             }
         };
 
