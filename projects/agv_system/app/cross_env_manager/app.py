@@ -367,14 +367,30 @@ def search():
         flash('请输入搜索关键词', 'warning')
         return redirect(url_for('index'))
     
-    # 查询匹配的任务模板
-    query = """
-    SELECT * FROM fy_cross_model_process 
-    WHERE model_process_code LIKE %s 
-    ORDER BY id DESC
-    """
-    params = (f'%{search_term}%',)
-    templates = execute_query(query, params)
+    # 纯数字输入：优先通过ID精确查找
+    if search_term.isdigit():
+        id_query = "SELECT * FROM fy_cross_model_process WHERE id = %s"
+        id_result = execute_query(id_query, (int(search_term),))
+        if id_result and len(id_result) > 0:
+            templates = id_result
+        else:
+            # ID未找到，回退到模糊搜索
+            query = """
+            SELECT * FROM fy_cross_model_process 
+            WHERE model_process_code LIKE %s 
+            ORDER BY id DESC
+            """
+            params = (f'%{search_term}%',)
+            templates = execute_query(query, params)
+    else:
+        # 非纯数字：模糊搜索
+        query = """
+        SELECT * FROM fy_cross_model_process 
+        WHERE model_process_code LIKE %s 
+        ORDER BY id DESC
+        """
+        params = (f'%{search_term}%',)
+        templates = execute_query(query, params)
     
     if not templates:
         flash(f'未找到包含 "{search_term}" 的任务模板', 'info')
