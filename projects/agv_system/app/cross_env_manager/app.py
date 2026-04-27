@@ -1459,6 +1459,95 @@ def get_detailed_analysis():
             'message': f'服务器错误: {str(e)}'
         }), 500
 
+@app.route('/api/stats/main_task_status')
+def get_main_task_status():
+    """获取当天大模板状态分布统计（含error_desc细分）"""
+    try:
+        from datetime import date
+        from modules.query.task_query_extended import connect_to_production_db
+        today = date.today().strftime('%Y-%m-%d')
+        
+        conn = connect_to_production_db("10.68.2.32")
+        cursor = conn.cursor()
+        
+        # 按状态分组统计
+        sql = """
+            SELECT task_status, COUNT(*) as count 
+            FROM fy_cross_task 
+            WHERE create_time >= %s
+            GROUP BY task_status
+            ORDER BY task_status
+        """
+        cursor.execute(sql, (today,))
+        results = cursor.fetchall() or []
+        
+        # 状态映射（含子项说明）
+        status_map = {
+            -1: {'label': '容量管控', 'color': '#6c757d', 'subs': []},
+            3: {'label': '已被异常完成', 'color': '#ffc107', 'subs': [
+                '请勿频繁请求', '任务异常结束', '小车预占失败', '请勿重复下发任务', '已下发'
+            ]},
+            4: {'label': '正在发送', 'color': '#0dcaf0', 'subs': []},
+            5: {'label': '重发中', 'color': '#fd7e14', 'subs': ['请勿频繁请求']},
+            6: {'label': '已下发', 'color': '#0d6efd', 'subs': []},
+            7: {'label': '任务失败', 'color': '#dc3545', 'subs': [
+                '货架未初始化(7301)', '找不到任务模板',
+                '车没有预占(7027)', 'action条件判断错误(0X2032)'
+            ]},
+            8: {'label': '任务完成', 'color': '#198754', 'subs': []}
+        }
+        
+        distribution = []
+        total = 0
+        for row in results:
+            status = row['task_status']
+            count = row['count']
+            total += count
+            info = status_map.get(status, {'label': f'未知({status})', 'color': '#6c757d', 'subs': []})
+            distribution.append({
+                'status': status,
+                'label': info['label'],
+                'color': info['color'],
+                'count': count,
+                'subs': info['subs']
+            })
+        
+        # 查询异常状态的 task_error 细分（status=3 和 status=7）
+        error_sql = """
+            SELECT task_status, task_error, COUNT(*) as count 
+            FROM fy_cross_task 
+            WHERE create_time >= %s AND task_status IN (3, 7)
+            GROUP BY task_status, task_error
+            ORDER BY task_status, count DESC
+        """
+        cursor.execute(error_sql, (today,))
+        error_results = cursor.fetchall() or []
+        
+        error_detail = []
+        for row in error_results:
+            error_detail.append({
+                'status': row['task_status'],
+                'errorDesc': row['task_error'] or '(无描述)',
+                'count': row['count']
+            })
+        
+        return jsonify({
+            'success': True,
+            'total': total,
+            'date': today,
+            'distribution': distribution,
+            'errorDetail': error_detail
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'服务器错误: {str(e)}'
+        }), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 # ============================================================================
 # 查询功能路由
 # ============================================================================

@@ -262,6 +262,29 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 大模板状态分布图表 -->
+            <div class="query-card mt-3 animate__animated animate__fadeInUp" id="statusChartCard">
+                <div class="query-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>今日任务状态概览</h6>
+                    <button class="btn btn-sm btn-outline-secondary" id="refreshChartBtn" title="刷新图表">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+                <div class="query-card-body">
+                    <!-- 统计面板 -->
+                    <div id="chartStatsPanel" class="small mb-3">
+                        <div class="text-center text-muted">加载中...</div>
+                    </div>
+                    <!-- 饼图：异常状态（status=3,7）按 task_error 分类 -->
+                    <div>
+                        <small class="text-muted fw-bold">⚠️ 异常任务分布</small>
+                        <div style="position: relative; height: 200px;">
+                            <canvas id="chartErrorDist"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 右侧：结果展示区 -->
@@ -339,6 +362,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/vendor/chart.js/chart.min.js"></script>
 <script>
     (function() {
         // ---------- DOM 元素 ----------
@@ -415,8 +439,147 @@
                 shelfInput.value = urlParams.get('shelf');
                 setTimeout(executeQuery, 200);
             }
+            
+            // 初始化图表
+            loadTaskStatusChart();
+            
+            // 绑定刷新按钮
+            document.getElementById('refreshChartBtn').addEventListener('click', () => {
+                loadTaskStatusChart();
+            });
         });
 
+        // ---------- 图表相关 ----------
+        let chartErrorDist = null;
+        let chartLastLoadTime = 0;
+        const CHART_DEBOUNCE_MS = 1000;
+        
+        async function loadTaskStatusChart() {
+            // 防抖：1秒内只能触发一次
+            const now = Date.now();
+            if (now - chartLastLoadTime < CHART_DEBOUNCE_MS) {
+                alert('⚠️ 请勿频繁刷新，1秒内只能刷新一次');
+                return;
+            }
+            chartLastLoadTime = now;
+            
+            try {
+                const res = await fetch('/api/stats/main_task_status');
+                const data = await res.json();
+                
+                if (!data.success) {
+                    document.getElementById('chartStatsPanel').innerHTML = 
+                        '<div class="text-center text-danger small">加载失败</div>';
+                    return;
+                }
+                
+                // 销毁旧图表
+                if (chartErrorDist) { chartErrorDist.destroy(); chartErrorDist = null; }
+                
+                // ========== 1. 统计面板：全部状态 ==========
+                let panelHtml = '';
+                const total = data.total;
+                const dist = data.distribution || [];
+                const statusOrder = [-1, 3, 4, 5, 6, 7, 8];
+                const distMap = {};
+                dist.forEach(d => { distMap[d.status] = d; });
+                
+                statusOrder.forEach(status => {
+                    const item = distMap[status];
+                    if (!item) return;
+                    const pct = total > 0 ? ((item.count / total) * 100).toFixed(1) : 0;
+                    const barWidth = total > 0 ? ((item.count / total) * 100) : 0;
+                    
+                    panelHtml += `
+                        <div class="mb-2">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="me-2" style="width:12px; height:12px; background:${item.color}; border-radius:3px; display:inline-block;"></span>
+                                <span class="fw-bold" style="font-size:0.8rem;">${item.label}</span>
+                                <span class="ms-auto" style="font-size:0.8rem;">${item.count} (${pct}%)</span>
+                            </div>
+                            <div style="height:4px; background:#e9ecef; border-radius:2px;">
+                                <div style="height:4px; width:${barWidth}%; background:${item.color}; border-radius:2px;"></div>
+                            </div>`;
+                    
+                    if (item.subs && item.subs.length > 0) {
+                        panelHtml += '<div class="ms-3 mt-1" style="font-size:0.7rem; color:#6c757d;">';
+                        item.subs.forEach(sub => { panelHtml += `<span class="me-2">• ${sub}</span>`; });
+                        panelHtml += '</div>';
+                    }
+                });
+                
+                const anomalyTotal = (distMap[3]?.count || 0) + (distMap[5]?.count || 0) + (distMap[7]?.count || 0);
+                const anomalyPct = total > 0 ? ((anomalyTotal / total) * 100).toFixed(1) : 0;
+                
+                panelHtml += `
+                    <div class="mt-2 pt-2 border-top">
+                        <span class="fw-bold ${anomalyPct > 20 ? 'text-danger' : 'text-warning'}" style="font-size:0.8rem;">
+                            ⚠️ 异常合计: ${anomalyTotal} (${anomalyPct}%)
+                        </span>
+                        <span class="text-muted ms-2" style="font-size:0.75rem;">总计: ${total} 个任务</span>
+                    </div>`;
+                
+                document.getElementById('chartStatsPanel').innerHTML = panelHtml;
+                
+                // ========== 2. 合并饼图：status=3,7 按 task_error 分类 ==========
+                const errorData = data.errorDetail || [];
+                const labels = errorData.map(e => `${e.status}:${e.errorDesc}`);
+                const values = errorData.map(e => e.count);
+                const colors = errorData.map(e => e.status === 3 ? '#ffc107' : '#dc3545');
+                
+                const ctx = document.getElementById('chartErrorDist');
+                if (ctx && errorData.length > 0) {
+                    chartErrorDist = new Chart(ctx.getContext('2d'), {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: colors,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 6,
+                                        usePointStyle: true,
+                                        font: { size: 10 }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                                            return `${context.label}: ${context.raw} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else if (ctx) {
+                    const ctx2d = ctx.getContext('2d');
+                    ctx2d.clearRect(0, 0, ctx.width, ctx.height);
+                    ctx2d.font = '12px sans-serif';
+                    ctx2d.fillStyle = '#6c757d';
+                    ctx2d.textAlign = 'center';
+                    ctx2d.fillText('暂无异常任务数据', ctx.width/2, ctx.height/2);
+                }
+                
+            } catch (e) {
+                console.error('图表加载失败:', e);
+                document.getElementById('chartStatsPanel').innerHTML = 
+                    '<div class="text-center text-danger small">加载失败: ' + e.message + '</div>';
+            }
+        }
+        
         function toggleQueryPanel() {
             // 选项卡已处理显示，无需额外操作
         }
@@ -490,6 +653,8 @@
                 addToHistory(isTaskQuery ? orderId : `${shelf} (货架)`);
                 const result = await performDeepQuery(orderId);
                 renderResult(result);
+                // 查询完成后刷新图表
+                loadTaskStatusChart();
             } catch (error) {
                 console.error('查询失败:', error);
                 resultContainer.innerHTML = `

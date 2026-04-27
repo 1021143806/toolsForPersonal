@@ -631,3 +631,32 @@ POST /api/task/force_complete
   "message": "仅允许对重发中（status=5）的子任务执行异常完成操作（当前状态: 7）"
 }
 ```
+
+### 5.6 大模板状态分布统计（含error_desc细分）
+```
+GET /api/stats/main_task_status
+```
+查询当天 `fy_cross_task` 表按 `task_status` 分组统计，异常状态（3,7）额外按 `error_desc` 细分。
+
+**响应示例:**
+```json
+{
+  "success": true,
+  "total": 150,
+  "date": "2026-04-27",
+  "distribution": [
+    {"status": -1, "label": "容量管控", "color": "#6c757d", "count": 5, "subs": []},
+    {"status": 3, "label": "已被异常完成", "color": "#ffc107", "count": 12, "subs": ["请勿频繁请求", "任务异常结束", "小车预占失败", "请勿重复下发任务", "已下发"]},
+    {"status": 5, "label": "重发中", "color": "#fd7e14", "count": 3, "subs": ["请勿频繁请求"]},
+    {"status": 6, "label": "已下发", "color": "#0d6efd", "count": 25, "subs": []},
+    {"status": 7, "label": "任务失败", "color": "#dc3545", "count": 8, "subs": ["货架未初始化(7301)", "找不到任务模板", "车没有预占(7027)", "action条件判断错误(0X2032)"]},
+    {"status": 8, "label": "任务完成", "color": "#198754", "count": 97, "subs": []}
+  ],
+  "errorDetail": [
+    {"status": 3, "errorDesc": "请勿频繁请求", "count": 5},
+    {"status": 3, "errorDesc": "任务异常结束", "count": 3},
+    {"status": 7, "errorDesc": "货架未初始化(7301)", "count": 4},
+    {"status": 7, "errorDesc": "找不到任务模板", "count": 2}
+  ]
+}
+```

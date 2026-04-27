@@ -228,6 +228,14 @@ venv/bin/python3 test/???.py
 - `plans/resend_logic_detail.md` - 重发逻辑详细设计（含合并后的统一流程）
 - `plans/cross_env_retry_frontend_plan.md` - 重发功能前端方案设计
 - `plans/query_display_fix_plan.md` - 查询页面修复计划
+- `plans/chart_design_plan.md` - 大模板状态分布图表设计方案
+
+#### 5. 大模板状态分布图表（2026-04-27）
+- **后端API**: `GET /api/stats/main_task_status` (app.py)，查询当天 fy_cross_task 按 task_status 分组统计
+- **前端**: unified_home.html 左侧新增饼图卡片（Chart.js）+ 统计面板
+- **刷新时机**: 页面加载时、查询任务后、手动刷新按钮
+- **防抖**: 1秒内只能触发一次，频繁点击弹窗警告
+- **交互**: 饼图悬停显示状态名/数量/百分比，点击图例切换显示/隐藏，异常率红色高亮
 
 ### ds说
 - 2026-04-27: 跨环境任务重发功能已完成前后端实现。重发逻辑中前置任务检查放在最前面（不通过则不执行任何修改），逻辑1和逻辑2已合并为统一流程。sub_order_id递增规则为解析{orderId}_{taskSeq}_{subId}后subId+1。API文档已整理到doc/API.md。
