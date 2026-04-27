@@ -533,12 +533,13 @@ def update_template_details(template_id, form_data):
             
             # 构建更新查询
             update_query = """
-            UPDATE fy_cross_model_process_detail 
+            UPDATE fy_cross_model_process_detail
             SET task_seq = %s,
                 template_code = %s,
                 template_name = %s,
                 task_servicec = %s,
-                task_path = %s
+                task_path = %s,
+                need_third_trigger = %s
             WHERE id = %s AND model_process_id = %s
             """
             
@@ -548,6 +549,8 @@ def update_template_details(template_id, form_data):
             template_name = fields.get('template_name', '')
             task_servicec = fields.get('task_servicec', '')
             task_path = fields.get('task_path', '')
+            need_third_trigger_str = fields.get('need_third_trigger', '0')
+            need_third_trigger = 1 if str(need_third_trigger_str) == '1' else 0
             
             # 验证task_seq是否为数字
             try:
@@ -561,6 +564,7 @@ def update_template_details(template_id, form_data):
                 template_name,
                 task_servicec,
                 task_path,
+                need_third_trigger,
                 detail_id,
                 template_id
             )
@@ -581,7 +585,7 @@ def edit_detail(detail_id):
     form_data = request.form
     
     update_query = """
-    UPDATE fy_cross_model_process_detail 
+    UPDATE fy_cross_model_process_detail
     SET task_seq = %s,
         task_servicec = %s,
         template_code = %s,
@@ -589,7 +593,8 @@ def edit_detail(detail_id):
         task_path = %s,
         backflow_template_code = %s,
         comeback_template_code = %s,
-        back_wait_time = %s
+        back_wait_time = %s,
+        need_third_trigger = %s
     WHERE id = %s
     """
     
@@ -613,6 +618,10 @@ def edit_detail(detail_id):
         except (ValueError, TypeError):
             back_wait_time = None
     
+    # 处理 need_third_trigger 字段
+    need_third_trigger_str = form_data.get('need_third_trigger', '0').strip()
+    need_third_trigger = 1 if need_third_trigger_str == '1' else 0
+
     params = (
         int(form_data.get('task_seq', 0)),
         get_form_value(form_data, 'task_servicec', ''),
@@ -622,6 +631,7 @@ def edit_detail(detail_id):
         get_form_value(form_data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
         get_form_value(form_data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
         back_wait_time,  # 处理后的整数值或NULL
+        need_third_trigger,  # 0或1
         detail_id
     )
     
@@ -758,11 +768,11 @@ def copy_template(template_id):
             if original_details:
                 for detail in original_details:
                     insert_detail_query = """
-                    INSERT INTO fy_cross_model_process_detail 
-                    (model_process_id, task_seq, task_servicec, template_code, 
-                     template_name, task_path, backflow_template_code, 
-                     comeback_template_code, back_wait_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO fy_cross_model_process_detail
+                    (model_process_id, task_seq, task_servicec, template_code,
+                     template_name, task_path, backflow_template_code,
+                     comeback_template_code, back_wait_time, need_third_trigger)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
                     # 确保正确处理NULL值
@@ -806,7 +816,8 @@ def copy_template(template_id):
                         detail['task_path'],
                         safe_get_value(detail, 'backflow_template_code'),
                         safe_get_value(detail, 'comeback_template_code'),
-                        safe_get_value(detail, 'back_wait_time')
+                        safe_get_value(detail, 'back_wait_time'),
+                        detail.get('need_third_trigger', 0)
                     )
                     
                     execute_query(insert_detail_query, detail_params, fetch=False)
@@ -864,11 +875,11 @@ def add_detail(template_id):
         
         # 插入新子任务
         insert_query = """
-        INSERT INTO fy_cross_model_process_detail 
-        (model_process_id, task_seq, task_servicec, template_code, 
-         template_name, task_path, backflow_template_code, 
-         comeback_template_code, back_wait_time)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO fy_cross_model_process_detail
+        (model_process_id, task_seq, task_servicec, template_code,
+         template_name, task_path, backflow_template_code,
+         comeback_template_code, back_wait_time, need_third_trigger)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         # 辅助函数：处理表单中的空值和0值
@@ -894,6 +905,10 @@ def add_detail(template_id):
             except (ValueError, TypeError):
                 back_wait_time = None
         
+        # 处理 need_third_trigger 字段
+        need_third_trigger_value = data.get('need_third_trigger', 0)
+        need_third_trigger = 1 if str(need_third_trigger_value) == '1' else 0
+
         params = (
             template_id,
             new_seq,
@@ -903,7 +918,8 @@ def add_detail(template_id):
             get_form_value(data, 'task_path', ''),
             get_form_value(data, 'backflow_template_code'),  # 空字符串或'0'会变成NULL
             get_form_value(data, 'comeback_template_code'),  # 空字符串或'0'会变成NULL
-            back_wait_time  # 处理后的整数值或NULL
+            back_wait_time,  # 处理后的整数值或NULL
+            need_third_trigger  # 0或1
         )
         
         new_detail_id = execute_query(insert_query, params, fetch=False)
@@ -1928,6 +1944,21 @@ def addtask():
     return render_template('addTask/addtask.html', 
                           logged_in=session.get('logged_in', False),
                           username=session.get('username', ''))
+
+@app.route('/query/help')
+def query_help():
+    """提供查询页面的帮助文档"""
+    try:
+        readme_path = os.path.join(os.path.dirname(__file__), 'templates', 'query', 'readme.md')
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        import markdown
+        html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
+        
+        return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        return f"无法加载帮助文档: {str(e)}", 500
 
 @app.route('/addtask/help')
 def addtask_help():

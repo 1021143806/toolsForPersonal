@@ -112,6 +112,7 @@
                                     <th>模板名称</th>
                                     <th>服务器地址</th>
                                     <th>目标点</th>
+                                    <th>第三方触发</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -135,13 +136,20 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <button type="button" class="btn btn-sm btn-outline-warning" 
-                                                    data-bs-toggle="modal" 
+                                            {% if detail.need_third_trigger == 1 %}
+                                                <span class="badge bg-warning">是</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">否</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-warning"
+                                                    data-bs-toggle="modal"
                                                     data-bs-target="#editDetailModal{{ detail.id }}">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-info" 
-                                                    data-bs-toggle="collapse" 
+                                            <button type="button" class="btn btn-sm btn-outline-info"
+                                                    data-bs-toggle="collapse"
                                                     data-bs-target="#detailInfo{{ detail.id }}">
                                                 <i class="bi bi-info"></i>
                                             </button>
@@ -149,7 +157,7 @@
                                     </tr>
                                     <!-- 详细信息折叠 -->
                                     <tr class="collapse" id="detailInfo{{ detail.id }}">
-                                        <td colspan="7" class="bg-light">
+                                        <td colspan="8" class="bg-light">
                                             <div class="p-3">
                                                 <h6>子任务详细信息</h6>
                                                 <div class="row">
@@ -161,6 +169,13 @@
                                                     <div class="col-md-6">
                                                         <p><strong>空车回流模板:</strong> {{ detail.comeback_template_code or '未设置' }}</p>
                                                         <p><strong>回流等待时间:</strong> {{ detail.back_wait_time or 0 }} 秒</p>
+                                                        <p><strong>第三方触发:</strong>
+                                                            {% if detail.need_third_trigger == 1 %}
+                                                                <span class="badge bg-warning">是</span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">否</span>
+                                                            {% endif %}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -356,8 +371,17 @@
                     
                     <div class="mb-3">
                         <label class="form-label">回流等待时间 (秒)</label>
-                        <input type="number" class="form-control" name="back_wait_time" 
+                        <input type="number" class="form-control" name="back_wait_time"
                                value="{{ detail.back_wait_time or 0 }}" min="0">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" name="need_third_trigger"
+                               value="1" id="edit_need_third_trigger_{{ detail.id }}"
+                               {% if detail.need_third_trigger == 1 %}checked{% endif %}>
+                        <label class="form-check-label" for="edit_need_third_trigger_{{ detail.id }}">
+                            第三方触发
+                        </label>
+                        <div class="form-text">勾选表示该子任务存在第三方触发</div>
                     </div>
                 </div>
                 <div class="modal-footer">

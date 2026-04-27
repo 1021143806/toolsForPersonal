@@ -333,28 +333,16 @@
 
 <!-- 帮助模态框 -->
 <div class="modal fade" id="helpModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-question-circle me-2"></i>使用帮助</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <h6>1. 任务单号查询</h6>
-                <p>输入完整的 OrderId（例如 <code>pad_html2026-04-20 14:30:00</code>），系统会：</p>
-                <ul>
-                    <li>从目标服务器获取主任务信息</li>
-                    <li>从本地数据库查询 <code>task_group</code> 和 <code>task_group_detail</code> 完整记录</li>
-                    <li>展示关联的大模板及子模板，可点击跳转编辑</li>
-                    <li>列出该模板下其他执行中/异常任务</li>
-                    <li>聚合所有子任务信息（跨服务器），并以 Markdown 风格展示</li>
-                </ul>
-                <h6 class="mt-3">2. 货架号查询</h6>
-                <p>输入货架编号，系统按优先级（执行中→失败/异常→已完成）查找该货架最近的任务，然后自动转为任务单号查询。</p>
-                <h6 class="mt-3">3. IP地址输入</h6>
-                <p>支持完整IP如 <code>10.68.2.32</code> 或仅最后一段数字 <code>32</code>，系统会自动补全为 <code>10.68.2.32</code>。</p>
-                <h6 class="mt-3">4. 查看原始JSON</h6>
-                <p>点击各卡片上的 <i class="bi bi-info-circle"></i> 按钮，可查看对应接口返回的原始数据。</p>
+            <div class="modal-body" id="helpModalBody">
+                <div class="text-center text-muted py-3">
+                    <div class="spinner-border spinner-border-sm me-2"></div>加载中...
+                </div>
             </div>
         </div>
     </div>
@@ -400,7 +388,19 @@
             typeShelfRadio.addEventListener('change', toggleQueryPanel);
             serverIpInput.addEventListener('input', updateIpHint);
             queryBtn.addEventListener('click', executeQuery);
-            document.getElementById('helpToggle').addEventListener('click', () => helpModal.show());
+            document.getElementById('helpToggle').addEventListener('click', async () => {
+                helpModal.show();
+                const body = document.getElementById('helpModalBody');
+                if (body && body.querySelector('.spinner-border')) {
+                    try {
+                        const res = await fetch('/query/help');
+                        const html = await res.text();
+                        body.innerHTML = html;
+                    } catch (e) {
+                        body.innerHTML = '<div class="text-danger">加载帮助文档失败: ' + e.message + '</div>';
+                    }
+                }
+            });
             document.getElementById('copyJsonBtn').addEventListener('click', copyJsonToClipboard);
             
             // 回车快捷查询

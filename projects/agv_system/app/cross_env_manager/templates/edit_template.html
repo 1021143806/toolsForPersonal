@@ -169,6 +169,7 @@
                             <th>模板名称</th>
                             <th>服务器地址</th>
                             <th>目标点</th>
+                            <th>第三方触发</th>
                             <th style="width: 120px;">操作</th>
                         </tr>
                     </thead>
@@ -200,18 +201,24 @@ value="{{ detail.template_name|default('') }}">
 value="{{ detail.task_servicec|default('') }}">
                                 </td>
                                 <td>
-<input type="text" class="form-control form-control-sm" 
-                                            name="detail_{{ detail.id }}_task_path" 
+<input type="text" class="form-control form-control-sm"
+                                            name="detail_{{ detail.id }}_task_path"
                                             value="{{ detail.task_path|default('') }}">
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           name="detail_{{ detail.id }}_need_third_trigger"
+                                           value="1"
+                                           {% if detail.need_third_trigger == 1 %}checked{% endif %}>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <a href="#" class="btn btn-outline-warning" 
-                                           data-bs-toggle="modal" 
+                                        <a href="#" class="btn btn-outline-warning"
+                                           data-bs-toggle="modal"
                                            data-bs-target="#editDetailModal{{ detail.id }}">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <button type="button" class="btn btn-outline-danger delete-detail-btn" 
+                                        <button type="button" class="btn btn-outline-danger delete-detail-btn"
                                                 data-detail-id="{{ detail.id }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -305,8 +312,17 @@ value="{{ detail.task_servicec|default('') }}">
                     
                     <div class="mb-3">
                         <label class="form-label">回流等待时间 (秒)</label>
-                        <input type="number" class="form-control" name="back_wait_time" 
+                        <input type="number" class="form-control" name="back_wait_time"
                                value="{{ detail.back_wait_time or 0 }}" min="0">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" name="need_third_trigger"
+                               value="1" id="edit_need_third_trigger_{{ detail.id }}"
+                               {% if detail.need_third_trigger == 1 %}checked{% endif %}>
+                        <label class="form-check-label" for="edit_need_third_trigger_{{ detail.id }}">
+                            第三方触发
+                        </label>
+                        <div class="form-text">勾选表示该子任务存在第三方触发</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -362,8 +378,16 @@ value="{{ detail.task_servicec|default('') }}">
                     
                     <div class="mb-3">
                         <label class="form-label">回流等待时间 (秒)</label>
-                        <input type="text" class="form-control" id="new_back_wait_time" 
+                        <input type="text" class="form-control" id="new_back_wait_time"
                                name="back_wait_time" value="0">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" name="need_third_trigger"
+                               value="1" id="new_need_third_trigger">
+                        <label class="form-check-label" for="new_need_third_trigger">
+                            第三方触发
+                        </label>
+                        <div class="form-text">勾选表示该子任务存在第三方触发</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -483,7 +507,8 @@ value="{{ detail.task_servicec|default('') }}">
                     task_path: document.getElementById('new_task_path').value,
                     backflow_template_code: document.getElementById('new_backflow_template_code').value,
                     comeback_template_code: document.getElementById('new_comeback_template_code').value,
-                    back_wait_time: document.getElementById('new_back_wait_time').value
+                    back_wait_time: document.getElementById('new_back_wait_time').value,
+                    need_third_trigger: document.getElementById('new_need_third_trigger').checked ? 1 : 0
                 };
                 
                 // 验证必填字段
@@ -611,14 +636,20 @@ value="{{ detail.task_servicec|default('') }}">
                            value="${detail.task_servicec || ''}">
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-sm" 
-                           name="detail_${detail.id}_task_path" 
+                    <input type="text" class="form-control form-control-sm"
+                           name="detail_${detail.id}_task_path"
                            value="${detail.task_path || ''}">
+                </td>
+                <td class="text-center">
+                    <input type="checkbox" class="form-check-input"
+                           name="detail_${detail.id}_need_third_trigger"
+                           value="1"
+                           ${detail.need_third_trigger == 1 ? 'checked' : ''}>
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
-                        <a href="#" class="btn btn-outline-warning" 
-                           data-bs-toggle="modal" 
+                        <a href="#" class="btn btn-outline-warning"
+                           data-bs-toggle="modal"
                            data-bs-target="#editDetailModal${detail.id}">
                             <i class="bi bi-pencil"></i>
                         </a>
@@ -669,6 +700,7 @@ value="{{ detail.task_servicec|default('') }}">
                                 <th>模板名称</th>
                                 <th>服务器地址</th>
                                 <th>目标点</th>
+                                <th>第三方触发</th>
                                 <th style="width: 120px;">操作</th>
                             </tr>
                         </thead>
