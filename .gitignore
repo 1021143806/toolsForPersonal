@@ -338,3 +338,4 @@ date.log
 local.md
 *.csv
 test_*
+plans/*

@@ -706,34 +706,36 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <table class="table table-sm table-borderless">
-                                    <tr><th class="w-40">任务单号</th><td><code>${main.orderId || '-'}</code></td></tr>
-                                    <tr><th>任务状态</th><td>${getStatusBadge(main.taskStatus)} ${main.taskStatusName ? `<small class="text-muted">(${main.taskStatusName})</small>` : ''}</td></tr>
-                                    <tr><th>模板名称</th><td>${main.modelProcessName || '-'}</td></tr>
+                                    <tr><th class="w-40">任务单号</th><td><code>${main.orderId || main.order_id || '-'}</code></td></tr>
+                                    <tr><th>任务状态</th><td>${getStatusBadge(main.taskStatus || main.status)} ${(main.taskStatusName || main.task_status_name) ? `<small class="text-muted">(${main.taskStatusName || main.task_status_name})</small>` : ''}</td></tr>
+                                    <tr><th>模板名称</th><td>${main.modelProcessName || main.templateName || main.model_process_name || '-'}</td></tr>
                                     <tr><th>模板代码</th><td>
-                                        <code>${main.modelProcessCode || '-'}</code>
+                                        <code>${main.modelProcessCode || main.templateCode || main.model_process_code || '-'}</code>
                                         ${result.templateInfo ? 
-                                            `<a href="/template/edit/${main.modelProcessCode}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                            `<a href="/template/edit/${main.modelProcessCode || main.templateCode}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
                                                 <i class="bi bi-pencil-square"></i> 编辑模板
                                             </a>` : ''}
                                     </td></tr>
-                                    <tr><th>所在区域ID</th><td>${main.areaId || '-'}</td></tr>
-                                    <tr><th>分派的AGV</th><td>${main.robotNum || main.deviceNum || '-'}</td></tr>
-                                    <tr><th>设备序列号</th><td>${main.robotId || main.deviceCode || '-'}</td></tr>
-                                    <tr><th>设备IP</th><td>${main.deviceIp || '-'}</td></tr>
-                                    <tr><th>路径点集</th><td><code>${main.pathPoints || '-'}</code></td></tr>
+                                    <tr><th>所在区域ID</th><td>${main.areaId || main.area_id || '-'}</td></tr>
+                                    <tr><th>分派的AGV</th><td>${main.robotNum || main.deviceNum || main.robot_num || '-'}</td></tr>
+                                    <tr><th>设备序列号</th><td>${main.robotId || main.deviceCode || main.robot_id || main.device_code || '-'}</td></tr>
+                                    <tr><th>设备IP</th><td>${main.deviceIp || main.device_ip || '-'}</td></tr>
+                                    <tr><th>路径点集</th><td><code>${main.pathPoints || main.taskPath || main.path_points || '-'}</code></td></tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
                                 <table class="table table-sm table-borderless">
-                                    <tr><th>AGV设备类型</th><td>${main.robotType || '-'}</td></tr>
-                                    <tr><th>货架模型编号</th><td>${main.shelfModel || '-'}</td></tr>
-                                    <tr><th>货架模型</th><td>${main.shelfModelName || '-'}</td></tr>
-                                    <tr><th>任务货架</th><td>${main.carrierCode || main.shelfNum || '-'}</td></tr>
-                                    <tr><th>错误描述</th><td>${main.errorDesc || '-'}</td></tr>
-                                    <tr><th>创建时间</th><td>${formatTime(main.createTime)}</td></tr>
-                                    <tr><th>开始时间</th><td>${formatTime(main.startTime)}</td></tr>
-                                    <tr><th>结束时间</th><td>${formatTime(main.endTime)}</td></tr>
+                                    <tr><th>AGV设备类型</th><td>${main.robotType || main.robot_type || '-'}</td></tr>
+                                    <tr><th>货架模型编号</th><td>${main.shelfModel || main.shelf_model || '-'}</td></tr>
+                                    <tr><th>货架模型</th><td>${main.shelfModelName || main.shelf_model_name || '-'}</td></tr>
+                                    <tr><th>任务货架</th><td>${main.carrierCode || main.shelfNum || main.carrier_code || main.shelf_num || '-'}</td></tr>
+                                    <tr><th>错误描述</th><td>${main.errorDesc || main.error_desc || '-'}</td></tr>
+                                    <tr><th>创建时间</th><td>${formatTime(main.createTime ?? main.create_time)}</td></tr>
+                                    <tr><th>开始时间</th><td>${formatTime(main.startTime ?? main.start_time)}</td></tr>
+                                    <tr><th>结束时间</th><td>${formatTime(main.endTime ?? main.end_time)}</td></tr>
                                     <tr><th>服务器IP</th><td>${result.baseUrl}</td></tr>
+                                    <tr><th>变更状态</th><td>${main.changeStatus ?? main.change_status ?? '-'}</td></tr>
+                                    <tr><th>更新时间</th><td>${formatTime(main.updateTime ?? main.update_time)}</td></tr>
                                 </table>
                             </div>
                         </div>
@@ -865,12 +867,14 @@
             }
             
             // 任务信息字段（按照PHP文件中的字段）
+            // 注意：远程API（/crossTask/query 和 /crossTask/detail）返回驼峰命名
+            // 如 deviceNum, deviceCode, templateCode, taskPath 等
             const areaId = getField('area_id', 'areaId') || '-';
             const templateCode = getField('template_code', 'templateCode', 'model_process_code') || '-';
-            const robotNum = getField('robot_num', 'robotNum') || '-';
+            const robotNum = getField('robot_num', 'robotNum', 'deviceNum') || '-';
             const robotId = getField('robot_id', 'robotId', 'device_code', 'deviceCode') || '-';
             const deviceIp = getField('device_ip', 'deviceIp', 'DEVICE_IP') || '-';
-            const pathPoints = getField('path_points', 'pathPoints') || '-';
+            const pathPoints = getField('path_points', 'pathPoints', 'taskPath') || '-';
             const robotType = getField('robot_type', 'robotType') || '-';
             const shelfModel = getField('shelf_model', 'shelfModel') || '-';
             const shelfModelName = getField('shelf_model_name', 'shelfModelName') || '-';
