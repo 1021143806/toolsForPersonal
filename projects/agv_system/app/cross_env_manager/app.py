@@ -18,6 +18,7 @@ import re
 import os
 import sys
 import argparse
+import hashlib
 from datetime import datetime
 from dotenv import load_dotenv
 import logging
@@ -221,19 +222,26 @@ def log_template_rendered(sender, template, context, **extra):
     # 记录模板渲染信息
     app.logger.info(f"模板渲染: IP={client_ip}, 模板路径={template_path}")
 
+def _get_user_info():
+    """获取当前用户信息用于日志"""
+    username = session.get('username', '-')
+    is_admin = session.get('is_admin', False)
+    role = '管理员' if is_admin else ('用户' if username != '-' else '-')
+    return f"{username}({role})"
+
 def log_request_info():
     """记录请求信息"""
     client_ip = request.remote_addr
     if request.headers.get('X-Forwarded-For'):
         client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    app.logger.info(f"请求开始: IP={client_ip}, 路径={request.path}, 方法={request.method}")
+    app.logger.info(f"请求开始: IP={client_ip}, 路径={request.path}, 方法={request.method}, 用户={_get_user_info()}")
 
 def log_response_info(response):
     """记录响应信息"""
     client_ip = request.remote_addr
     if request.headers.get('X-Forwarded-For'):
         client_ip = request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    app.logger.info(f"请求完成: IP={client_ip}, 路径={request.path}, 状态码={response.status_code}")
+    app.logger.info(f"请求完成: IP={client_ip}, 路径={request.path}, 状态码={response.status_code}, 用户={_get_user_info()}")
     return response
 
 # 设置日志格式
@@ -285,12 +293,47 @@ LOGIN_CONFIG = {
                 'admin123')
 }
 
+def verify_bms_user(username, password):
+    """通过本地数据库 bms_user 表验证普通用户"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return False
+        cursor = conn.cursor(DictCursor)
+        cursor.execute("SELECT PASSWORD FROM bms_user WHERE LOGIN_NAME = %s", (username,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            # MD5 验证
+            md5_password = hashlib.md5(password.encode()).hexdigest()
+            return md5_password == row['PASSWORD']
+        return False
+    except Exception as e:
+        print(f"bms_user验证失败: {e}")
+        return False
+
 def login_required(f):
-    """登录验证装饰器"""
+    """登录验证装饰器（普通用户或管理员均可）"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
-            return jsonify({'error': '需要登录'}), 401
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': '需要登录', 'redirect': '/login'}), 401
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    """管理员验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('is_admin'):
+            # AJAX/fetch 请求：返回 JSON（base.html 全局拦截用 Toast 提示）
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': '需要管理员权限，请在首页启用管理员提权'}), 403
+            # 页面直接访问：返回弹窗 HTML，弹窗后返回上一页
+            return '''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"></head>
+<body><script>alert('需要管理员权限，请在首页启用管理员提权');history.back();</script></body></html>''', 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -351,11 +394,13 @@ def get_next_available_id():
     return result[0]['max_id'] + 1
 
 @app.route('/')
+@login_required
 def index():
     """主页 - 搜索页面"""
     return render_template('index.html')
 
 @app.route('/search', methods=['GET', 'POST'])
+@login_required
 def search():
     """搜索任务模板"""
     if request.method == 'POST':
@@ -411,6 +456,7 @@ def search():
                          search_term=search_term)
 
 @app.route('/template/<int:template_id>')
+@login_required
 def view_template(template_id):
     """查看单个任务模板详情"""
     # 获取主模板信息
@@ -436,6 +482,8 @@ def view_template(template_id):
                          details=details)
 
 @app.route('/edit/<int:template_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def edit_template(template_id):
     """编辑任务模板"""
     if request.method == 'GET':
@@ -596,6 +644,8 @@ def update_template_details(template_id, form_data):
     return updated_count
 
 @app.route('/edit_detail/<int:detail_id>', methods=['POST'])
+@login_required
+@admin_required
 def edit_detail(detail_id):
     """编辑子任务"""
     form_data = request.form
@@ -669,6 +719,8 @@ def edit_detail(detail_id):
     return redirect(url_for('index'))
 
 @app.route('/copy/<int:template_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def copy_template(template_id):
     """复制任务模板"""
     if request.method == 'GET':
@@ -845,6 +897,7 @@ def copy_template(template_id):
             return redirect(url_for('copy_template', template_id=template_id))
 
 @app.route('/api/search_suggestions', methods=['GET'])
+@login_required
 def search_suggestions():
     """搜索建议API"""
     term = request.args.get('term', '').strip()
@@ -871,6 +924,8 @@ def search_suggestions():
     return jsonify(suggestions)
 
 @app.route('/api/template/<int:template_id>/details/add', methods=['POST'])
+@login_required
+@admin_required
 def add_detail(template_id):
     """添加新子任务"""
     try:
@@ -964,6 +1019,8 @@ def add_detail(template_id):
         }), 500
 
 @app.route('/api/template/<int:template_id>/details/<int:detail_id>/delete', methods=['DELETE'])
+@login_required
+@admin_required
 def delete_detail(template_id, detail_id):
     """删除子任务"""
     try:
@@ -1002,6 +1059,8 @@ def delete_detail(template_id, detail_id):
         }), 500
 
 @app.route('/api/template/<int:template_id>/details/reorder', methods=['POST'])
+@login_required
+@admin_required
 def reorder_details(template_id):
     """重新排序子任务"""
     try:
@@ -1063,6 +1122,7 @@ def reorder_details(template_id):
         }), 500
 
 @app.route('/docs')
+@login_required
 def show_docs():
     """显示本地README.md文档"""
     try:
@@ -1072,6 +1132,7 @@ def show_docs():
         return f"无法加载文档: {str(e)}", 500
 
 @app.route('/docs/module/<name>')
+@login_required
 def docs_module(name):
     """加载指定模块的readme文档"""
     try:
@@ -1126,11 +1187,13 @@ def docs_module(name):
         return f"无法加载文档: {str(e)}", 500
 
 @app.route('/stats')
+@login_required
 def show_stats():
     """显示统计页面"""
     return render_template('stats/index.html')
 
 @app.route('/api/stats/overview')
+@login_required
 def get_stats_overview():
     """获取系统概览统计"""
     try:
@@ -1194,6 +1257,7 @@ def get_stats_overview():
         }), 500
 
 @app.route('/api/stats/distribution')
+@login_required
 def get_stats_distribution():
     """获取分布统计"""
     try:
@@ -1263,6 +1327,7 @@ def get_stats_distribution():
         }), 500
 
 @app.route('/api/stats/templates_by_server')
+@login_required
 def get_templates_by_server():
     """按服务器分组获取模板信息"""
     try:
@@ -1298,6 +1363,7 @@ def get_templates_by_server():
         }), 500
 
 @app.route('/api/stats/template_growth')
+@login_required
 def get_template_growth():
     """获取模板增长趋势（基于ID顺序）"""
     try:
@@ -1331,6 +1397,7 @@ def get_template_growth():
         }), 500
 
 @app.route('/api/task_group/<order_id>')
+@login_required
 def get_task_group_info(order_id):
     """获取task_group和task_group_detail信息，支持本地和远程查询"""
     try:
@@ -1359,6 +1426,7 @@ def get_task_group_info(order_id):
         }), 500
 
 @app.route('/api/task/resend', methods=['POST'])
+@login_required
 def resend_task():
     """跨环境任务重发接口"""
     try:
@@ -1397,6 +1465,7 @@ def resend_task():
         )
         
         if result.get('success'):
+            app.logger.info(f"[RESEND] 用户={_get_user_info()} 重发子任务 {sub_order_id} → {result.get('newSubOrderId')}")
             return jsonify(result)
         else:
             return jsonify(result), 400
@@ -1409,6 +1478,7 @@ def resend_task():
         }), 500
 
 @app.route('/api/task/force_complete', methods=['POST'])
+@login_required
 def force_complete_task():
     """跨环境任务异常完成接口（仅将子任务状态置为3）"""
     try:
@@ -1446,6 +1516,7 @@ def force_complete_task():
         )
         
         if result.get('success'):
+            app.logger.info(f"[FORCE_COMPLETE] 用户={_get_user_info()} 异常完成子任务 {sub_order_id}")
             return jsonify(result)
         else:
             return jsonify(result), 400
@@ -1458,6 +1529,7 @@ def force_complete_task():
         }), 500
 
 @app.route('/api/stats/detailed_analysis')
+@login_required
 def get_detailed_analysis():
     """获取详细分析数据"""
     try:
@@ -1537,6 +1609,7 @@ def get_detailed_analysis():
         }), 500
 
 @app.route('/api/stats/main_task_status')
+@login_required
 def get_main_task_status():
     """获取当天大模板状态分布统计（含error_desc细分）"""
     try:
@@ -1630,6 +1703,7 @@ def get_main_task_status():
 # ============================================================================
 
 @app.route('/query')
+@login_required
 def query_index():
     """查询功能主页"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1639,6 +1713,7 @@ def query_index():
     return render_template('query/unified_home.html')
 
 @app.route('/query/legacy')
+@login_required
 def query_legacy():
     """旧版查询功能主页（兼容性）"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1648,6 +1723,7 @@ def query_legacy():
     return render_template('query/index_optimized.html')
 
 @app.route('/query/task', methods=['GET', 'POST'])
+@login_required
 def query_task_extended():
     """整合任务查询页面"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1657,6 +1733,7 @@ def query_task_extended():
     return render_template('query/task_extended.html')
 
 @app.route('/query/device', methods=['GET', 'POST'])
+@login_required
 def query_device():
     """设备验证"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1739,11 +1816,13 @@ def query_device():
 # ============================================================================
 
 @app.route('/task_query')
+@login_required
 def task_query_home():
     """任务查询主页 - 对应1.3项目的home.html功能"""
     return render_template('query/task_query_home.html')
 
 @app.route('/task_query/result')
+@login_required
 def task_query_result():
     """任务单号查询结果 - 对应FindTheTask.php功能"""
     order_id = request.args.get('order_id', '').strip()
@@ -1771,6 +1850,7 @@ def task_query_result():
         return redirect(url_for('task_query_home'))
 
 @app.route('/task_query/cross_task_by_template')
+@login_required
 def cross_task_by_template():
     """跨环境任务模板查询 - 对应Kua.php功能"""
     template_code = request.args.get('template_code', '').strip()
@@ -1795,6 +1875,7 @@ def cross_task_by_template():
         return redirect(url_for('task_query_home'))
 
 @app.route('/task_query/cross_model_process_info')
+@login_required
 def cross_model_process_info():
     """跨环境任务模板详情 - 对应Chech_Kua_model_process.php功能"""
     template_code = request.args.get('template_code', '').strip()
@@ -1817,6 +1898,7 @@ def cross_model_process_info():
         return redirect(url_for('task_query_home'))
 
 @app.route('/task_query/cross_task_info')
+@login_required
 def cross_task_info():
     """跨环境任务详情 - 对应FindTheTaskKua.php功能"""
     order_id = request.args.get('order_id', '').strip()
@@ -1843,6 +1925,7 @@ def cross_task_info():
 # ============================================================================
 
 @app.route('/join_qr_nodes')
+@login_required
 def list_join_qr_nodes():
     """显示所有join_qr_node_info记录"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1861,6 +1944,7 @@ def list_join_qr_nodes():
         return render_template('join_qr_nodes.html', nodes=[], stats={})
 
 @app.route('/join_qr_nodes/search')
+@login_required
 def search_join_qr_nodes():
     """搜索join_qr_node_info记录"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1881,6 +1965,7 @@ def search_join_qr_nodes():
         return jsonify({'success': False, 'message': f'搜索失败: {str(e)}'}), 500
 
 @app.route('/join_qr_nodes/<int:node_id>')
+@login_required
 def view_join_qr_node(node_id):
     """查看join_qr_node_info记录详情"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1899,6 +1984,8 @@ def view_join_qr_node(node_id):
         return redirect(url_for('list_join_qr_nodes'))
 
 @app.route('/join_qr_nodes/<int:node_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def edit_join_qr_node(node_id):
     """编辑join_qr_node_info记录"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1941,6 +2028,8 @@ def edit_join_qr_node(node_id):
         return redirect(url_for('list_join_qr_nodes'))
 
 @app.route('/join_qr_nodes/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
 def add_join_qr_node():
     """添加新的join_qr_node_info记录"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1972,6 +2061,8 @@ def add_join_qr_node():
     return render_template('add_join_qr_node.html')
 
 @app.route('/api/join_qr_nodes/<int:node_id>/delete', methods=['DELETE'])
+@login_required
+@admin_required
 def delete_join_qr_node(node_id):
     """删除join_qr_node_info记录"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1987,6 +2078,7 @@ def delete_join_qr_node(node_id):
         return jsonify({'success': False, 'message': f'删除失败: {str(e)}'}), 500
 
 @app.route('/api/join_qr_nodes/stats')
+@login_required
 def get_join_qr_node_stats_api():
     """获取join_qr_node_info统计信息API"""
     if not QUERY_MODULES_AVAILABLE:
@@ -1999,6 +2091,7 @@ def get_join_qr_node_stats_api():
         return jsonify({'success': False, 'message': f'获取统计信息失败: {str(e)}'}), 500
 
 @app.route('/addtask')
+@login_required
 def addtask():
     """AGV任务下发页面"""
     # 传递登录状态到模板
@@ -2007,6 +2100,7 @@ def addtask():
                           username=session.get('username', ''))
 
 @app.route('/help')
+@login_required
 def index_help():
     """提供首页的帮助文档"""
     try:
@@ -2022,6 +2116,7 @@ def index_help():
         return f"无法加载帮助文档: {str(e)}", 500
 
 @app.route('/query/help')
+@login_required
 def query_help():
     """提供查询页面的帮助文档"""
     try:
@@ -2037,6 +2132,7 @@ def query_help():
         return f"无法加载帮助文档: {str(e)}", 500
 
 @app.route('/addtask/help')
+@login_required
 def addtask_help():
     """提供addtask页面的帮助文档"""
     try:
@@ -2068,11 +2164,15 @@ def addtask_help():
         return f"无法加载帮助文档: {str(e)}", 500
 
 @app.route('/config')
+@login_required
+@admin_required
 def config_editor():
     """配置管理页面"""
     return render_template('addTask/config_editor.html')
 
 @app.route('/addtask/config')
+@login_required
+@admin_required
 def get_addtask_config():
     """获取当前配置"""
     try:
@@ -2086,6 +2186,8 @@ def get_addtask_config():
         return jsonify({'error': f'无法加载配置: {str(e)}'}), 500
 
 @app.route('/addtask/config', methods=['POST'])
+@login_required
+@admin_required
 def save_addtask_config():
     """保存配置（支持版本控制和提交消息）"""
     try:
@@ -2179,6 +2281,8 @@ def save_addtask_config():
         return jsonify({'error': f'保存配置失败: {str(e)}'}), 500
 
 @app.route('/addtask/config/backups')
+@login_required
+@admin_required
 def list_backups():
     """列出所有备份文件（包含提交消息和父版本信息）"""
     try:
@@ -2243,6 +2347,8 @@ def list_backups():
         return jsonify({'error': f'无法列出备份: {str(e)}'}), 500
 
 @app.route('/addtask/config/backup', methods=['POST'])
+@login_required
+@admin_required
 def create_backup():
     """创建手动备份（支持提交消息和父版本信息）"""
     try:
@@ -2293,6 +2399,8 @@ def create_backup():
         return jsonify({'error': f'创建备份失败: {str(e)}'}), 500
 
 @app.route('/addtask/config/backup/<backup_name>')
+@login_required
+@admin_required
 def get_backup(backup_name):
     """获取备份文件内容"""
     try:
@@ -2308,6 +2416,8 @@ def get_backup(backup_name):
         return jsonify({'error': f'无法读取备份: {str(e)}'}), 500
 
 @app.route('/addtask/config/backup/<backup_name>/restore', methods=['POST'])
+@login_required
+@admin_required
 def restore_backup(backup_name):
     """恢复备份"""
     try:
@@ -2330,6 +2440,8 @@ def restore_backup(backup_name):
         return jsonify({'error': f'恢复备份失败: {str(e)}'}), 500
 
 @app.route('/addtask/config/backup/<backup_name>', methods=['DELETE'])
+@login_required
+@admin_required
 def delete_backup(backup_name):
     """删除备份"""
     try:
@@ -2345,49 +2457,64 @@ def delete_backup(backup_name):
 
 # ==================== 登录认证路由 ====================
 
+@app.route('/login')
+def login_page():
+    """登录页面"""
+    return render_template('login.html')
+
 @app.route('/api/login', methods=['POST'])
 def login():
-    """用户登录"""
+    """用户登录（RCS账号 + 可选管理员提权）"""
     try:
         data = request.get_json()
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
+        admin_username = data.get('admin_username', '').strip()
+        admin_password = data.get('admin_password', '').strip()
         
-        # 验证用户名和密码
-        if username == LOGIN_CONFIG['username'] and password == LOGIN_CONFIG['password']:
-            session['logged_in'] = True
-            session['username'] = username
-            session['login_time'] = datetime.now().isoformat()
-            return jsonify({
-                'success': True,
-                'message': '登录成功',
-                'username': username
-            })
+        if not username or not password:
+            return jsonify({'success': False, 'error': '用户名和密码不能为空'}), 400
+        
+        # 先验证 RCS 用户
+        if not verify_bms_user(username, password):
+            return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
+        
+        session['logged_in'] = True
+        session['username'] = username
+        session['login_time'] = datetime.now().isoformat()
+        
+        # 检查是否需要管理员提权
+        if admin_username and admin_password:
+            if admin_username == LOGIN_CONFIG['username'] and admin_password == LOGIN_CONFIG['password']:
+                session['is_admin'] = True
+                print(f"[LOGIN] 管理员提权: {username} (by {admin_username}) @ {session['login_time']}")
+                return jsonify({'success': True, 'message': f'登录成功（管理员权限）', 'username': username, 'is_admin': True})
+            else:
+                # 管理员验证失败，但RCS登录成功，给普通权限
+                session['is_admin'] = False
+                print(f"[LOGIN] 管理员提权失败: {username} @ {session['login_time']}")
+                return jsonify({'success': True, 'message': '登录成功（管理员验证失败，普通权限）', 'username': username, 'is_admin': False})
         else:
-            return jsonify({
-                'success': False,
-                'error': '用户名或密码错误'
-            }), 401
+            session['is_admin'] = False
+            print(f"[LOGIN] 普通用户登录: {username} @ {session['login_time']}")
+            return jsonify({'success': True, 'message': '登录成功', 'username': username, 'is_admin': False})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'登录失败: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'error': f'登录失败: {str(e)}'}), 500
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
     """用户注销"""
+    username = session.get('username', 'unknown')
+    print(f"[LOGOUT] 用户注销: {username}")
     session.clear()
-    return jsonify({
-        'success': True,
-        'message': '已注销'
-    })
+    return jsonify({'success': True, 'message': '已注销'})
 
 @app.route('/api/auth/status')
 def auth_status():
     """获取认证状态"""
     return jsonify({
         'logged_in': session.get('logged_in', False),
+        'is_admin': session.get('is_admin', False),
         'username': session.get('username', ''),
         'login_time': session.get('login_time', '')
     })
@@ -2398,6 +2525,7 @@ def health_check():
     return '1000', 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 @app.route('/test/version_tree')
+@login_required
 def test_version_tree():
     """测试版本历史树状图页面"""
     return render_template('test_version_tree.html')

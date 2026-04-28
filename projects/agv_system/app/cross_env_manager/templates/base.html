@@ -438,6 +438,13 @@
                         </li>
                     </ul>
                     <div class="navbar-nav d-flex align-items-center">
+                        <span id="navUserInfo" class="text-light me-2 small" style="display:none;">
+                            <i class="bi bi-person-circle"></i> <span id="navUsername"></span>
+                            <span id="navAdminBadge" class="badge bg-warning text-dark ms-1" style="display:none;">管理员</span>
+                        </span>
+                        <button id="navLogoutBtn" class="btn btn-outline-danger btn-sm me-2" style="display:none;" title="注销">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
                         <button id="themeToggleNav" class="btn btn-outline-secondary btn-sm me-2" title="切换主题">
                             <i class="bi bi-moon-stars"></i>
                         </button>
@@ -522,6 +529,34 @@
         });
     </script>
     <script>
+        // 全局拦截 fetch 403 响应，Toast 提示需要管理员权限
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args).then(response => {
+                if (response.status === 403) {
+                    response.clone().json().then(data => {
+                        showToast(data.error || '需要管理员权限，请在首页启用管理员提权', 'warning');
+                    }).catch(() => {
+                        showToast('需要管理员权限，请在首页启用管理员提权', 'warning');
+                    });
+                }
+                return response;
+            });
+        };
+        
+        // Toast 通知函数
+        function showToast(message, type) {
+            const bgClass = type === 'warning' ? 'bg-warning text-dark' : 'bg-danger text-white';
+            const icon = type === 'warning' ? 'bi-exclamation-triangle' : 'bi-x-circle';
+            const toastHtml = '<div class="toast align-items-center ' + bgClass + ' border-0" role="alert"><div class="d-flex"><div class="toast-body"><i class="bi ' + icon + ' me-2"></i>' + message + '</div><button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+            const container = document.getElementById('toastContainer') || (() => { const d = document.createElement('div'); d.id = 'toastContainer'; d.className = 'toast-container position-fixed top-0 end-0 p-3'; d.style.zIndex = '9999'; document.body.appendChild(d); return d; })();
+            const toastEl = document.createElement('div');
+            toastEl.innerHTML = toastHtml;
+            container.appendChild(toastEl.firstElementChild);
+            const toast = new bootstrap.Toast(container.lastElementChild, { delay: 4000 });
+            toast.show();
+        };
+        
         // 自动关闭警告消息
         $(document).ready(function() {
             setTimeout(function() {
@@ -576,11 +611,28 @@
             }
         }
 
-        // 同步导航栏中的主题切换按钮
+        // 同步导航栏中的主题切换按钮 + 登录状态
         $(document).ready(function() {
             $('#themeToggleNav').click(function() {
                 $('#themeToggle').click();
             });
+            
+            // 检查登录状态
+            fetch('/api/auth/status')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        $('#navUserInfo').show();
+                        $('#navUsername').text(data.username);
+                        if (data.is_admin) {
+                            $('#navAdminBadge').show();
+                        }
+                        $('#navLogoutBtn').show().click(async () => {
+                            await fetch('/api/logout', { method: 'POST' });
+                            window.location.reload();
+                        });
+                    }
+                });
         });
     </script>
     {% block extra_js %}{% endblock %}
