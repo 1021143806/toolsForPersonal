@@ -2537,6 +2537,7 @@ if __name__ == '__main__':
     # ========================================================================
     # Phase 1 架构优化：初始化数据库连接池
     # ========================================================================
+    pool = None
     try:
         from modules.database.connection import DatabasePool, get_db_config_from_toml
         pool = DatabasePool()
@@ -2601,7 +2602,7 @@ if __name__ == '__main__':
     print(f"数据库: {DB_CONFIG['database']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}")
     print(f"服务地址: http://{host}:{port}")
     print(f"调试模式: {'是' if debug else '否'}")
-    print(f"连接池: {'已启用' if 'pool' in dir() and pool.is_initialized else '未启用（使用传统连接）'}")
+    print(f"连接池: {'已启用' if pool and pool.is_initialized else '未启用（使用传统连接）'}")
     print("=" * 60)
     print("启动服务中...")
     
