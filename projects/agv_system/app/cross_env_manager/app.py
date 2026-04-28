@@ -406,7 +406,7 @@ def search():
         details = execute_query(detail_query, (template['id'],))
         template['details'] = details or []
     
-    return render_template('search_results.html', 
+    return render_template('template/search_results.html', 
                          templates=templates, 
                          search_term=search_term)
 
@@ -431,7 +431,7 @@ def view_template(template_id):
     """
     details = execute_query(detail_query, (template_id,))
     
-    return render_template('template_detail.html', 
+    return render_template('template/detail.html', 
                          template=template, 
                          details=details)
 
@@ -457,7 +457,7 @@ def edit_template(template_id):
         """
         details = execute_query(detail_query, (template_id,))
         
-        return render_template('edit_template.html', 
+        return render_template('template/edit.html', 
                              template=template, 
                              details=details)
     
@@ -690,7 +690,7 @@ def copy_template(template_id):
         """
         details = execute_query(detail_query, (template_id,))
         
-        return render_template('copy_template.html', 
+        return render_template('template/copy.html', 
                              template=template, 
                              details=details)
     
@@ -1067,23 +1067,68 @@ def show_docs():
     """显示本地README.md文档"""
     try:
         # 读取README.md文件
-        readme_path = os.path.join(os.path.dirname(__file__), 'README.md')
-        with open(readme_path, 'r', encoding='utf-8') as f:
+        return render_template('docs/index.html')
+    except Exception as e:
+        return f"无法加载文档: {str(e)}", 500
+
+@app.route('/docs/module/<name>')
+def docs_module(name):
+    """加载指定模块的readme文档"""
+    try:
+        # 模块路径映射
+        module_paths = {
+            'template': 'templates/template/readme.md',
+            'addTask': 'templates/addTask/readme.md',
+            'query': 'templates/query/readme.md',
+            'stats': 'templates/stats/readme.md',
+            'components': 'templates/components/readme.md',
+            'api': 'doc/API.md',
+        }
+        
+        if name not in module_paths:
+            return f"未找到模块: {name}", 404
+        
+        file_path = os.path.join(os.path.dirname(__file__), module_paths[name])
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # 将Markdown转换为HTML（简单转换）
         import markdown
         html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
         
-        return render_template('docs.html', content=html_content)
+        return f'''<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档 - {name}</title>
+    <link href="/static/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <style>
+        body {{ background: #121212; color: #e9ecef; padding: 2rem; }}
+        .container {{ max-width: 900px; }}
+        h1, h2, h3 {{ color: #e9ecef; border-bottom: 1px solid #495057; padding-bottom: 0.3em; }}
+        code {{ background: #2d2d2d; padding: 0.2em 0.4em; border-radius: 3px; }}
+        pre {{ background: #2d2d2d; padding: 1rem; border-radius: 8px; overflow: auto; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 1rem 0; }}
+        th, td {{ border: 1px solid #495057; padding: 8px 12px; text-align: left; }}
+        th {{ background: #2d2d2d; }}
+        a {{ color: #6ea8fe; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/docs" class="btn btn-outline-light btn-sm mb-3">&larr; 返回文档中心</a>
+        {html_content}
+    </div>
+</body>
+</html>'''
     except Exception as e:
-        # 如果读取失败，返回错误信息
-        return f"无法读取文档: {str(e)}", 500
+        return f"无法加载文档: {str(e)}", 500
 
 @app.route('/stats')
 def show_stats():
     """显示统计页面"""
-    return render_template('stats.html')
+    return render_template('stats/index.html')
 
 @app.route('/api/stats/overview')
 def get_stats_overview():
@@ -1960,6 +2005,21 @@ def addtask():
     return render_template('addTask/addtask.html', 
                           logged_in=session.get('logged_in', False),
                           username=session.get('username', ''))
+
+@app.route('/help')
+def index_help():
+    """提供首页的帮助文档"""
+    try:
+        readme_path = os.path.join(os.path.dirname(__file__), 'templates', 'index_help.md')
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        import markdown
+        html_content = markdown.markdown(content, extensions=['fenced_code', 'tables'])
+        
+        return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        return f"无法加载帮助文档: {str(e)}", 500
 
 @app.route('/query/help')
 def query_help():

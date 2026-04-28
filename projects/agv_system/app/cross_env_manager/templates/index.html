@@ -99,191 +99,16 @@
             </div>
         </div>
         
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-info-circle text-primary"></i> 系统功能
-                        </h5>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 任务模板查询
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 模板详情查看
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 模板信息修改
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 模板复制插入
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 子任务管理
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> AGV任务查询
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> 设备验证
-                            </li>
-                            <li class="list-group-item">
-                                <i class="bi bi-check-circle text-success"></i> AGV状态监控
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-database text-warning"></i> 数据库信息
-                        </h5>
-                        <p class="card-text">
-                            当前连接数据库：<code>agv_cross_env_test</code>
-                        </p>
-                        <p class="card-text">
-                            管理表：
-                        </p>
-                        <div class="d-flex flex-wrap gap-1">
-                            <span class="badge bg-secondary">fy_cross_model_process</span>
-                            <span class="badge bg-secondary">fy_cross_model_process_detail</span>
-                            <span class="badge bg-secondary">join_qr_node_info</span>
-                            <span class="badge bg-secondary">agv_robot</span>
-                            <span class="badge bg-secondary">agv_robot_ext</span>
-                            <span class="badge bg-info">shelf</span>
-                            <span class="badge bg-info">shelf_model</span>
-                            <span class="badge bg-info">fy_cross_task</span>
-                        </div>
-                        <div class="mt-3">
-                            <a href="#" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#dbInfoModal">
-                                <i class="bi bi-info-square"></i> 查看表结构
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <div class="card mt-4">
             <div class="card-body">
                 <h5 class="card-title">
-                    <i class="bi bi-lightbulb text-info"></i> 使用说明
+                    <i class="bi bi-lightbulb text-info"></i> 使用帮助
                 </h5>
-                <div class="accordion" id="usageAccordion">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
-                                1. 如何搜索任务模板？
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse show">
-                            <div class="accordion-body">
-                                <p>在搜索框中输入任务模板代码或名称，支持模糊匹配。例如：</p>
-                                <ul>
-                                    <li>输入 <code>HJBY</code> 查找所有包含 HJBY 的任务模板</li>
-                                    <li>输入完整代码如 <code>HJBY_back_32A3DJ2F_to_31A3QD4B3F_446</code></li>
-                                    <li>输入部分关键词如 <code>back</code> 或 <code>test</code></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
-                                2. 如何复制模板？
-                            </button>
-                        </h2>
-                        <div id="collapseTwo" class="accordion-collapse collapse">
-                            <div class="accordion-body">
-                                <p>在搜索结果页面或模板详情页面，点击"复制模板"按钮。</p>
-                                <p>系统会自动生成新的模板代码：</p>
-                                <ul>
-                                    <li>如果输入 <code>HJBY_test</code>，系统会检查最后一条记录ID（如484）</li>
-                                    <li>自动生成新ID为485，新模板代码为 <code>HJBY_test_485</code></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
-                                3. 如何修改模板信息？
-                            </button>
-                        </h2>
-                        <div id="collapseThree" class="accordion-collapse collapse">
-                            <div class="accordion-body">
-                                <p>在模板详情页面点击"编辑"按钮，进入编辑页面。</p>
-                                <p>修改完成后点击"保存"，系统会提示确认修改。</p>
-                                <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> 注意：修改操作会直接更新数据库，请谨慎操作。</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
-                                4. AGV查询功能
-                            </button>
-                        </h2>
-                        <div id="collapseFour" class="accordion-collapse collapse">
-                            <div class="accordion-body">
-                                <p>系统提供完整的AGV任务查询功能：</p>
-                                <ul>
-                                    <li><strong>任务查询</strong>：查询AGV任务执行状态</li>
-                                    <li><strong>设备验证</strong>：验证AGV设备配置和状态</li>
-                                    <li><strong>模板查询</strong>：查询跨环境任务模板</li>
-                                    <li><strong>AGV状态</strong>：监控AGV实时运行状态</li>
-                                    <li><strong>交接点查询</strong>：查询AGV交接点信息</li>
-                                    <li><strong>货架模型查询</strong>：查询货架模型配置</li>
-                                </ul>
-                                <p>点击上方查询功能按钮或访问 <a href="/query">查询功能主页</a> 使用所有功能。</p>
-                            </div>
-                        </div>
+                <div id="indexHelpContent">
+                    <div class="text-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm me-2"></div>加载中...
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 数据库信息模态框 -->
-<div class="modal fade" id="dbInfoModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">数据库表结构</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6>fy_cross_model_process (跨环境任务模板主表)</h6>
-                <ul class="small">
-                    <li><code>id</code> - 主键ID</li>
-                    <li><code>model_process_code</code> - 模板代码 (如 HJBY_back_32A3DJ2F_to_31A3QD4B3F_446)</li>
-                    <li><code>model_process_name</code> - 模板名称</li>
-                    <li><code>enable</code> - 是否启用 (0=禁用/跨环境任务, 1=启用)</li>
-                    <li><code>request_url</code> - 回调URL</li>
-                    <li><code>capacity</code> - 容量管控值</li>
-                    <li><code>target_points</code> - 目标点位</li>
-                    <li><code>area_id</code> - 区域ID</li>
-                    <li><code>target_points_ip</code> - 目标服务器IP</li>
-                </ul>
-                
-                <h6>fy_cross_model_process_detail (跨环境子任务模板明细表)</h6>
-                <ul class="small">
-                    <li><code>id</code> - 主键ID</li>
-                    <li><code>model_process_id</code> - 关联主模板ID</li>
-                    <li><code>task_seq</code> - 任务顺序</li>
-                    <li><code>task_servicec</code> - 下发服务器地址</li>
-                    <li><code>template_code</code> - 子任务模板代码</li>
-                    <li><code>template_name</code> - 子任务名称</li>
-                    <li><code>task_path</code> - 目标点标识</li>
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
             </div>
         </div>
     </div>
@@ -291,17 +116,17 @@
 
 {% block extra_js %}
 <script>
-    // 搜索建议功能
-    $(document).ready(function() {
-        const searchInput = $('input[name="search_term"]');
-        
-        searchInput.on('input', function() {
-            const term = $(this).val();
-            if (term.length < 2) return;
-            
-            // 这里可以添加搜索建议功能
-            // 实际实现需要调用后端API
-        });
+    // 加载使用帮助
+    document.addEventListener('DOMContentLoaded', async () => {
+        const helpContainer = document.getElementById('indexHelpContent');
+        if (!helpContainer) return;
+        try {
+            const res = await fetch('/help');
+            const html = await res.text();
+            helpContainer.innerHTML = html;
+        } catch (e) {
+            helpContainer.innerHTML = '<div class="text-danger">加载帮助文档失败: ' + e.message + '</div>';
+        }
     });
 </script>
 {% endblock %}

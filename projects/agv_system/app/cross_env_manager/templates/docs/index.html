@@ -1,297 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}跨环境任务模板管理系统 - 文档{% endblock %}
+{% block title %}跨环境任务模板管理系统 - 文档中心{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="bi bi-journal-text me-2"></i> 系统文档
-                    </h4>
-                    <div>
-                        <a href="{{ url_for('index') }}" class="btn btn-light btn-sm">
-                            <i class="bi bi-arrow-left me-1"></i> 返回首页
-                        </a>
-                        <button onclick="window.print()" class="btn btn-light btn-sm ms-2">
-                            <i class="bi bi-printer me-1"></i> 打印
-                        </button>
-                    </div>
+                    <h4 class="mb-0"><i class="bi bi-journal-text me-2"></i> 文档中心</h4>
+                    <a href="{{ url_for('index') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> 返回首页
+                    </a>
                 </div>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    本文档基于项目根目录下的 <code>README.md</code> 文件生成，内容与本地文档完全一致。
-                </div>
-                
-                <!-- 文档导航 -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="bi bi-list me-2"></i> 文档目录
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <ul class="list-unstyled">
-                                    <li><a href="#功能特性"><i class="bi bi-check-circle text-success me-2"></i>功能特性</a></li>
-                                    <li><a href="#系统要求"><i class="bi bi-gear text-primary me-2"></i>系统要求</a></li>
-                                    <li><a href="#安装部署"><i class="bi bi-download text-warning me-2"></i>安装部署</a></li>
-                                    <li><a href="#使用说明"><i class="bi bi-play-circle text-info me-2"></i>使用说明</a></li>
-                                </ul>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="/docs/module/template" class="text-decoration-none">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-diagram-3 fs-1 text-primary"></i>
+                                    <h5 class="mt-2">模板管理</h5>
+                                    <p class="small text-muted">搜索、编辑、复制跨环境任务模板</p>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <ul class="list-unstyled">
-                                    <li><a href="#数据库表结构"><i class="bi bi-database text-secondary me-2"></i>数据库表结构</a></li>
-                                    <li><a href="#开发说明"><i class="bi bi-code-slash text-dark me-2"></i>开发说明</a></li>
-                                    <li><a href="#故障排除"><i class="bi bi-tools text-danger me-2"></i>故障排除</a></li>
-                                    <li><a href="#部署到生产环境"><i class="bi bi-server text-success me-2"></i>部署到生产环境</a></li>
-                                </ul>
-                            </div>
-                        </div>
+                        </a>
                     </div>
-                </div>
-                
-                <!-- Markdown内容 -->
-                <div class="markdown-content p-4 border rounded">
-                    {{ content|safe }}
-                </div>
-                
-                <!-- 文档信息 -->
-                <div class="card mt-4">
-                    <div class="card-body text-center">
-                        <p class="mb-2">
-                            <i class="bi bi-clock-history me-1"></i>
-                            文档最后更新: <strong>2026-04-08</strong>
-                        </p>
-                        <p class="mb-0">
-                            <i class="bi bi-file-earmark-text me-1"></i>
-                            源文件: <code>README.md</code> ({{ content|length }} 字符)
-                        </p>
+                    <div class="col-md-4">
+                        <a href="/docs/module/addTask" class="text-decoration-none">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-send fs-1 text-success"></i>
+                                    <h5 class="mt-2">任务下发</h5>
+                                    <p class="small text-muted">AGV跨环境任务下发系统</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/docs/module/query" class="text-decoration-none">
+                            <div class="card h-100 border-info">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-search fs-1 text-info"></i>
+                                    <h5 class="mt-2">查询功能</h5>
+                                    <p class="small text-muted">任务查询、货架查询、状态概览</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/docs/module/stats" class="text-decoration-none">
+                            <div class="card h-100 border-warning">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-graph-up fs-1 text-warning"></i>
+                                    <h5 class="mt-2">统计仪表盘</h5>
+                                    <p class="small text-muted">数据分析与可视化图表</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/docs/module/components" class="text-decoration-none">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-puzzle fs-1 text-secondary"></i>
+                                    <h5 class="mt-2">共享组件</h5>
+                                    <p class="small text-muted">UI组件库与使用说明</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="/docs/module/api" class="text-decoration-none">
+                            <div class="card h-100 border-danger">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-code-slash fs-1 text-danger"></i>
+                                    <h5 class="mt-2">API 文档</h5>
+                                    <p class="small text-muted">后端接口完整参考</p>
+                                </div>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .markdown-content {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        line-height: 1.6;
-        background-color: var(--card-bg);
-        color: var(--text-color);
-        border-color: var(--border-color) !important;
-    }
-    
-    .markdown-content h1,
-    .markdown-content h2,
-    .markdown-content h3,
-    .markdown-content h4,
-    .markdown-content h5,
-    .markdown-content h6 {
-        margin-top: 1.5em;
-        margin-bottom: 0.5em;
-        font-weight: 600;
-        line-height: 1.25;
-        border-bottom: 1px solid var(--border-color);
-        padding-bottom: 0.3em;
-        color: var(--text-color);
-    }
-    
-    .markdown-content h1 { font-size: 2em; }
-    .markdown-content h2 { font-size: 1.5em; }
-    .markdown-content h3 { font-size: 1.25em; }
-    .markdown-content h4 { font-size: 1em; }
-    .markdown-content h5 { font-size: 0.875em; }
-    .markdown-content h6 { font-size: 0.85em; color: var(--text-color); opacity: 0.8; }
-    
-    .markdown-content p {
-        margin-top: 0;
-        margin-bottom: 16px;
-        color: var(--text-color);
-    }
-    
-    .markdown-content ul,
-    .markdown-content ol {
-        padding-left: 2em;
-        margin-top: 0;
-        margin-bottom: 16px;
-    }
-    
-    .markdown-content li {
-        margin-bottom: 0.25em;
-        color: var(--text-color);
-    }
-    
-    .markdown-content code {
-        padding: 0.2em 0.4em;
-        margin: 0;
-        font-size: 85%;
-        background-color: var(--detail-card-bg);
-        color: var(--text-color);
-        border-radius: 3px;
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-    }
-    
-    .markdown-content pre {
-        padding: 16px;
-        overflow: auto;
-        font-size: 85%;
-        line-height: 1.45;
-        background-color: var(--detail-card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 3px;
-        margin-bottom: 16px;
-    }
-    
-    .markdown-content pre code {
-        padding: 0;
-        margin: 0;
-        font-size: 100%;
-        word-break: normal;
-        white-space: pre;
-        background: transparent;
-        border: 0;
-        color: var(--text-color);
-    }
-    
-    .markdown-content table {
-        display: block;
-        width: 100%;
-        overflow: auto;
-        margin-bottom: 16px;
-        border-spacing: 0;
-        border-collapse: collapse;
-        border: 1px solid var(--border-color);
-    }
-    
-    .markdown-content table th {
-        font-weight: 600;
-        padding: 6px 13px;
-        border: 1px solid var(--border-color);
-        background-color: var(--detail-card-bg);
-        color: var(--text-color);
-    }
-    
-    .markdown-content table td {
-        padding: 6px 13px;
-        border: 1px solid var(--border-color);
-        color: var(--text-color);
-    }
-    
-    .markdown-content table tr {
-        background-color: var(--card-bg);
-        border-top: 1px solid var(--border-color);
-    }
-    
-    .markdown-content table tr:nth-child(2n) {
-        background-color: var(--detail-card-bg);
-    }
-    
-    .markdown-content blockquote {
-        padding: 0 1em;
-        color: var(--text-color);
-        opacity: 0.8;
-        border-left: 0.25em solid var(--border-color);
-        margin: 0 0 16px 0;
-        background-color: var(--detail-card-bg);
-    }
-    
-    .markdown-content img {
-        max-width: 100%;
-        box-sizing: content-box;
-        background-color: var(--card-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-    }
-    
-    .markdown-content a {
-        color: #0d6efd;
-        text-decoration: none;
-    }
-    
-    .markdown-content a:hover {
-        text-decoration: underline;
-    }
-    
-    [data-bs-theme="dark"] .markdown-content a {
-        color: #6ea8fe;
-    }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    // 平滑滚动到锚点
-    document.querySelectorAll('.markdown-content a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
-    
-    // 为所有标题添加锚点
-    document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6').forEach(heading => {
-        const id = heading.textContent.toLowerCase().replace(/[^\w]+/g, '-');
-        heading.id = id;
-        
-        // 添加锚点链接
-        const anchor = document.createElement('a');
-        anchor.href = `#${id}`;
-        anchor.className = 'heading-anchor ms-2';
-        anchor.innerHTML = '<i class="bi bi-link-45deg"></i>';
-        anchor.style.opacity = '0.5';
-        anchor.style.textDecoration = 'none';
-        anchor.style.fontSize = '0.8em';
-        
-        heading.appendChild(anchor);
-        
-        // 鼠标悬停时显示锚点
-        heading.addEventListener('mouseenter', () => {
-            anchor.style.opacity = '1';
-        });
-        heading.addEventListener('mouseleave', () => {
-            anchor.style.opacity = '0.5';
-        });
-    });
-    
-    // 复制代码块功能
-    document.querySelectorAll('.markdown-content pre').forEach(pre => {
-        const button = document.createElement('button');
-        button.className = 'btn btn-sm btn-outline-secondary position-absolute';
-        button.style.top = '8px';
-        button.style.right = '8px';
-        button.innerHTML = '<i class="bi bi-clipboard"></i>';
-        button.title = '复制代码';
-        
-        pre.style.position = 'relative';
-        pre.appendChild(button);
-        
-        button.addEventListener('click', () => {
-            const code = pre.querySelector('code')?.textContent || pre.textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                button.innerHTML = '<i class="bi bi-check"></i>';
-                button.className = 'btn btn-sm btn-success position-absolute';
-                setTimeout(() => {
-                    button.innerHTML = '<i class="bi bi-clipboard"></i>';
-                    button.className = 'btn btn-sm btn-outline-secondary position-absolute';
-                }, 2000);
-            });
-        });
-    });
-</script>
 {% endblock %}
