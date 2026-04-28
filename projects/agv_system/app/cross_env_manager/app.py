@@ -2556,6 +2556,16 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[启动] 警告: 异常处理器注册失败: {e}")
     
+    # ========================================================================
+    # Phase 2 架构优化：注册蓝图路由
+    # ========================================================================
+    try:
+        from routes import register_blueprints
+        register_blueprints(app)
+        print(f"[启动] 蓝图路由已注册")
+    except Exception as e:
+        print(f"[启动] 警告: 蓝图注册失败，使用原有路由: {e}")
+    
     # 获取Flask运行参数（命令行参数优先，然后是配置，最后是环境变量）
     # 注意：配置文件使用小写字段名（如 host, port），环境变量使用大写（如 FLASK_HOST, FLASK_PORT）
     flask_config = config.get('flask', {})

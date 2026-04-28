@@ -238,7 +238,9 @@ venv/bin/python3 test/???.py
 - **交互**: 饼图悬停显示状态名/数量/百分比，点击图例切换显示/隐藏，异常率红色高亮
 
 ### ds说
-- 2026-04-28: **Phase 1 架构优化完成**。引入 DBUtils 连接池（modules/database/connection.py 重构），新增 dao/ 层（BaseDAO + TemplateDAO + DetailDAO），新增 middleware/ 层（统一异常处理 AppError/NotFoundError/AuthError/ValidationError），app.py 启动时自动初始化连接池并注册异常处理器。新增依赖 DBUtils==3.1.2，已同步更新 requirements.txt 和 vendor_packages3.9/requirements_py39_fixed.txt。详细方案见 plans/cross_env_manager_architecture_optimization.md。
+- 2026-04-28: **Phase 1 架构优化完成**。引入 DBUtils 连接池（modules/database/connection.py 重构），新增 dao/ 层（BaseDAO + TemplateDAO + DetailDAO），新增 middleware/ 层（统一异常处理 AppError/NotFoundError/AuthError/ValidationError），app.py 启动时自动初始化连接池并注册异常处理器。新增依赖 DBUtils==3.1.2。
+- 2026-04-28: **Phase 2 架构优化完成**。创建 routes/ 蓝图层，将 app.py 中50+路由按功能拆分为8个蓝图文件。蓝图在 app.py 启动时自动注册，57条路由全部验证通过。
+- 2026-04-28: **Phase 3 架构优化完成**。创建 services/ 业务逻辑层：AuthService（认证）、StatsService（统计）、TemplateService（模板CRUD+搜索+复制）、ConfigService（配置管理+备份）。修改 auth_routes/stats_routes/config_routes/template_routes 四个蓝图调用 Service 层，路由只负责请求解析和响应渲染。详细方案见 plans/cross_env_manager_architecture_optimization.md。
 - 2026-04-27: 跨环境任务重发功能已完成前后端实现。重发逻辑中前置任务检查放在最前面（不通过则不执行任何修改），逻辑1和逻辑2已合并为统一流程。sub_order_id递增规则为解析{orderId}_{taskSeq}_{subId}后subId+1。API文档已整理到doc/API.md。
 - 2026-04-27: 查询页面字段显示问题已修复，根因是前端getField()查找的字段名与远程API返回的驼峰命名不匹配。修复方案是添加候选字段名而非修改API，保持向后兼容。
 - 2026-04-27: fy_cross_model_process_detail 表新增 need_third_trigger 字段（默认0，1=存在第三方触发）。已在 app.py 的4处 SQL（edit_detail、copy_template、API新增子任务、批量更新子任务）和 edit_template.html、template_detail.html 的编辑/新增子任务模态框中添加该字段的编辑支持。前端使用复选框控件，勾选=1，不勾选=0。
