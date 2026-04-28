@@ -2534,6 +2534,28 @@ if __name__ == '__main__':
     # 创建模板目录
     os.makedirs('templates', exist_ok=True)
     
+    # ========================================================================
+    # Phase 1 架构优化：初始化数据库连接池
+    # ========================================================================
+    try:
+        from modules.database.connection import DatabasePool, get_db_config_from_toml
+        pool = DatabasePool()
+        db_pool_config = get_db_config_from_toml(args.config)
+        pool.init_pool(db_pool_config)
+        print(f"[启动] 数据库连接池已初始化")
+    except Exception as e:
+        print(f"[启动] 警告: 连接池初始化失败，将使用传统连接方式: {e}")
+    
+    # ========================================================================
+    # Phase 1 架构优化：注册统一异常处理器
+    # ========================================================================
+    try:
+        from middleware.error_handler import register_error_handlers
+        register_error_handlers(app)
+        print(f"[启动] 统一异常处理器已注册")
+    except Exception as e:
+        print(f"[启动] 警告: 异常处理器注册失败: {e}")
+    
     # 获取Flask运行参数（命令行参数优先，然后是配置，最后是环境变量）
     # 注意：配置文件使用小写字段名（如 host, port），环境变量使用大写（如 FLASK_HOST, FLASK_PORT）
     flask_config = config.get('flask', {})
@@ -2559,6 +2581,7 @@ if __name__ == '__main__':
     print(f"数据库: {DB_CONFIG['database']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}")
     print(f"服务地址: http://{host}:{port}")
     print(f"调试模式: {'是' if debug else '否'}")
+    print(f"连接池: {'已启用' if 'pool' in dir() and pool.is_initialized else '未启用（使用传统连接）'}")
     print("=" * 60)
     print("启动服务中...")
     
