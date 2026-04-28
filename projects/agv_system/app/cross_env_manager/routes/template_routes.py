@@ -10,6 +10,7 @@ import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.template_service import TemplateService
+from middleware.cache import cache
 
 template_bp = Blueprint('template', __name__)
 _template_service = TemplateService()
@@ -99,6 +100,8 @@ def edit_template(template_id):
             updated = _template_service.update_details_batch(template_id, form_data)
             if updated > 0:
                 flash(f'成功更新 {updated} 个子任务', 'success')
+            cache.delete_memoized(_template_service.get_template, template_id)
+            cache.clear()  # 清除统计缓存
         else:
             flash('任务模板更新失败', 'error')
         return redirect(url_for('template.view_template', template_id=template_id))

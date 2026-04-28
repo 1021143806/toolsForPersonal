@@ -5,13 +5,15 @@
 """
 
 from modules.database.connection import execute_query
+from middleware.cache import cache
 
 
 class StatsService:
     """统计服务"""
     
+    @cache.cached(timeout=300, key_prefix='stats_overview')
     def get_overview(self):
-        """获取系统概览统计"""
+        """获取系统概览统计（缓存5分钟）"""
         template_stats = execute_query("""
         SELECT COUNT(*) as total_templates,
             SUM(CASE WHEN enable = 1 THEN 1 ELSE 0 END) as enabled_templates,
@@ -39,8 +41,9 @@ class StatsService:
             }
         return None
     
+    @cache.cached(timeout=300, key_prefix='stats_distribution')
     def get_distribution(self):
-        """获取分布统计"""
+        """获取分布统计（缓存5分钟）"""
         enable_dist = execute_query("""
         SELECT enable as status, COUNT(*) as count,
             ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM fy_cross_model_process), 2) as percentage
@@ -57,8 +60,9 @@ class StatsService:
             'server_distribution': server_dist or []
         }
     
+    @cache.cached(timeout=300, key_prefix='stats_templates_by_server')
     def get_templates_by_server(self):
-        """按服务器统计模板"""
+        """按服务器统计模板（缓存5分钟）"""
         return execute_query("""
         SELECT target_points_ip as server, COUNT(*) as count
         FROM fy_cross_model_process WHERE target_points_ip IS NOT NULL AND target_points_ip != ''

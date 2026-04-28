@@ -2566,6 +2566,16 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[启动] 警告: 蓝图注册失败，使用原有路由: {e}")
     
+    # ========================================================================
+    # Phase 4 架构优化：初始化缓存
+    # ========================================================================
+    try:
+        from middleware.cache import init_cache
+        init_cache(app)
+        print(f"[启动] 缓存层已初始化")
+    except Exception as e:
+        print(f"[启动] 警告: 缓存初始化失败: {e}")
+    
     # 获取Flask运行参数（命令行参数优先，然后是配置，最后是环境变量）
     # 注意：配置文件使用小写字段名（如 host, port），环境变量使用大写（如 FLASK_HOST, FLASK_PORT）
     flask_config = config.get('flask', {})
