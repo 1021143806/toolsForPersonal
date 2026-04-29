@@ -41,6 +41,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data', 'dispatch')
 CACHE_INDEX_PATH = os.path.join(DATA_DIR, 'cache_index.json')
 BACKUP_DIR = os.path.join(DATA_DIR, 'backups')
+GLOBAL_LOG_PATH = os.path.join(DATA_DIR, 'global_log.json')
 
 # 线程锁
 _write_lock = threading.Lock()
@@ -94,6 +95,34 @@ def _save_json(filepath, data):
 def _get_region_file(region_key, filename):
     """获取区域文件路径（按区域文件夹存放）"""
     return os.path.join(DATA_DIR, region_key, filename)
+
+
+# ========== 全局操作日志 ==========
+
+def write_global_log(action, region_key, detail='', level='info'):
+    """写入全局操作日志（自动清理超过2天的日志）"""
+    logs = _load_json(GLOBAL_LOG_PATH)
+    logs.append({
+        "time": datetime.now().isoformat(),
+        "action": action,
+        "region_key": region_key,
+        "detail": detail,
+        "level": level
+    })
+    # 自动清理超过2天的日志
+    from datetime import timedelta
+    two_days_ago = (datetime.now() - timedelta(days=2)).isoformat()
+    logs = [log for log in logs if log.get('time', '') >= two_days_ago]
+    _save_json(GLOBAL_LOG_PATH, logs)
+
+
+@dispatch_bp.route('/api/dispatch/global_log')
+@login_required
+def api_global_log():
+    """获取全局操作日志"""
+    logs = _load_json(GLOBAL_LOG_PATH)
+    logs.sort(key=lambda x: x.get('time', ''), reverse=True)
+    return jsonify({'logs': logs})
 
 
 # ========== 核心计算逻辑 ==========
@@ -355,7 +384,16 @@ def handle_status_report(data):
     index = _load_cache_index()
     region = index.get(region_key)
     if not region:
-        return False, f"区域 {region_key} 不存在"
+        # 区域不存在，从配置中删除并清理文件夹
+        if region_key in index:
+            del index[region_key]
+            _save_cache_index(index)
+        # 清理区域文件夹
+        import shutil
+        region_dir = os.path.join(DATA_DIR, region_key)
+        if os.path.exists(region_dir):
+            shutil.rmtree(region_dir, ignore_errors=True)
+        return False, f"区域 {region_key} 不存在，已自动清理"
     
     template_config = None
     for t in region.get('templates', []):
@@ -484,6 +522,17 @@ def api_report_status():
             return jsonify({'success': False, 'error': '请求体为空'}), 400
         
         success, message = handle_status_report(data)
+        # 记录日志（不阻塞主流程）
+        try:
+            rk = data.get('region_key') or 'auto'
+            tn = data.get('modelProcessCode') or data.get('template_name', '?')
+            dn = data.get('deviceNum', '?')
+            st = data.get('status', '?')
+            write_global_log('report_status', rk, f'{tn} {dn} status={st}: {message}',
+                           'info' if success else 'warning')
+        except:
+            pass
+        
         if success:
             return jsonify({'success': True, 'message': message})
         else:
@@ -765,6 +814,7 @@ def api_execute(region_key):
         balance = calculate_area_balance(region_key, region)
         
         if balance['direction'] == 'none':
+            write_global_log('execute_balanced', region_key, '区域平衡，无需下发')
             return jsonify({
                 'success': True,
                 'message': '区域平衡，无需下发',
@@ -774,6 +824,7 @@ def api_execute(region_key):
         
         # 2. 互斥检查
         if not balance['can_dispatch']:
+            write_global_log('execute_mutex', region_key, balance['mutex_reason'], 'warning')
             return jsonify({
                 'success': False,
                 'error': balance['mutex_reason'],
@@ -881,6 +932,9 @@ def api_execute(region_key):
             reason=reason
         )
         
+        write_global_log('execute', region_key,
+            f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台, 模板:{target_template["name"]}, 方向:{direction}, 原因:{reason}')
+        
         return jsonify({
             'success': True,
             'message': f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台设备',
@@ -930,6 +984,8 @@ def api_clean_simulated(region_key):
             _save_json(now_file, now_devices)
             cleaned_count += (old_len - len(now_devices))
         
+        write_global_log('clean_simulated', region_key, f'清理了 {cleaned_count} 条模拟数据')
+        
         return jsonify({
             'success': True,
             'message': f'已清理 {cleaned_count} 条模拟数据',
@@ -937,4 +993,5 @@ def api_clean_simulated(region_key):
         })
         
     except Exception as e:
+        write_global_log('clean_simulated_error', region_key, str(e), 'error')
         return jsonify({'error': f'清理失败: {str(e)}'}), 500
