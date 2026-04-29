@@ -1,24 +1,35 @@
-# 模板管理
-
-## 功能概述
-
-模板管理模块用于管理跨环境任务模板（`fy_cross_model_process` 表）及其子任务（`fy_cross_model_process_detail` 表）。
-
-## 页面列表
-
-| 页面 | 路由 | 说明 |
-|------|------|------|
-| 搜索模板 | `POST /search` | 首页搜索框，支持模糊搜索和纯数字ID精确查找 |
-| 搜索结果 | `GET /search?search_term=xxx` | 展示匹配的模板列表 |
-| 模板详情 | `GET /template/<id>` | 查看模板完整信息和子任务列表 |
-| 编辑模板 | `GET/POST /edit/<id>` | 修改模板配置信息 |
-| 复制模板 | `GET/POST /copy/<id>` | 基于现有模板创建新模板，自动生成ID后缀 |
-| 编辑子任务 | `POST /edit_detail/<id>` | 修改子任务详细信息 |
-| 添加子任务 | `POST /api/template/<id>/details/add` | 添加新子任务 |
-| 删除子任务 | `DELETE /api/template/<id>/details/<id>/delete` | 删除子任务 |
-| 子任务排序 | `POST /api/template/<id>/details/reorder` | 拖拽调整子任务顺序 |
-
-## 数据库表
-
-- **fy_cross_model_process**：跨环境任务模板主表
-- **fy_cross_model_process_detail**：跨环境子任务模板明细表
+{
+  "region_1": {
+    "areaId": "1",
+    "server": "10.68.2.31:7000",
+    "enabled": true,
+    "xmin": 2,
+    "xmax": 4,
+    "max_dispatch_once": 3,
+    "templates": [
+      {"name": "A1-1", "file": "A1-1.json", "direction": "in", "desc": "调空车模板1去空车"},
+      {"name": "B1-2", "file": "B1-2.json", "direction": "out", "desc": "调空车模板1回空车"},
+      {"name": "C1-1", "file": "C1-1.json", "direction": "in", "desc": "负载模板1"},
+      {"name": "C1-2", "file": "C1-2.json", "direction": "in", "desc": "负载模板2"},
+      {"name": "C1-3", "file": "C1-3.json", "direction": "in", "desc": "负载模板3"},
+      {"name": "D1-1", "file": "D1-1.json", "direction": "out", "desc": "负载回库模板1"}
+    ]
+  },
+  "region_2": {
+    "areaId": "2",
+    "server": "10.68.2.31:7000",
+    "enabled": false,
+    "xmin": 2,
+    "xmax": 6,
+    "max_dispatch_once": 3,
+    "templates": [
+      {"name": "A2-1", "file": "A2-1.json", "direction": "in", "desc": "调空车模板1去空车"},
+      {"name": "B2-2", "file": "B2-2.json", "direction": "out", "desc": "调空车模板1回空车"},
+      {"name": "C2-1", "file": "C2-1.json", "direction": "in", "desc": "负载模板1"},
+      {"name": "C2-2", "file": "C2-2.json", "direction": "in", "desc": "负载模板2"},
+      {"name": "C2-3", "file": "C2-3.json", "direction": "in", "desc": "负载模板3"},
+      {"name": "D2-1", "file": "D2-1.json", "direction": "out", "desc": "负载回库模板1"},
+      {"name": "D2-2", "file": "D2-2.json", "direction": "out", "desc": "负载回库模板2"}
+    ]
+  }
+}

@@ -9,3 +9,5 @@ static/js/backups/*
 .env
 .env.local
 *.log
+# 调车模块数据文件
+data/

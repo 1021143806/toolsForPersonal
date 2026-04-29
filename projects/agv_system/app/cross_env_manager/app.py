@@ -1144,6 +1144,7 @@ def docs_module(name):
             'stats': 'templates/stats/readme.md',
             'components': 'templates/components/readme.md',
             'api': 'doc/API.md',
+            'dispatch': 'templates/dispatch/readme.md',
         }
         
         if name not in module_paths:

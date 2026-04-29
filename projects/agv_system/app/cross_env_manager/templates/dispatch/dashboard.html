@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+{% block title %}空车调车管理系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--card-shadow-hover);
+    }
+    .stat-card .stat-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .stat-card .stat-value { font-size: 1.75rem; font-weight: 700; }
+    .stat-card .stat-label { font-size: 0.85rem; opacity: 0.7; }
+
+    .area-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    .area-card:hover { box-shadow: var(--card-shadow-hover); }
+    .area-card .area-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .area-card .area-header .area-title { font-size: 1.1rem; font-weight: 600; }
+    .area-card .area-body { padding: 1.25rem; }
+
+    .balance-panel {
+        background: var(--detail-card-bg);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .balance-item { text-align: center; min-width: 60px; }
+    .balance-item .value { font-size: 1.5rem; font-weight: 700; }
+    .balance-item .label { font-size: 0.75rem; opacity: 0.7; }
+    .balance-divider { width: 1px; height: 40px; background: var(--border-color); }
+
+    .template-table { width: 100%; font-size: 0.9rem; }
+    .template-table th {
+        font-weight: 600; font-size: 0.8rem;
+        text-transform: uppercase; letter-spacing: 0.5px;
+        opacity: 0.7; padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .template-table td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .template-table tr:last-child td { border-bottom: none; }
+    .template-table tr:hover td { background: var(--detail-card-bg); }
+    .template-section-title {
+        font-size: 0.85rem; font-weight: 600;
+        padding: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    .log-item {
+        display: flex; align-items: flex-start; gap: 0.75rem;
+        padding: 0.6rem 0; border-bottom: 1px solid var(--border-color);
+        font-size: 0.9rem;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-item .log-time { min-width: 45px; font-weight: 600; opacity: 0.7; font-size: 0.8rem; }
+    .log-item .log-icon { font-size: 1rem; opacity: 0.6; }
+    .log-item .log-area { font-weight: 600; min-width: 50px; }
+
+    .direction-badge {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.25rem 0.6rem; border-radius: 20px;
+        font-size: 0.8rem; font-weight: 500;
+    }
+
+    /* JSON 文件展开面板 */
+    .json-panel {
+        border-top: 1px solid var(--border-color);
+        padding: 1rem 1.25rem;
+        background: var(--detail-card-bg);
+        display: none;
+    }
+    .json-panel.open { display: block; }
+    .json-file-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;
+        background: var(--card-bg); border-radius: 8px;
+        border: 1px solid var(--border-color);
+        font-size: 0.9rem;
+    }
+    .json-file-item:hover { border-color: var(--primary-color); }
+    .json-file-item .file-info { display: flex; align-items: center; gap: 0.5rem; }
+    .json-file-item .file-actions { display: flex; gap: 0.3rem; }
+    .json-viewer {
+        margin-top: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .json-viewer .viewer-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.85rem; font-weight: 600;
+    }
+    .json-viewer pre {
+        margin: 0; padding: 0.75rem;
+        background: #1e1e1e; color: #d4d4d4;
+        font-size: 0.8rem; max-height: 300px; overflow: auto;
+        white-space: pre-wrap; word-break: break-all;
+    }
+    .json-viewer textarea {
+        width: 100%; min-height: 200px;
+        background: #1e1e1e; color: #d4d4d4;
+        border: none; padding: 0.75rem;
+        font-family: monospace; font-size: 0.8rem;
+        resize: vertical;
+    }
+
+    @media (max-width: 768px) {
+        .balance-panel { gap: 0.8rem; }
+        .balance-divider { display: none; }
+        .stat-card .stat-value { font-size: 1.3rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1"><i class="bi bi-truck me-2"></i>空车调车管理系统</h3>
+            <p class="text-muted mb-0">实时监控各区域设备平衡状态，自动调度空车任务</p>
+        </div>
+        <div>
+            <button id="refreshBtn" class="btn btn-outline-primary btn-sm me-2" onclick="refreshData()">
+                <i class="bi bi-arrow-clockwise"></i> 刷新
+            </button>
+            <a href="{{ url_for('dispatch.config_page') }}" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-gear"></i> 配置
+            </a>
+            <a href="/docs/module/dispatch" class="btn btn-outline-info btn-sm" target="_blank">
+                <i class="bi bi-question-circle"></i> 帮助
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4" id="summaryRow">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon text-primary"><i class="bi bi-building"></i></div>
+                <div class="stat-value" id="totalAreas">-</div>
+                <div class="stat-label">总区域</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon text-info"><i class="bi bi-device-hdd"></i></div>
+                <div class="stat-value" id="totalDevices">-</div>
+                <div class="stat-label">总设备</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon text-warning"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-value" id="needDispatch">-</div>
+                <div class="stat-label">需调度</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon text-success"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-value" id="balanced">-</div>
+                <div class="stat-label">平衡</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="areaCardsContainer"></div>
+
+    <div class="area-card">
+        <div class="area-header">
+            <span class="area-title"><i class="bi bi-clock-history me-2"></i>操作日志</span>
+            <span class="badge bg-secondary" id="logCount">0</span>
+        </div>
+        <div class="area-body" id="logContainer">
+            <div class="text-center text-muted py-3">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let refreshInterval = null;
+
+$(document).ready(function() {
+    refreshData();
+    refreshInterval = setInterval(refreshData, 10000);
+});
+
+function refreshData() {
+    fetch('/api/dispatch/status')
+        .then(r => r.json())
+        .then(data => {
+            renderSummary(data.summary);
+            // 首次加载或卡片容器为空时全量渲染
+            const container = document.getElementById('areaCardsContainer');
+            if (!container.hasChildNodes() || container.children.length === 0) {
+                renderAreas(data.areas);
+            } else {
+                // 增量更新：只更新数据，不重新渲染 DOM
+                updateAreasData(data.areas);
+            }
+        })
+        .catch(err => console.error('获取数据失败:', err));
+}
+
+function renderSummary(summary) {
+    if (!summary) return;
+    document.getElementById('totalAreas').textContent = summary.total_areas;
+    document.getElementById('totalDevices').textContent = summary.total_devices;
+    document.getElementById('needDispatch').textContent = summary.need_dispatch;
+    document.getElementById('balanced').textContent = summary.balanced;
+}
+
+function renderAreas(areas) {
+    const container = document.getElementById('areaCardsContainer');
+    if (!areas || areas.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-5">暂无区域数据</div>';
+        return;
+    }
+    let html = '<div class="row">';
+    areas.forEach(area => {
+        const dirBadge = getDirectionBadge(area);
+        const incomingRows = renderTemplateRows(area.templates.incoming);
+        const outgoingRows = renderTemplateRows(area.templates.outgoing);
+        html += `
+        <div class="col-lg-6">
+            <div class="area-card">
+                <div class="area-header">
+                    <span class="area-title">
+                        <i class="bi bi-geo-alt me-1 text-primary"></i>${area.name}
+                        <small class="text-muted ms-2" style="font-size:0.8rem;">xmin:${area.xmin} xmax:${area.xmax}</small>
+                        <div class="form-check form-switch d-inline-block ms-2">
+                            <input class="form-check-input" type="checkbox" ${area.enabled ? 'checked' : ''} onchange="toggleRegion('${area.region_key}', this.checked)" style="cursor:pointer;">
+                            <label class="form-check-label small ${area.enabled ? 'text-success' : 'text-muted'}">${area.enabled ? '已启用' : '已禁用'}</label>
+                        </div>
+                    </span>
+                    ${dirBadge}
+                </div>
+                <div class="area-body">
+                    <div class="balance-panel">
+                        <div class="balance-item">
+                            <div class="value ${area.currentCount === 0 || area.currentCount ? 'text-primary' : 'text-muted'}">${area.currentCount ?? 0}</div>
+                            <div class="label">当前设备</div>
+                        </div>
+                        <div class="balance-divider"></div>
+                        <div class="balance-item">
+                            <div class="value ${area.need > 0 ? 'text-warning' : 'text-success'}">${area.need}</div>
+                            <div class="label">需调度</div>
+                        </div>
+                        <div class="balance-divider"></div>
+                        <div class="balance-item">
+                            <div class="value text-muted" style="font-size:0.9rem;">${area.xmin} ~ ${area.xmax}</div>
+                            <div class="label">保留范围</div>
+                        </div>
+                        <div class="balance-divider"></div>
+                        <div class="balance-item flex-grow-1 text-start">
+                            <div class="small ${area.direction === 'none' ? 'text-success' : area.direction === 'out' ? 'text-danger' : 'text-warning'}">
+                                <i class="${area.direction_icon} me-1"></i>${area.direction_text}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="template-section-title text-success"><i class="bi bi-box-arrow-in-down"></i> 来区域</div>
+                            <table class="template-table">
+                                <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
+                                <tbody>${incomingRows}</tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="template-section-title text-danger"><i class="bi bi-box-arrow-up"></i> 离开</div>
+                            <table class="template-table">
+                                <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
+                                <tbody>${outgoingRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-top border-secondary d-flex gap-2 flex-wrap">
+                        <a href="/dispatch/area/${area.id}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list-ul"></i> 详情</a>
+                        ${area.need > 0 ? `<button class="btn btn-outline-warning btn-sm" onclick="autoDispatch(${area.id}, '${area.name}')"><i class="bi bi-truck"></i> 自动调车</button>` : ''}
+                        <button class="btn btn-outline-info btn-sm" onclick="toggleJsonPanel('${area.region_key}', this)"><i class="bi bi-filetype-json"></i> JSON文件</button>
+                        <a href="/dispatch/config" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> 配置</a>
+                    </div>
+                </div>
+                <!-- JSON 文件展开面板 -->
+                <div class="json-panel" id="json-panel-${area.region_key}">
+                    <div id="json-files-list-${area.region_key}">
+                        <div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载文件列表...</div>
+                    </div>
+                    <div class="json-viewer" id="json-viewer-${area.region_key}" style="display:none;">
+                        <div class="viewer-header">
+                            <span id="viewer-title-${area.region_key}"></span>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-primary" id="btn-edit-${area.region_key}" onclick="enableEditMode('${area.region_key}')" style="display:none;"><i class="bi bi-pencil"></i> 编辑</button>
+                                <button class="btn btn-sm btn-outline-success" id="btn-save-${area.region_key}" onclick="saveFileContent('${area.region_key}')" style="display:none;"><i class="bi bi-check-lg"></i> 保存</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="btn-cancel-${area.region_key}" onclick="cancelEdit('${area.region_key}')" style="display:none;"><i class="bi bi-x"></i> 取消</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="closeViewer('${area.region_key}')"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                        <pre id="viewer-content-${area.region_key}"></pre>
+                        <textarea id="viewer-editor-${area.region_key}" style="display:none;"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+/**
+ * 增量更新区域数据 - 只更新数字和状态，不重新渲染 DOM
+ * 这样展开的 JSON 面板不会被销毁
+ */
+function updateAreasData(areas) {
+    if (!areas || areas.length === 0) return;
+    
+    const container = document.getElementById('areaCardsContainer');
+    const cards = container.querySelectorAll('.area-card');
+    
+    areas.forEach((area, idx) => {
+        const card = cards[idx];
+        if (!card) return;
+        
+        // 更新平衡面板数字
+        const balanceItems = card.querySelectorAll('.balance-item .value');
+        if (balanceItems.length >= 2) {
+            // 当前设备数
+            const cc = area.currentCount ?? 0;
+            balanceItems[0].textContent = cc;
+            balanceItems[0].className = 'value ' + (cc === 0 ? 'text-muted' : 'text-primary');
+            // 需调度数
+            balanceItems[1].textContent = area.need;
+            balanceItems[1].className = 'value ' + (area.need > 0 ? 'text-warning' : 'text-success');
+        }
+        
+        // 更新方向徽章
+        const header = card.querySelector('.area-header');
+        const oldBadge = header.querySelector('.direction-badge');
+        if (oldBadge) oldBadge.remove();
+        header.insertAdjacentHTML('beforeend', getDirectionBadge(area));
+        
+        // 更新方向文本
+        const dirText = card.querySelector('.balance-item.flex-grow-1 .small');
+        if (dirText) {
+            dirText.className = 'small ' + (area.direction === 'none' ? 'text-success' : area.direction === 'out' ? 'text-danger' : 'text-warning');
+            dirText.innerHTML = '<i class="' + area.direction_icon + ' me-1"></i>' + area.direction_text;
+        }
+        
+        // 更新模板表格计数
+        const tables = card.querySelectorAll('.template-table tbody');
+        if (tables.length >= 2) {
+            // 来区域表格
+            updateTableCounts(tables[0], area.templates.incoming);
+            // 离开表格
+            updateTableCounts(tables[1], area.templates.outgoing);
+        }
+        
+        // 更新自动调车按钮（根据 need 变化显示/隐藏）
+        const btnGroup = card.querySelector('.d-flex.gap-2.flex-wrap');
+        if (btnGroup) {
+            const oldAutoBtn = btnGroup.querySelector('.btn-outline-warning');
+            if (area.need > 0 && !oldAutoBtn) {
+                // need > 0 但没有按钮，添加
+                const autoBtn = document.createElement('button');
+                autoBtn.className = 'btn btn-outline-warning btn-sm';
+                autoBtn.innerHTML = '<i class="bi bi-truck"></i> 自动调车';
+                autoBtn.onclick = function() { autoDispatch(area.id, area.name); };
+                btnGroup.insertBefore(autoBtn, btnGroup.querySelector('[onclick*="toggleJsonPanel"]'));
+            } else if (area.need <= 0 && oldAutoBtn) {
+                // need <= 0 但有按钮，移除
+                oldAutoBtn.remove();
+            }
+        }
+    });
+}
+
+function updateTableCounts(tbody, templates) {
+    const rows = tbody.querySelectorAll('tr');
+    templates.forEach((t, idx) => {
+        if (rows[idx]) {
+            const badge = rows[idx].querySelector('.badge');
+            if (badge) {
+                badge.textContent = t.count;
+                badge.className = 'badge ' + (t.count > 0 ? 'bg-primary' : 'bg-secondary');
+            }
+        }
+    });
+}
+
+function renderTemplateRows(templates) {
+    if (!templates || templates.length === 0) return '<tr><td colspan="3" class="text-center text-muted">无配置</td></tr>';
+    return templates.map(t => {
+        const icon = t.type === 'empty_in' || t.type === 'empty_out' ? 'bi-truck' : 'bi-box-seam';
+        return `<tr><td><code>${t.code}</code></td><td><i class="${icon} me-1 small opacity-50"></i>${t.name}</td>
+            <td class="text-center"><span class="badge ${t.count > 0 ? 'bg-primary' : 'bg-secondary'}">${t.count}</span></td></tr>`;
+    }).join('');
+}
+
+function getDirectionBadge(area) {
+    if (area.direction === 'none') return `<span class="direction-badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i>平衡</span>`;
+    if (area.direction === 'out') return `<span class="direction-badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-arrow-up"></i>调出 ${area.need}辆</span>`;
+    return `<span class="direction-badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-arrow-down"></i>调入 ${area.need}辆</span>`;
+}
+
+function renderLogs(logs) {
+    const container = document.getElementById('logContainer');
+    const countEl = document.getElementById('logCount');
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-3">暂无操作日志</div>';
+        countEl.textContent = '0'; return;
+    }
+    countEl.textContent = logs.length;
+    container.innerHTML = logs.map(log => `
+        <div class="log-item">
+            <span class="log-time">${log.time}</span>
+            <i class="bi ${log.icon} log-icon"></i>
+            <span class="log-area badge bg-secondary">${log.area}</span>
+            <span class="log-action fw-medium">${log.action}</span>
+            <span class="text-muted">${log.detail}</span>
+        </div>`).join('');
+}
+
+function toggleRegion(regionKey, enabled) {
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (config[regionKey]) {
+                config[regionKey].enabled = enabled;
+                return fetch('/api/dispatch/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+            }
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) refreshData();
+        })
+        .catch(err => console.error('切换失败:', err));
+}
+
+function autoDispatch(areaId, areaName) {
+    if (!confirm(`确定对 ${areaName} 执行自动调车？`)) return;
+    alert(`已触发 ${areaName} 自动调车（模拟）`);
+}
+
+// ========== JSON 文件展开面板 ==========
+
+let currentViewerRegion = null;
+let currentViewerFilename = null;
+let currentViewerContent = null;
+
+function toggleJsonPanel(regionKey, btn) {
+    const panel = document.getElementById('json-panel-' + regionKey);
+    const isOpen = panel.classList.contains('open');
+    
+    // 关闭所有其他面板
+    document.querySelectorAll('.json-panel.open').forEach(p => {
+        p.classList.remove('open');
+    });
+    
+    if (isOpen) {
+        panel.classList.remove('open');
+        return;
+    }
+    
+    panel.classList.add('open');
+    loadRegionFiles(regionKey);
+}
+
+function loadRegionFiles(regionKey) {
+    const listEl = document.getElementById('json-files-list-' + regionKey);
+    listEl.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载文件列表...</div>';
+    
+    fetch('/api/dispatch/region_files/' + regionKey)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                listEl.innerHTML = '<div class="text-center text-danger py-2">' + data.error + '</div>';
+                return;
+            }
+            if (!data.files || data.files.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-muted py-2">暂无关联文件</div>';
+                return;
+            }
+            listEl.innerHTML = data.files.map(f => {
+                const dirLabel = f.direction === 'in' ? '来区域' : (f.direction === 'out' ? '离开' : '系统');
+                const dirColor = f.direction === 'in' ? 'success' : (f.direction === 'out' ? 'danger' : 'secondary');
+                const sizeStr = f.exists ? (f.size / 1024).toFixed(2) + ' KB' : '<span class="text-warning">未创建</span>';
+                return '<div class="json-file-item">' +
+                    '<div class="file-info">' +
+                        '<i class="bi bi-filetype-json text-warning"></i>' +
+                        '<strong>' + f.filename + '</strong>' +
+                        '<span class="badge bg-' + dirColor + '">' + dirLabel + '</span>' +
+                        '<small class="text-muted">' + sizeStr + '</small>' +
+                    '</div>' +
+                    '<div class="file-actions">' +
+                        '<button class="btn btn-sm btn-outline-primary" onclick="viewFile(\'' + regionKey + '\',\'' + f.filename + '\')"><i class="bi bi-eye"></i> 查看</button>' +
+                        '<button class="btn btn-sm btn-outline-warning" onclick="editFile(\'' + regionKey + '\',\'' + f.filename + '\')"><i class="bi bi-pencil"></i> ' + (f.exists ? '编辑' : '创建') + '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        })
+        .catch(err => {
+            listEl.innerHTML = '<div class="text-center text-danger py-2">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function viewFile(regionKey, filename) {
+    currentViewerRegion = regionKey;
+    currentViewerFilename = filename;
+    currentViewerContent = null;
+    
+    const viewer = document.getElementById('json-viewer-' + regionKey);
+    const title = document.getElementById('viewer-title-' + regionKey);
+    const content = document.getElementById('viewer-content-' + regionKey);
+    const editor = document.getElementById('viewer-editor-' + regionKey);
+    const btnEdit = document.getElementById('btn-edit-' + regionKey);
+    const btnSave = document.getElementById('btn-save-' + regionKey);
+    const btnCancel = document.getElementById('btn-cancel-' + regionKey);
+    
+    viewer.style.display = 'block';
+    title.textContent = '📄 ' + filename + '（只读）';
+    content.style.display = 'block';
+    editor.style.display = 'none';
+    btnEdit.style.display = 'inline-block';
+    btnSave.style.display = 'none';
+    btnCancel.style.display = 'none';
+    content.textContent = '加载中...';
+    
+    fetch('/api/dispatch/region_file/' + regionKey + '/' + filename)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                content.textContent = '错误: ' + data.error;
+                return;
+            }
+            currentViewerContent = data.content;
+            content.textContent = data.content;
+        })
+        .catch(err => {
+            content.textContent = '加载失败: ' + err.message;
+        });
+}
+
+function editFile(regionKey, filename) {
+    currentViewerRegion = regionKey;
+    currentViewerFilename = filename;
+    currentViewerContent = null;
+    
+    const viewer = document.getElementById('json-viewer-' + regionKey);
+    const title = document.getElementById('viewer-title-' + regionKey);
+    const content = document.getElementById('viewer-content-' + regionKey);
+    const editor = document.getElementById('viewer-editor-' + regionKey);
+    const btnEdit = document.getElementById('btn-edit-' + regionKey);
+    const btnSave = document.getElementById('btn-save-' + regionKey);
+    const btnCancel = document.getElementById('btn-cancel-' + regionKey);
+    
+    viewer.style.display = 'block';
+    title.textContent = '✏️ ' + filename + '（编辑中）';
+    content.style.display = 'none';
+    editor.style.display = 'block';
+    btnEdit.style.display = 'none';
+    btnSave.style.display = 'inline-block';
+    btnCancel.style.display = 'inline-block';
+    editor.value = '加载中...';
+    
+    fetch('/api/dispatch/region_file/' + regionKey + '/' + filename)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                editor.value = '错误: ' + data.error;
+                return;
+            }
+            currentViewerContent = data.content;
+            editor.value = data.content;
+        })
+        .catch(err => {
+            editor.value = '加载失败: ' + err.message;
+        });
+}
+
+function enableEditMode(regionKey) {
+    const content = document.getElementById('viewer-content-' + regionKey);
+    const editor = document.getElementById('viewer-editor-' + regionKey);
+    const btnEdit = document.getElementById('btn-edit-' + regionKey);
+    const btnSave = document.getElementById('btn-save-' + regionKey);
+    const btnCancel = document.getElementById('btn-cancel-' + regionKey);
+    const title = document.getElementById('viewer-title-' + regionKey);
+    
+    title.textContent = '✏️ ' + currentViewerFilename + '（编辑中）';
+    editor.value = content.textContent;
+    content.style.display = 'none';
+    editor.style.display = 'block';
+    btnEdit.style.display = 'none';
+    btnSave.style.display = 'inline-block';
+    btnCancel.style.display = 'inline-block';
+}
+
+function saveFileContent(regionKey) {
+    const editor = document.getElementById('viewer-editor-' + regionKey);
+    const content = editor.value;
+    
+    // 验证 JSON
+    try {
+        JSON.parse(content);
+    } catch (e) {
+        showToast('JSON 格式错误: ' + e.message, 'danger');
+        return;
+    }
+    
+    fetch('/api/dispatch/region_file/' + regionKey + '/' + currentViewerFilename, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({content: content})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // 切换回查看模式
+            const viewerContent = document.getElementById('viewer-content-' + regionKey);
+            const editor = document.getElementById('viewer-editor-' + regionKey);
+            const btnEdit = document.getElementById('btn-edit-' + regionKey);
+            const btnSave = document.getElementById('btn-save-' + regionKey);
+            const btnCancel = document.getElementById('btn-cancel-' + regionKey);
+            const title = document.getElementById('viewer-title-' + regionKey);
+            
+            currentViewerContent = content;
+            viewerContent.textContent = content;
+            viewerContent.style.display = 'block';
+            editor.style.display = 'none';
+            btnEdit.style.display = 'inline-block';
+            btnSave.style.display = 'none';
+            btnCancel.style.display = 'none';
+            title.textContent = '📄 ' + currentViewerFilename + '（只读）';
+            
+            // 刷新看板数据
+            refreshData();
+        } else {
+            showToast('保存失败: ' + (data.error || '未知错误'), 'danger');
+        }
+    })
+    .catch(err => showToast('保存失败: ' + err.message, 'danger'));
+}
+
+function cancelEdit(regionKey) {
+    const viewerContent = document.getElementById('viewer-content-' + regionKey);
+    const editor = document.getElementById('viewer-editor-' + regionKey);
+    const btnEdit = document.getElementById('btn-edit-' + regionKey);
+    const btnSave = document.getElementById('btn-save-' + regionKey);
+    const btnCancel = document.getElementById('btn-cancel-' + regionKey);
+    const title = document.getElementById('viewer-title-' + regionKey);
+    
+    if (currentViewerContent !== null) {
+        viewerContent.textContent = currentViewerContent;
+    }
+    viewerContent.style.display = 'block';
+    editor.style.display = 'none';
+    btnEdit.style.display = 'inline-block';
+    btnSave.style.display = 'none';
+    btnCancel.style.display = 'none';
+    title.textContent = '📄 ' + currentViewerFilename + '（只读）';
+}
+
+function closeViewer(regionKey) {
+    const viewer = document.getElementById('json-viewer-' + regionKey);
+    viewer.style.display = 'none';
+    currentViewerRegion = null;
+    currentViewerFilename = null;
+    currentViewerContent = null;
+}
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    if (!container) {
+        // 如果没有 toastContainer，创建临时提示
+        alert(message);
+        return;
+    }
+    const t = document.createElement('div');
+    t.className = 'toast align-items-center text-bg-' + type + ' border-0 show';
+    t.innerHTML = '<div class="d-flex"><div class="toast-body">' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+</script>
+{% endblock %}
