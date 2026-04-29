@@ -91,6 +91,43 @@ def calculate_area_balance(region_key, region_config):
     max_once = region_config.get('max_dispatch_once', 3)
     enabled = region_config.get('enabled', False)
     
+    # 分时段配置解析（始终解析，不受手动开关影响，用于展示）
+    time_slot_active = False
+    time_slot_matched = None
+    time_slots_config = region_config.get('time_slots', {})
+    if time_slots_config.get('enabled', False):
+        now_time = datetime.now().strftime('%H:%M')
+        matched_slots = []
+        for slot in time_slots_config.get('slots', []):
+            start = slot.get('start', '00:00')
+            end = slot.get('end', '00:00')
+            # 处理跨天时段（如 20:00 ~ 08:00）
+            if start <= end:
+                matched = start <= now_time <= end
+            else:
+                matched = now_time >= start or now_time <= end
+            if matched:
+                # 计算时段长度（分钟），用于选择最精确的时段
+                if start <= end:
+                    duration = (int(end[:2])*60 + int(end[3:])) - (int(start[:2])*60 + int(start[3:]))
+                else:
+                    duration = (24*60 - (int(start[:2])*60 + int(start[3:]))) + (int(end[:2])*60 + int(end[3:]))
+                matched_slots.append((duration, slot))
+        
+        if matched_slots:
+            # 选择时间范围最小的时段（最精确匹配）
+            matched_slots.sort(key=lambda x: x[0])
+            best_slot = matched_slots[0][1]
+            xmin = best_slot.get('xmin', xmin)
+            xmax = best_slot.get('xmax', xmax)
+            time_slot_active = True
+            time_slot_matched = best_slot
+    
+    # 分时配置中 xmin=-1, xmax=-1 表示禁用真实任务（仅在手动启用时生效）
+    effective_enabled = enabled
+    if enabled and time_slot_active and xmin == -1 and xmax == -1:
+        effective_enabled = False  # 走模拟逻辑
+    
     # 统计 a: 来区域模板中 status=6 的任务数
     a = 0
     incoming_templates = []
@@ -164,7 +201,8 @@ def calculate_area_balance(region_key, region_config):
         "areaId": region_config.get('areaId', '0'),
         "name": region_key,
         "server": region_config.get('server', ''),
-        "enabled": enabled,
+        "enabled": enabled,  # 手动开关状态（前端显示用）
+        "effective_enabled": effective_enabled,  # 实际生效状态（计算用）
         "xmin": xmin,
         "xmax": xmax,
         "max_dispatch_once": max_once,
@@ -180,6 +218,8 @@ def calculate_area_balance(region_key, region_config):
         "direction_color": direction_color,
         "can_dispatch": can_dispatch,
         "mutex_reason": mutex_reason,
+        "time_slot_active": time_slot_active,
+        "time_slot_matched": time_slot_matched,
         "templates": {
             "incoming": incoming_templates,
             "outgoing": outgoing_templates
@@ -609,7 +649,7 @@ def api_region_file_save(region_key, filename):
 
 # ========== 下发记录 API ==========
 
-def write_dispatch_log(region_key, template_name, direction, dispatch_url, request_body, simulated, device_code='', device_num='', result='success', response_body=None):
+def write_dispatch_log(region_key, template_name, direction, dispatch_url, request_body, simulated, device_code='', device_num='', result='success', response_body=None, reason='manual'):
     """写入下发记录到 dispatch_log.json"""
     log_file = _get_region_file(region_key, 'dispatch_log.json')
     logs = _load_json(log_file)
@@ -623,7 +663,8 @@ def write_dispatch_log(region_key, template_name, direction, dispatch_url, reque
         "simulated": simulated,
         "deviceCode": device_code,
         "deviceNum": device_num,
-        "result": result
+        "result": result,
+        "reason": reason
     })
     _save_json(log_file, logs)
     return True
@@ -711,7 +752,7 @@ def api_execute(region_key):
         # 4. 构建下发请求体（与任务下发界面格式一致）
         import random as _random
         sim_id = datetime.now().strftime('%Y%m%d%H%M%S')
-        simulated = not enabled
+        simulated = not balance.get('effective_enabled', enabled)
         
         # 生成 orderId: CEM_auto_YYYY-MM-DD HH:MM:SS.ms__随机数
         now_dt = datetime.now()
@@ -768,8 +809,19 @@ def api_execute(region_key):
             })
         _save_json(template_file, tasks)
         
-        # 7. 写入下发记录
+        # 7. 写入下发记录（区分原因）
         log_url = dispatch_url if not simulated else f'(模拟-未实际请求)\n真实地址: {dispatch_url}'
+        # 判断 reason
+        if not region.get('enabled', False):
+            reason = 'manual_disabled'  # 手动禁用
+        elif balance.get('time_slot_active') and balance['time_slot_matched'] and \
+             balance['time_slot_matched'].get('xmin') == -1 and balance['time_slot_matched'].get('xmax') == -1:
+            reason = 'time_slot_disabled'  # 分时禁用
+        elif balance.get('time_slot_active'):
+            reason = 'time_slot'  # 分时控制
+        else:
+            reason = 'manual'  # 手动触发
+        
         write_dispatch_log(
             region_key=region_key,
             template_name=target_template['name'],
@@ -780,7 +832,8 @@ def api_execute(region_key):
             device_code=f"SIM_{sim_id}" if simulated else f"DISP_{sim_id}",
             device_num=f"共{dispatch_count}台",
             result=result,
-            response_body=response_body
+            response_body=response_body,
+            reason=reason
         )
         
         return jsonify({

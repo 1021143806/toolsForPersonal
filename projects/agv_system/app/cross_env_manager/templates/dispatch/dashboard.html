@@ -322,6 +322,7 @@ function renderAreas(areas) {
                         <button class="btn btn-outline-warning btn-sm" onclick="executeCalculation('${area.region_key}', '${area.name}')"><i class="bi bi-play-circle"></i> 执行计算</button>
                         <button class="btn btn-outline-info btn-sm" onclick="toggleJsonPanel('${area.region_key}', this)"><i class="bi bi-filetype-json"></i> JSON文件</button>
                         <button class="btn btn-outline-teal btn-sm" onclick="toggleDispatchLogPanel('${area.region_key}', this)"><i class="bi bi-send"></i> 下发记录</button>
+                        <button class="btn btn-outline-purple btn-sm" onclick="toggleTimeSlotPanel('${area.region_key}', this)"><i class="bi bi-clock"></i> 分时配置</button>
                         <a href="/dispatch/config" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> 配置</a>
                     </div>
                 </div>
@@ -355,6 +356,12 @@ function renderAreas(areas) {
                             <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('dispatch-log-viewer-${area.region_key}').style.display='none'"><i class="bi bi-x-lg"></i></button>
                         </div>
                         <pre id="dispatch-log-content-${area.region_key}"></pre>
+                    </div>
+                </div>
+                <!-- 分时配置展开面板 -->
+                <div class="json-panel" id="time-slot-panel-${area.region_key}">
+                    <div id="time-slot-content-${area.region_key}">
+                        <div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载分时配置...</div>
                     </div>
                 </div>
             </div>
@@ -915,6 +922,243 @@ function viewDispatchLog(regionKey, idx) {
         '请求报文:\n' + bodyStr + '\n' +
         '──────────────────────────────\n' +
         '响应报文:\n' + respStr;
+}
+
+// ========== 分时配置展开面板 ==========
+
+function toggleTimeSlotPanel(regionKey, btn) {
+    const panel = document.getElementById('time-slot-panel-' + regionKey);
+    const isOpen = panel.classList.contains('open');
+    
+    document.querySelectorAll('.json-panel.open').forEach(p => p.classList.remove('open'));
+    
+    if (isOpen) {
+        panel.classList.remove('open');
+        return;
+    }
+    
+    panel.classList.add('open');
+    loadTimeSlotConfig(regionKey);
+}
+
+function loadTimeSlotConfig(regionKey) {
+    const el = document.getElementById('time-slot-content-' + regionKey);
+    el.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载分时配置...</div>';
+    
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            const region = config[regionKey];
+            if (!region) { el.innerHTML = '<div class="text-danger py-2">区域不存在</div>'; return; }
+            
+            const ts = region.time_slots || { enabled: false, slots: [] };
+            const slots = ts.slots || [];
+            
+            let html = '<div class="mb-3 d-flex align-items-center gap-3">';
+            html += '<div class="form-check form-switch">';
+            html += '<input class="form-check-input" type="checkbox" ' + (ts.enabled ? 'checked' : '') + ' onchange="toggleTimeSlotEnabled(\'' + regionKey + '\', this.checked)">';
+            html += '<label class="form-check-label">' + (ts.enabled ? '分时已启用' : '分时已禁用') + '</label>';
+            html += '</div>';
+            html += '<small class="text-muted">优先级低于手动开关</small>';
+            html += '</div>';
+            
+            if (slots.length > 0) {
+                html += '<div class="mb-2"><strong>时段列表：</strong></div>';
+                slots.forEach((s, idx) => {
+                    const xminLabel = s.xmin === -1 ? '禁用' : s.xmin;
+                    const xmaxLabel = s.xmax === -1 ? '禁用' : s.xmax;
+                    html += '<div class="json-file-item">';
+                    html += '<div class="file-info">';
+                    html += '<span class="badge bg-info">' + s.start + ' ~ ' + s.end + '</span>';
+                    html += '<span>xmin: <strong>' + xminLabel + '</strong></span>';
+                    html += '<span>xmax: <strong>' + xmaxLabel + '</strong></span>';
+                    html += '</div>';
+                    html += '<div class="file-actions">';
+                    html += '<button class="btn btn-sm btn-outline-primary" onclick="editTimeSlot(\'' + regionKey + '\',' + idx + ')"><i class="bi bi-pencil"></i></button>';
+                    html += '<button class="btn btn-sm btn-outline-danger" onclick="removeTimeSlot(\'' + regionKey + '\',' + idx + ')"><i class="bi bi-trash"></i></button>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+            } else {
+                html += '<div class="text-muted py-2">暂无时段配置</div>';
+            }
+            
+            // 新增/编辑时段表单
+            html += '<div class="mt-3 p-3" style="background:var(--card-bg);border-radius:8px;border:1px solid var(--border-color);">';
+            html += '<div class="d-flex justify-content-between align-items-center mb-2">';
+            html += '<strong id="ts-mode-' + regionKey + '" style="color:var(--primary-color);"><i class="bi bi-plus-circle me-1"></i>新增时段</strong>';
+            html += '<button class="btn btn-sm btn-outline-secondary" id="ts-cancel-' + regionKey + '" onclick="resetTimeSlotForm(\'' + regionKey + '\')" style="display:none;"><i class="bi bi-x"></i> 取消编辑</button>';
+            html += '</div>';
+            html += '<div class="row g-2 align-items-end">';
+            html += '<div class="col-md-2"><label class="form-label small">开始</label><input type="time" class="form-control form-control-sm" id="ts-start-' + regionKey + '" value="08:00"></div>';
+            html += '<div class="col-md-2"><label class="form-label small">结束</label><input type="time" class="form-control form-control-sm" id="ts-end-' + regionKey + '" value="17:00"></div>';
+            html += '<div class="col-md-2"><label class="form-label small">xmin</label><input type="number" class="form-control form-control-sm" id="ts-xmin-' + regionKey + '" value="2"></div>';
+            html += '<div class="col-md-2"><label class="form-label small">xmax</label><input type="number" class="form-control form-control-sm" id="ts-xmax-' + regionKey + '" value="4"></div>';
+            html += '<div class="col-md-2"><button class="btn btn-sm btn-primary" id="ts-btn-' + regionKey + '" onclick="addTimeSlot(\'' + regionKey + '\')"><i class="bi bi-plus"></i> 添加</button></div>';
+            html += '</div>';
+            html += '<small class="text-muted mt-1 d-block">xmin=-1, xmax=-1 = 禁用真实任务；xmin=0, xmax=0 = 清空到0</small>';
+            html += '</div>';
+            
+            el.innerHTML = html;
+        })
+        .catch(err => { el.innerHTML = '<div class="text-danger py-2">加载失败: ' + err.message + '</div>'; });
+}
+
+function toggleTimeSlotEnabled(regionKey, enabled) {
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (!config[regionKey]) return;
+            if (!config[regionKey].time_slots) config[regionKey].time_slots = { enabled: false, slots: [] };
+            config[regionKey].time_slots.enabled = enabled;
+            return fetch('/api/dispatch/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) {
+                showToast('分时配置已' + (enabled ? '启用' : '禁用'), 'success');
+                loadTimeSlotConfig(regionKey);
+                refreshData();
+            }
+        })
+        .catch(err => showToast('操作失败: ' + err.message, 'danger'));
+}
+
+function addTimeSlot(regionKey) {
+    const start = document.getElementById('ts-start-' + regionKey).value;
+    const end = document.getElementById('ts-end-' + regionKey).value;
+    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value) || 2;
+    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value) || 4;
+    
+    if (!start || !end) { showToast('请填写开始和结束时间', 'warning'); return; }
+    
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (!config[regionKey]) return;
+            if (!config[regionKey].time_slots) config[regionKey].time_slots = { enabled: false, slots: [] };
+            config[regionKey].time_slots.slots.push({ start, end, xmin, xmax });
+            return fetch('/api/dispatch/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) {
+                showToast('时段已添加', 'success');
+                loadTimeSlotConfig(regionKey);
+                refreshData();
+            }
+        })
+        .catch(err => showToast('添加失败: ' + err.message, 'danger'));
+}
+
+function editTimeSlot(regionKey, idx) {
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            const slots = config[regionKey]?.time_slots?.slots;
+            if (!slots || !slots[idx]) return;
+            const s = slots[idx];
+            
+            // 填充表单
+            document.getElementById('ts-start-' + regionKey).value = s.start;
+            document.getElementById('ts-end-' + regionKey).value = s.end;
+            document.getElementById('ts-xmin-' + regionKey).value = s.xmin;
+            document.getElementById('ts-xmax-' + regionKey).value = s.xmax;
+            
+            // 切换为编辑模式
+            const modeTitle = document.getElementById('ts-mode-' + regionKey);
+            modeTitle.innerHTML = '<i class="bi bi-pencil-square me-1"></i>编辑时段 (#' + (idx+1) + ')';
+            modeTitle.style.color = '#ffc107';
+            
+            const btn = document.getElementById('ts-btn-' + regionKey);
+            btn.className = 'btn btn-sm btn-warning';
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> 更新';
+            btn.onclick = function() { updateTimeSlot(regionKey, idx); };
+            
+            document.getElementById('ts-cancel-' + regionKey).style.display = 'inline-block';
+        });
+}
+
+function resetTimeSlotForm(regionKey) {
+    // 重置为新增模式
+    document.getElementById('ts-start-' + regionKey).value = '08:00';
+    document.getElementById('ts-end-' + regionKey).value = '17:00';
+    document.getElementById('ts-xmin-' + regionKey).value = '2';
+    document.getElementById('ts-xmax-' + regionKey).value = '4';
+    
+    const modeTitle = document.getElementById('ts-mode-' + regionKey);
+    modeTitle.innerHTML = '<i class="bi bi-plus-circle me-1"></i>新增时段';
+    modeTitle.style.color = '';
+    
+    const btn = document.getElementById('ts-btn-' + regionKey);
+    btn.className = 'btn btn-sm btn-primary';
+    btn.innerHTML = '<i class="bi bi-plus"></i> 添加';
+    btn.onclick = function() { addTimeSlot(regionKey); };
+    
+    document.getElementById('ts-cancel-' + regionKey).style.display = 'none';
+}
+
+function updateTimeSlot(regionKey, idx) {
+    const start = document.getElementById('ts-start-' + regionKey).value;
+    const end = document.getElementById('ts-end-' + regionKey).value;
+    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value) || 2;
+    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value) || 4;
+    
+    if (!start || !end) { showToast('请填写开始和结束时间', 'warning'); return; }
+    
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (!config[regionKey]?.time_slots?.slots) return;
+            config[regionKey].time_slots.slots[idx] = { start, end, xmin, xmax };
+            return fetch('/api/dispatch/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) {
+                showToast('时段已更新', 'success');
+                loadTimeSlotConfig(regionKey);
+                refreshData();
+            }
+        })
+        .catch(err => showToast('更新失败: ' + err.message, 'danger'));
+}
+
+function removeTimeSlot(regionKey, idx) {
+    if (!confirm('确定删除该时段？')) return;
+    
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (!config[regionKey] || !config[regionKey].time_slots) return;
+            config[regionKey].time_slots.slots.splice(idx, 1);
+            return fetch('/api/dispatch/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) {
+                showToast('时段已删除', 'success');
+                loadTimeSlotConfig(regionKey);
+                refreshData();
+            }
+        })
+        .catch(err => showToast('删除失败: ' + err.message, 'danger'));
 }
 
 function showToast(message, type) {
