@@ -208,8 +208,10 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/vendor/chart.js/chart.min.js"></script>
 <script>
 let refreshInterval = null;
+let chartInstances = {};
 
 $(document).ready(function() {
     refreshData();
@@ -304,15 +306,39 @@ function renderAreas(areas) {
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <div class="d-flex align-items-start gap-2 mb-2">
+                                <div style="position:relative;width:100px;height:100px;flex-shrink:0;">
+                                    <canvas id="chart-in-${area.region_key}" width="100" height="100"></canvas>
+                                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+                                        <div style="font-size:1rem;font-weight:700;line-height:1.2;">${area.a ?? 0}</div>
+                                        <div style="font-size:0.5rem;opacity:0.6;">来</div>
+                                    </div>
+                                </div>
+                                <div id="legend-in-${area.region_key}" class="small" style="flex:1;min-width:0;line-height:1.6;">
+                                    ${renderChartLegend(area.templates?.incoming || [], 'in')}
+                                </div>
+                            </div>
                             <div class="template-section-title text-success"><i class="bi bi-box-arrow-in-down"></i> 来区域</div>
-                            <table class="template-table">
+                            <table class="template-table" style="width:100%;">
                                 <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${incomingRows}</tbody>
                             </table>
                         </div>
                         <div class="col-md-6">
+                            <div class="d-flex align-items-start gap-2 mb-2">
+                                <div style="position:relative;width:100px;height:100px;flex-shrink:0;">
+                                    <canvas id="chart-out-${area.region_key}" width="100" height="100"></canvas>
+                                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+                                        <div style="font-size:1rem;font-weight:700;line-height:1.2;">${area.b ?? 0}</div>
+                                        <div style="font-size:0.5rem;opacity:0.6;">离</div>
+                                    </div>
+                                </div>
+                                <div id="legend-out-${area.region_key}" class="small" style="flex:1;min-width:0;line-height:1.6;">
+                                    ${renderChartLegend(area.templates?.outgoing || [], 'out')}
+                                </div>
+                            </div>
                             <div class="template-section-title text-danger"><i class="bi bi-box-arrow-up"></i> 离开</div>
-                            <table class="template-table">
+                            <table class="template-table" style="width:100%;">
                                 <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${outgoingRows}</tbody>
                             </table>
@@ -369,6 +395,145 @@ function renderAreas(areas) {
     });
     html += '</div>';
     container.innerHTML = html;
+    
+    // 渲染完成后初始化双环形图
+    areas.forEach(area => {
+        initDualCharts(area);
+    });
+}
+
+function createDoughnutChart(canvasId, labels, data, colors) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const ctx = canvas.getContext('2d');
+    if (data.length === 0) {
+        data = [1];
+        labels = ['无数据'];
+        colors = ['#374151'];
+    }
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 1,
+                borderColor: 'transparent',
+                hoverBorderColor: '#fff',
+                hoverBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initDualCharts(area) {
+    const rk = area.region_key;
+    
+    // 来区域环形图
+    const inLabels = [];
+    const inData = [];
+    const inCols = [];
+    (area.templates?.incoming || []).forEach((t, i) => {
+        if (t.count > 0) {
+            inLabels.push(t.code);
+            inData.push(t.count);
+            inCols.push(CHART_COLORS.in[i % 5]);
+        }
+    });
+    if (chartInstances['in-' + rk]) chartInstances['in-' + rk].destroy();
+    chartInstances['in-' + rk] = createDoughnutChart('chart-in-' + rk, inLabels, inData, inCols);
+    
+    // 离开环形图
+    const outLabels = [];
+    const outData = [];
+    const outCols = [];
+    (area.templates?.outgoing || []).forEach((t, i) => {
+        if (t.count > 0) {
+            outLabels.push(t.code);
+            outData.push(t.count);
+            outCols.push(CHART_COLORS.out[i % 5]);
+        }
+    });
+    if (chartInstances['out-' + rk]) chartInstances['out-' + rk].destroy();
+    chartInstances['out-' + rk] = createDoughnutChart('chart-out-' + rk, outLabels, outData, outCols);
+}
+
+function updateDualCharts(area) {
+    const rk = area.region_key;
+    
+    // 更新来区域环形图
+    const inLabels = [];
+    const inData = [];
+    const inCols = [];
+    (area.templates?.incoming || []).forEach((t, i) => {
+        if (t.count > 0) {
+            inLabels.push(t.code);
+            inData.push(t.count);
+            inCols.push(CHART_COLORS.in[i % 5]);
+        }
+    });
+    let chart = chartInstances['in-' + rk];
+    if (chart) {
+        if (inData.length === 0) { inData.push(1); inLabels.push('无数据'); inCols.push('#374151'); }
+        chart.data.labels = inLabels;
+        chart.data.datasets[0].data = inData;
+        chart.data.datasets[0].backgroundColor = inCols;
+        chart.update();
+    } else {
+        chartInstances['in-' + rk] = createDoughnutChart('chart-in-' + rk, inLabels, inData, inCols);
+    }
+    
+    // 更新离开环形图
+    const outLabels = [];
+    const outData = [];
+    const outCols = [];
+    (area.templates?.outgoing || []).forEach((t, i) => {
+        if (t.count > 0) {
+            outLabels.push(t.code);
+            outData.push(t.count);
+            outCols.push(CHART_COLORS.out[i % 5]);
+        }
+    });
+    chart = chartInstances['out-' + rk];
+    if (chart) {
+        if (outData.length === 0) { outData.push(1); outLabels.push('无数据'); outCols.push('#374151'); }
+        chart.data.labels = outLabels;
+        chart.data.datasets[0].data = outData;
+        chart.data.datasets[0].backgroundColor = outCols;
+        chart.update();
+    } else {
+        chartInstances['out-' + rk] = createDoughnutChart('chart-out-' + rk, outLabels, outData, outCols);
+    }
+    
+    // 更新中间数字
+    const inCenter = document.querySelector('#chart-in-' + rk)?.parentElement?.querySelector('div[style*="position:absolute"]');
+    if (inCenter) inCenter.querySelector('div:first-child').textContent = area.a ?? 0;
+    const outCenter = document.querySelector('#chart-out-' + rk)?.parentElement?.querySelector('div[style*="position:absolute"]');
+    if (outCenter) outCenter.querySelector('div:first-child').textContent = area.b ?? 0;
+    
+    // 更新图例
+    const legendIn = document.getElementById('legend-in-' + rk);
+    if (legendIn) legendIn.innerHTML = renderChartLegend(area.templates?.incoming || [], 'in');
+    const legendOut = document.getElementById('legend-out-' + rk);
+    if (legendOut) legendOut.innerHTML = renderChartLegend(area.templates?.outgoing || [], 'out');
 }
 
 /**
@@ -442,6 +607,8 @@ function updateAreasData(areas) {
             updateTableCounts(tables[1], area.templates.outgoing);
         }
         
+        // 更新双环形图
+        updateDualCharts(area);
 
     });
 }
@@ -465,6 +632,26 @@ function renderTemplateRows(templates) {
         const icon = t.type === 'empty_in' || t.type === 'empty_out' ? 'bi-truck' : 'bi-box-seam';
         return `<tr><td><code>${t.code}</code></td><td><i class="${icon} me-1 small opacity-50"></i>${t.name}</td>
             <td class="text-center"><span class="badge ${t.count > 0 ? 'bg-primary' : 'bg-secondary'}">${t.count}</span></td></tr>`;
+    }).join('');
+}
+
+// 颜色配置：高对比度色板
+const CHART_COLORS = {
+    in: ['#059669', '#2563eb', '#7c3aed', '#d97706', '#0891b2'],  // 翠绿/蓝/紫/橙/青
+    out: ['#dc2626', '#db2777', '#ea580c', '#9333ea', '#0d9488']  // 正红/玫红/橙红/紫/青绿
+};
+
+function renderChartLegend(templates, direction) {
+    if (!templates || templates.length === 0) return '<div class="text-muted">无任务</div>';
+    const colors = CHART_COLORS[direction] || CHART_COLORS.in;
+    return templates.map((t, i) => {
+        const color = colors[i % colors.length];
+        const count = t.count || 0;
+        return `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${t.code}</span>
+            <span style="font-weight:600;flex-shrink:0;">${count}</span>
+        </div>`;
     }).join('');
 }
 

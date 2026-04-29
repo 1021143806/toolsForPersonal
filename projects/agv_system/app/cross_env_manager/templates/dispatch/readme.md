@@ -107,23 +107,39 @@ data/dispatch/
 
 ## API 接口
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/dispatch` | 主看板页面 |
-| GET | `/dispatch/config` | 配置编辑页面 |
-| GET | `/dispatch/area/<id>` | 区域详情页面 |
-| GET | `/api/dispatch/status` | 获取所有区域状态（含平衡计算） |
-| GET | `/api/dispatch/config` | 获取配置 |
-| POST | `/api/dispatch/config` | 保存配置 |
-| GET | `/api/dispatch/config/backups` | 列出备份 |
-| POST | `/api/dispatch/config/backup` | 创建备份 |
-| GET | `/api/dispatch/config/backup/<name>` | 查看备份内容 |
-| POST | `/api/dispatch/config/backup/<name>/restore` | 恢复备份 |
-| DELETE | `/api/dispatch/config/backup/<name>` | 删除备份 |
-| GET | `/api/dispatch/region_files/<region_key>` | 获取区域关联的文件列表 |
-| GET | `/api/dispatch/region_file/<region_key>/<filename>` | 获取文件内容（不存在时返回 `[]`） |
-| POST | `/api/dispatch/region_file/<region_key>/<filename>` | 保存文件内容（自动创建） |
-| **POST** | **`/api/dispatch/report_status`** | **任务状态上报接口** |
+### 权限说明
+
+调车模块已接入系统账号体系，权限分为三级：
+
+| 权限 | 说明 |
+|------|------|
+| 🔓 无需登录 | 外部设备上报接口，无需认证 |
+| 🔑 登录 | 登录用户可访问（普通用户或管理员） |
+| ⚙️ 管理员 | 需在首页启用管理员提权 |
+
+### 接口列表
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| GET | `/dispatch` | 🔑 登录 | 主看板页面 |
+| GET | `/dispatch/config` | ⚙️ 管理员 | 配置编辑页面 |
+| GET | `/dispatch/area/<id>` | 🔑 登录 | 区域详情页面 |
+| GET | `/api/dispatch/status` | 🔑 登录 | 获取所有区域状态（含平衡计算） |
+| GET | `/api/dispatch/config` | 🔑 登录 | 获取配置 |
+| POST | `/api/dispatch/config` | ⚙️ 管理员 | 保存配置 |
+| GET | `/api/dispatch/config/backups` | 🔑 登录 | 列出备份 |
+| POST | `/api/dispatch/config/backup` | ⚙️ 管理员 | 创建备份 |
+| GET | `/api/dispatch/config/backup/<name>` | 🔑 登录 | 查看备份内容 |
+| POST | `/api/dispatch/config/backup/<name>/restore` | ⚙️ 管理员 | 恢复备份 |
+| DELETE | `/api/dispatch/config/backup/<name>` | ⚙️ 管理员 | 删除备份 |
+| GET | `/api/dispatch/region_files/<region_key>` | 🔑 登录 | 获取区域关联的文件列表 |
+| GET | `/api/dispatch/region_file/<region_key>/<filename>` | 🔑 登录 | 获取文件内容 |
+| POST | `/api/dispatch/region_file/<region_key>/<filename>` | ⚙️ 管理员 | 保存文件内容 |
+| POST | `/api/dispatch/execute/<region_key>` | 🔑 登录 | 执行计算并下发调车 |
+| POST | `/api/dispatch/clean_simulated/<region_key>` | 🔑 登录 | 清理模拟数据 |
+| GET | `/api/dispatch/dispatch_log/<region_key>` | 🔑 登录 | 获取下发记录 |
+| POST | `/api/dispatch/dispatch_log/<region_key>` | ⚙️ 管理员 | 写入下发记录 |
+| **POST** | **`/api/dispatch/report_status`** | **🔓 无需登录** | **任务状态上报接口（外部设备）** |
 
 ### 状态上报接口
 

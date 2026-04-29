@@ -4,11 +4,37 @@
 调车管理路由蓝图 - 空车调车模块
 """
 
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, session, redirect, url_for
+from functools import wraps
 from datetime import datetime
 import os, json, threading
 
 dispatch_bp = Blueprint('dispatch', __name__, template_folder='../templates')
+
+
+def login_required(f):
+    """登录验证装饰器（普通用户或管理员均可）"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': '需要登录', 'redirect': '/login'}), 401
+            return redirect(url_for('auth.login_page'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def admin_required(f):
+    """管理员验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('is_admin'):
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': '需要管理员权限，请在首页启用管理员提权'}), 403
+            return '''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"></head>
+<body><script>alert('需要管理员权限，请在首页启用管理员提权');history.back();</script></body></html>''', 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 数据目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -66,8 +92,8 @@ def _save_json(filepath, data):
 
 
 def _get_region_file(region_key, filename):
-    """获取区域文件路径"""
-    return os.path.join(DATA_DIR, f"{region_key}_{filename}")
+    """获取区域文件路径（按区域文件夹存放）"""
+    return os.path.join(DATA_DIR, region_key, filename)
 
 
 # ========== 核心计算逻辑 ==========
@@ -415,18 +441,22 @@ def handle_status_report(data):
 # ========== 路由 ==========
 
 @dispatch_bp.route('/dispatch')
+@login_required
 def dashboard():
     """调车管理主看板"""
     return render_template('dispatch/dashboard.html')
 
 
 @dispatch_bp.route('/dispatch/config')
+@login_required
+@admin_required
 def config_page():
     """配置管理页"""
     return render_template('dispatch/config.html')
 
 
 @dispatch_bp.route('/dispatch/area/<int:area_id>')
+@login_required
 def area_detail(area_id):
     """区域详情页"""
     data = get_all_areas_status()
@@ -439,6 +469,7 @@ def area_detail(area_id):
 # ========== API ==========
 
 @dispatch_bp.route('/api/dispatch/status')
+@login_required
 def api_status():
     """获取所有区域状态"""
     return jsonify(get_all_areas_status())
@@ -446,7 +477,7 @@ def api_status():
 
 @dispatch_bp.route('/api/dispatch/report_status', methods=['POST'])
 def api_report_status():
-    """任务状态上报接口"""
+    """任务状态上报接口（外部设备上报，无需登录）"""
     try:
         data = request.get_json()
         if not data:
@@ -462,12 +493,15 @@ def api_report_status():
 
 
 @dispatch_bp.route('/api/dispatch/config')
+@login_required
 def get_config():
     """获取配置"""
     return jsonify(_load_cache_index())
 
 
 @dispatch_bp.route('/api/dispatch/config', methods=['POST'])
+@login_required
+@admin_required
 def save_config():
     """保存配置"""
     try:
@@ -481,6 +515,7 @@ def save_config():
 # ========== 备份 API ==========
 
 @dispatch_bp.route('/api/dispatch/config/backups')
+@login_required
 def list_backups():
     """列出备份"""
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -507,6 +542,8 @@ def list_backups():
 
 
 @dispatch_bp.route('/api/dispatch/config/backup', methods=['POST'])
+@login_required
+@admin_required
 def create_backup():
     """创建备份"""
     try:
@@ -528,6 +565,7 @@ def create_backup():
 
 
 @dispatch_bp.route('/api/dispatch/config/backup/<backup_name>')
+@login_required
 def get_backup(backup_name):
     """获取备份内容"""
     backup_path = os.path.join(BACKUP_DIR, backup_name)
@@ -539,6 +577,8 @@ def get_backup(backup_name):
 
 
 @dispatch_bp.route('/api/dispatch/config/backup/<backup_name>/restore', methods=['POST'])
+@login_required
+@admin_required
 def restore_backup(backup_name):
     """恢复备份"""
     backup_path = os.path.join(BACKUP_DIR, backup_name)
@@ -556,6 +596,8 @@ def restore_backup(backup_name):
 
 
 @dispatch_bp.route('/api/dispatch/config/backup/<backup_name>', methods=['DELETE'])
+@login_required
+@admin_required
 def delete_backup(backup_name):
     """删除备份"""
     backup_path = os.path.join(BACKUP_DIR, backup_name)
@@ -568,6 +610,7 @@ def delete_backup(backup_name):
 # ========== 区域 JSON 文件查看/编辑 API ==========
 
 @dispatch_bp.route('/api/dispatch/region_files/<region_key>')
+@login_required
 def api_region_files(region_key):
     """获取区域关联的文件列表"""
     index = _load_cache_index()
@@ -576,7 +619,6 @@ def api_region_files(region_key):
         return jsonify({'error': f'区域 {region_key} 不存在'}), 404
 
     files = []
-    # 从 templates 中提取
     for t in region.get('templates', []):
         fpath = _get_region_file(region_key, t['file'])
         exists = os.path.exists(fpath)
@@ -587,7 +629,6 @@ def api_region_files(region_key):
             'exists': exists,
             'size': os.path.getsize(fpath) if exists else 0
         })
-    # 添加 currentCount.json
     now_path = _get_region_file(region_key, 'currentCount.json')
     now_exists = os.path.exists(now_path)
     files.append({
@@ -602,11 +643,11 @@ def api_region_files(region_key):
 
 
 @dispatch_bp.route('/api/dispatch/region_file/<region_key>/<filename>')
+@login_required
 def api_region_file_get(region_key, filename):
-    """获取区域文件内容，文件不存在时返回空数组"""
+    """获取区域文件内容"""
     fpath = _get_region_file(region_key, filename)
     if not os.path.exists(fpath):
-        # 文件不存在时返回空数组作为默认内容
         return jsonify({
             'region_key': region_key,
             'filename': filename,
@@ -629,12 +670,13 @@ def api_region_file_get(region_key, filename):
 
 
 @dispatch_bp.route('/api/dispatch/region_file/<region_key>/<filename>', methods=['POST'])
+@login_required
+@admin_required
 def api_region_file_save(region_key, filename):
-    """保存区域文件内容，文件不存在时自动创建"""
+    """保存区域文件内容"""
     try:
         data = request.get_json()
         content = data.get('content', '')
-        # 验证 JSON 格式
         try:
             json.loads(content)
         except json.JSONDecodeError as e:
@@ -671,16 +713,18 @@ def write_dispatch_log(region_key, template_name, direction, dispatch_url, reque
 
 
 @dispatch_bp.route('/api/dispatch/dispatch_log/<region_key>')
+@login_required
 def api_dispatch_log(region_key):
     """获取下发记录"""
     log_file = _get_region_file(region_key, 'dispatch_log.json')
     logs = _load_json(log_file)
-    # 按时间倒序
     logs.sort(key=lambda x: x.get('time', ''), reverse=True)
     return jsonify({'region_key': region_key, 'logs': logs})
 
 
 @dispatch_bp.route('/api/dispatch/dispatch_log/<region_key>', methods=['POST'])
+@login_required
+@admin_required
 def api_dispatch_log_write(region_key):
     """写入下发记录"""
     try:
@@ -704,6 +748,7 @@ def api_dispatch_log_write(region_key):
 # ========== 执行计算 API ==========
 
 @dispatch_bp.route('/api/dispatch/execute/<region_key>', methods=['POST'])
+@login_required
 def api_execute(region_key):
     """执行单区域全流程：检查→计算→下发"""
     try:
@@ -854,6 +899,7 @@ def api_execute(region_key):
 # ========== 清理模拟数据 API ==========
 
 @dispatch_bp.route('/api/dispatch/clean_simulated/<region_key>', methods=['POST'])
+@login_required
 def api_clean_simulated(region_key):
     """清理指定区域所有模板 JSON 中的模拟数据"""
     try:
