@@ -1031,10 +1031,16 @@ function toggleTimeSlotEnabled(regionKey, enabled) {
 function addTimeSlot(regionKey) {
     const start = document.getElementById('ts-start-' + regionKey).value;
     const end = document.getElementById('ts-end-' + regionKey).value;
-    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value) || 2;
-    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value) || 4;
+    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value);
+    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value);
     
     if (!start || !end) { showToast('请填写开始和结束时间', 'warning'); return; }
+    if (isNaN(xmin) || isNaN(xmax)) { showToast('xmin 和 xmax 必须为数字', 'warning'); return; }
+    // 校验：xmax > xmin，允许特殊组合 (0,0)=清空到0, (-1,-1)=禁用
+    if (!(xmin === 0 && xmax === 0) && !(xmin === -1 && xmax === -1) && xmax <= xmin) {
+        showToast('xmax 必须大于 xmin（或设为 0,0 清空 / -1,-1 禁用）', 'warning');
+        return;
+    }
     
     fetch('/api/dispatch/config')
         .then(r => r.json())
@@ -1109,15 +1115,35 @@ function resetTimeSlotForm(regionKey) {
 function updateTimeSlot(regionKey, idx) {
     const start = document.getElementById('ts-start-' + regionKey).value;
     const end = document.getElementById('ts-end-' + regionKey).value;
-    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value) || 2;
-    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value) || 4;
+    const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value);
+    const xmax = parseInt(document.getElementById('ts-xmax-' + regionKey).value);
     
     if (!start || !end) { showToast('请填写开始和结束时间', 'warning'); return; }
+    if (isNaN(xmin) || isNaN(xmax)) { showToast('xmin 和 xmax 必须为数字', 'warning'); return; }
+    // 校验：xmax > xmin，允许特殊组合 (0,0)=清空到0, (-1,-1)=禁用
+    if (!(xmin === 0 && xmax === 0) && !(xmin === -1 && xmax === -1) && xmax <= xmin) {
+        showToast('xmax 必须大于 xmin（或设为 0,0 清空 / -1,-1 禁用）', 'warning');
+        return;
+    }
     
     fetch('/api/dispatch/config')
         .then(r => r.json())
         .then(config => {
-            if (!config[regionKey]?.time_slots?.slots) return;
+            // 确保 time_slots 和 slots 存在
+            if (!config[regionKey]) {
+                showToast('区域不存在', 'danger');
+                return;
+            }
+            if (!config[regionKey].time_slots) {
+                config[regionKey].time_slots = { enabled: false, slots: [] };
+            }
+            if (!config[regionKey].time_slots.slots) {
+                config[regionKey].time_slots.slots = [];
+            }
+            // 确保 slots 数组长度足够
+            while (config[regionKey].time_slots.slots.length <= idx) {
+                config[regionKey].time_slots.slots.push({ start: '00:00', end: '23:59', xmin: 2, xmax: 4 });
+            }
             config[regionKey].time_slots.slots[idx] = { start, end, xmin, xmax };
             return fetch('/api/dispatch/config', {
                 method: 'POST',
@@ -1125,12 +1151,19 @@ function updateTimeSlot(regionKey, idx) {
                 body: JSON.stringify(config)
             });
         })
-        .then(r => r && r.json())
+        .then(r => {
+            if (!r) return null;
+            return r.json();
+        })
         .then(result => {
             if (result && result.success) {
                 showToast('时段已更新', 'success');
+                // 更新成功后重置表单为新增模式
+                resetTimeSlotForm(regionKey);
                 loadTimeSlotConfig(regionKey);
                 refreshData();
+            } else {
+                showToast('更新失败: 服务器返回异常', 'danger');
             }
         })
         .catch(err => showToast('更新失败: ' + err.message, 'danger'));
