@@ -43,12 +43,14 @@ def _save_cache_index(data):
 
 
 def _load_json(filepath):
-    """加载 JSON 文件"""
+    """加载 JSON 文件，确保返回列表"""
     if not os.path.exists(filepath):
         return []
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+        # 如果不是列表，返回空列表
+        return data if isinstance(data, list) else []
     except:
         return []
 
@@ -314,8 +316,22 @@ def handle_status_report(data):
     if status == 6:
         # 任务开始（运行中）：记录到模板 JSON
         tasks = _load_json(template_file)
-        # 避免重复记录
-        if not any(t.get('deviceCode') == device_code and t.get('status') == 6 for t in tasks):
+        # 查找是否已有该设备的记录，有则覆盖，无则新增
+        existing = None
+        for t in tasks:
+            if t.get('deviceCode') == device_code and t.get('status') == 6:
+                existing = t
+                break
+        
+        if existing:
+            # 覆盖更新
+            existing['deviceNum'] = device_num
+            existing['order_id'] = order_id
+            existing['shelfNumber'] = data.get('shelfNumber', '')
+            existing['shelfCurrPosition'] = data.get('shelfCurrPosition', '')
+            existing['update_time'] = now
+        else:
+            # 新增
             tasks.append({
                 "deviceCode": device_code,
                 "deviceNum": device_num,
@@ -326,7 +342,7 @@ def handle_status_report(data):
                 "create_time": now,
                 "update_time": now
             })
-            _save_json(template_file, tasks)
+        _save_json(template_file, tasks)
         
     else:
         # 非 6 的状态（包括 8=完成 及其他状态）：执行清理逻辑
@@ -589,3 +605,237 @@ def api_region_file_save(region_key, filename):
         return jsonify({'success': True, 'message': f'{filename} 保存成功'})
     except Exception as e:
         return jsonify({'error': f'保存失败: {str(e)}'}), 500
+
+
+# ========== 下发记录 API ==========
+
+def write_dispatch_log(region_key, template_name, direction, dispatch_url, request_body, simulated, device_code='', device_num='', result='success', response_body=None):
+    """写入下发记录到 dispatch_log.json"""
+    log_file = _get_region_file(region_key, 'dispatch_log.json')
+    logs = _load_json(log_file)
+    logs.append({
+        "time": datetime.now().isoformat(),
+        "template_name": template_name,
+        "direction": direction,
+        "dispatch_url": dispatch_url,
+        "request_body": request_body,
+        "response_body": response_body,
+        "simulated": simulated,
+        "deviceCode": device_code,
+        "deviceNum": device_num,
+        "result": result
+    })
+    _save_json(log_file, logs)
+    return True
+
+
+@dispatch_bp.route('/api/dispatch/dispatch_log/<region_key>')
+def api_dispatch_log(region_key):
+    """获取下发记录"""
+    log_file = _get_region_file(region_key, 'dispatch_log.json')
+    logs = _load_json(log_file)
+    # 按时间倒序
+    logs.sort(key=lambda x: x.get('time', ''), reverse=True)
+    return jsonify({'region_key': region_key, 'logs': logs})
+
+
+@dispatch_bp.route('/api/dispatch/dispatch_log/<region_key>', methods=['POST'])
+def api_dispatch_log_write(region_key):
+    """写入下发记录"""
+    try:
+        data = request.get_json()
+        write_dispatch_log(
+            region_key=region_key,
+            template_name=data.get('template_name', ''),
+            direction=data.get('direction', ''),
+            dispatch_url=data.get('dispatch_url', ''),
+            request_body=data.get('request_body', {}),
+            simulated=data.get('simulated', False),
+            device_code=data.get('deviceCode', ''),
+            device_num=data.get('deviceNum', ''),
+            result=data.get('result', 'success')
+        )
+        return jsonify({'success': True, 'message': '下发记录已保存'})
+    except Exception as e:
+        return jsonify({'error': f'写入失败: {str(e)}'}), 500
+
+
+# ========== 执行计算 API ==========
+
+@dispatch_bp.route('/api/dispatch/execute/<region_key>', methods=['POST'])
+def api_execute(region_key):
+    """执行单区域全流程：检查→计算→下发"""
+    try:
+        index = _load_cache_index()
+        region = index.get(region_key)
+        if not region:
+            return jsonify({'error': f'区域 {region_key} 不存在'}), 404
+        
+        enabled = region.get('enabled', False)
+        server = region.get('server', '')
+        max_once = region.get('max_dispatch_once', 3)
+        
+        # 1. 计算平衡
+        balance = calculate_area_balance(region_key, region)
+        
+        if balance['direction'] == 'none':
+            return jsonify({
+                'success': True,
+                'message': '区域平衡，无需下发',
+                'balance': balance,
+                'dispatched': False
+            })
+        
+        # 2. 互斥检查
+        if not balance['can_dispatch']:
+            return jsonify({
+                'success': False,
+                'error': balance['mutex_reason'],
+                'balance': balance
+            }), 409
+        
+        # 3. 确定下发模板和方向
+        dispatch_count = balance['dispatch_count']
+        direction = balance['direction']
+        
+        # 选择对应方向的模板
+        target_template = None
+        for t in region.get('templates', []):
+            if t['direction'] == direction:
+                target_template = t
+                break
+        
+        if not target_template:
+            return jsonify({'error': f'未找到方向 {direction} 的模板'}), 400
+        
+        # 4. 构建下发请求体（与任务下发界面格式一致）
+        import random as _random
+        sim_id = datetime.now().strftime('%Y%m%d%H%M%S')
+        simulated = not enabled
+        
+        # 生成 orderId: CEM_auto_YYYY-MM-DD HH:MM:SS.ms__随机数
+        now_dt = datetime.now()
+        date_str = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+        ms = now_dt.microsecond // 1000
+        rand = _random.randint(0, 9999)
+        order_id = f"CEM_auto_{date_str}.{ms:03d}__{rand:04d}"
+        
+        dispatch_url = f"http://{server}/ics/taskOrder/addTask" if server else ''
+        request_body = [{
+            "modelProcessCode": target_template['name'],
+            "priority": 6,
+            "orderId": order_id,
+            "fromSystem": "CEM_auto",
+            "taskOrderDetail": {
+                "taskPath": "",
+                "shelfNumber": ""
+            }
+        }]
+        
+        # 5. 非模拟时实际发送 HTTP 请求
+        result = 'simulated'
+        response_body = None
+        if not simulated and dispatch_url:
+            try:
+                import urllib.request as _urllib
+                req = _urllib.Request(dispatch_url, 
+                    data=json.dumps(request_body).encode('utf-8'),
+                    headers={'Content-Type': 'application/json'})
+                resp = _urllib.urlopen(req, timeout=10)
+                resp_raw = resp.read().decode('utf-8')
+                response_body = json.loads(resp_raw)
+                result = 'success' if response_body.get('code') == 1000 else f'code={response_body.get("code")}'
+            except Exception as e:
+                result = f'请求失败: {str(e)}'
+                response_body = {"error": str(e)}
+        
+        # 6. 写入模板 JSON（模拟数据也写入）
+        template_file = _get_region_file(region_key, target_template['file'])
+        tasks = _load_json(template_file)
+        now = datetime.now().isoformat()
+        
+        for i in range(dispatch_count):
+            device_code = f"SIM_{sim_id}_{i}" if simulated else f"DISP_{sim_id}_{i}"
+            device_num = f"SIM_D{i}" if simulated else f"DISP_D{i}"
+            tasks.append({
+                "deviceCode": device_code,
+                "deviceNum": device_num,
+                "status": 6,
+                "_simulated": simulated,
+                "order_id": order_id,
+                "create_time": now,
+                "update_time": now
+            })
+        _save_json(template_file, tasks)
+        
+        # 7. 写入下发记录
+        log_url = dispatch_url if not simulated else f'(模拟-未实际请求)\n真实地址: {dispatch_url}'
+        write_dispatch_log(
+            region_key=region_key,
+            template_name=target_template['name'],
+            direction=direction,
+            dispatch_url=log_url,
+            request_body=request_body,
+            simulated=simulated,
+            device_code=f"SIM_{sim_id}" if simulated else f"DISP_{sim_id}",
+            device_num=f"共{dispatch_count}台",
+            result=result,
+            response_body=response_body
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台设备',
+            'balance': balance,
+            'dispatched': True,
+            'simulated': simulated,
+            'dispatch_count': dispatch_count,
+            'template_name': target_template['name'],
+            'direction': direction
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'执行失败: {str(e)}'}), 500
+
+
+# ========== 清理模拟数据 API ==========
+
+@dispatch_bp.route('/api/dispatch/clean_simulated/<region_key>', methods=['POST'])
+def api_clean_simulated(region_key):
+    """清理指定区域所有模板 JSON 中的模拟数据"""
+    try:
+        index = _load_cache_index()
+        region = index.get(region_key)
+        if not region:
+            return jsonify({'error': f'区域 {region_key} 不存在'}), 404
+        
+        cleaned_count = 0
+        
+        # 清理所有模板 JSON 文件
+        for t in region.get('templates', []):
+            fpath = _get_region_file(region_key, t['file'])
+            tasks = _load_json(fpath)
+            old_len = len(tasks)
+            tasks = [task for task in tasks if not task.get('_simulated')]
+            new_len = len(tasks)
+            if old_len != new_len:
+                _save_json(fpath, tasks)
+                cleaned_count += (old_len - new_len)
+        
+        # 清理 currentCount.json
+        now_file = _get_region_file(region_key, 'currentCount.json')
+        now_devices = _load_json(now_file)
+        old_len = len(now_devices)
+        now_devices = [d for d in now_devices if not d.get('_simulated')]
+        if old_len != len(now_devices):
+            _save_json(now_file, now_devices)
+            cleaned_count += (old_len - len(now_devices))
+        
+        return jsonify({
+            'success': True,
+            'message': f'已清理 {cleaned_count} 条模拟数据',
+            'cleaned_count': cleaned_count
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'清理失败: {str(e)}'}), 500

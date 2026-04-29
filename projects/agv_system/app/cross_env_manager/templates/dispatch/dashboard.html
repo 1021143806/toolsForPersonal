@@ -274,6 +274,16 @@ function renderAreas(areas) {
                         </div>
                         <div class="balance-divider"></div>
                         <div class="balance-item">
+                            <div class="value text-info">${area.a ?? 0}</div>
+                            <div class="label">来区域(a)</div>
+                        </div>
+                        <div class="balance-divider"></div>
+                        <div class="balance-item">
+                            <div class="value text-danger">${area.b ?? 0}</div>
+                            <div class="label">离开(b)</div>
+                        </div>
+                        <div class="balance-divider"></div>
+                        <div class="balance-item">
                             <div class="value ${area.need > 0 ? 'text-warning' : 'text-success'}">${area.need}</div>
                             <div class="label">需调度</div>
                         </div>
@@ -288,6 +298,9 @@ function renderAreas(areas) {
                                 <i class="${area.direction_icon} me-1"></i>${area.direction_text}
                             </div>
                         </div>
+                    </div>
+                    <div class="formula-row" id="formula-${area.region_key}" style="font-size:0.8rem;padding:0.25rem 0;opacity:0.8;">
+                        ${getFormulaText(area)}
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -306,9 +319,9 @@ function renderAreas(areas) {
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-top border-secondary d-flex gap-2 flex-wrap">
-                        <a href="/dispatch/area/${area.id}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list-ul"></i> 详情</a>
-                        ${area.need > 0 ? `<button class="btn btn-outline-warning btn-sm" onclick="autoDispatch(${area.id}, '${area.name}')"><i class="bi bi-truck"></i> 自动调车</button>` : ''}
+                        <button class="btn btn-outline-warning btn-sm" onclick="executeCalculation('${area.region_key}', '${area.name}')"><i class="bi bi-play-circle"></i> 执行计算</button>
                         <button class="btn btn-outline-info btn-sm" onclick="toggleJsonPanel('${area.region_key}', this)"><i class="bi bi-filetype-json"></i> JSON文件</button>
+                        <button class="btn btn-outline-teal btn-sm" onclick="toggleDispatchLogPanel('${area.region_key}', this)"><i class="bi bi-send"></i> 下发记录</button>
                         <a href="/dispatch/config" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> 配置</a>
                     </div>
                 </div>
@@ -329,6 +342,19 @@ function renderAreas(areas) {
                         </div>
                         <pre id="viewer-content-${area.region_key}"></pre>
                         <textarea id="viewer-editor-${area.region_key}" style="display:none;"></textarea>
+                    </div>
+                </div>
+                <!-- 下发记录展开面板 -->
+                <div class="json-panel" id="dispatch-log-panel-${area.region_key}">
+                    <div id="dispatch-log-list-${area.region_key}">
+                        <div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载下发记录...</div>
+                    </div>
+                    <div class="json-viewer" id="dispatch-log-viewer-${area.region_key}" style="display:none;">
+                        <div class="viewer-header">
+                            <span id="dispatch-log-title-${area.region_key}"></span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('dispatch-log-viewer-${area.region_key}').style.display='none'"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                        <pre id="dispatch-log-content-${area.region_key}"></pre>
                     </div>
                 </div>
             </div>
@@ -352,16 +378,39 @@ function updateAreasData(areas) {
         const card = cards[idx];
         if (!card) return;
         
-        // 更新平衡面板数字
+        // 更新平衡面板数字（6个: 当前设备, a, b, 需调度, 保留范围, 方向文本）
         const balanceItems = card.querySelectorAll('.balance-item .value');
-        if (balanceItems.length >= 2) {
+        if (balanceItems.length >= 5) {
             // 当前设备数
             const cc = area.currentCount ?? 0;
             balanceItems[0].textContent = cc;
             balanceItems[0].className = 'value ' + (cc === 0 ? 'text-muted' : 'text-primary');
+            // a (来区域)
+            balanceItems[1].textContent = area.a ?? 0;
+            // b (离开)
+            balanceItems[2].textContent = area.b ?? 0;
             // 需调度数
-            balanceItems[1].textContent = area.need;
-            balanceItems[1].className = 'value ' + (area.need > 0 ? 'text-warning' : 'text-success');
+            balanceItems[3].textContent = area.need;
+            balanceItems[3].className = 'value ' + (area.need > 0 ? 'text-warning' : 'text-success');
+            // 保留范围
+            balanceItems[4].textContent = (area.xmin ?? 0) + ' ~ ' + (area.xmax ?? 0);
+        }
+        
+        // 更新启用开关状态
+        const switchInput = card.querySelector('.form-check-input');
+        if (switchInput) {
+            switchInput.checked = area.enabled;
+            const switchLabel = card.querySelector('.form-check-label');
+            if (switchLabel) {
+                switchLabel.textContent = area.enabled ? '已启用' : '已禁用';
+                switchLabel.className = 'form-check-label small ' + (area.enabled ? 'text-success' : 'text-muted');
+            }
+        }
+        
+        // 更新公式行
+        const formulaRow = card.querySelector('.formula-row');
+        if (formulaRow) {
+            formulaRow.innerHTML = getFormulaText(area);
         }
         
         // 更新方向徽章
@@ -386,22 +435,7 @@ function updateAreasData(areas) {
             updateTableCounts(tables[1], area.templates.outgoing);
         }
         
-        // 更新自动调车按钮（根据 need 变化显示/隐藏）
-        const btnGroup = card.querySelector('.d-flex.gap-2.flex-wrap');
-        if (btnGroup) {
-            const oldAutoBtn = btnGroup.querySelector('.btn-outline-warning');
-            if (area.need > 0 && !oldAutoBtn) {
-                // need > 0 但没有按钮，添加
-                const autoBtn = document.createElement('button');
-                autoBtn.className = 'btn btn-outline-warning btn-sm';
-                autoBtn.innerHTML = '<i class="bi bi-truck"></i> 自动调车';
-                autoBtn.onclick = function() { autoDispatch(area.id, area.name); };
-                btnGroup.insertBefore(autoBtn, btnGroup.querySelector('[onclick*="toggleJsonPanel"]'));
-            } else if (area.need <= 0 && oldAutoBtn) {
-                // need <= 0 但有按钮，移除
-                oldAutoBtn.remove();
-            }
-        }
+
     });
 }
 
@@ -431,6 +465,37 @@ function getDirectionBadge(area) {
     if (area.direction === 'none') return `<span class="direction-badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i>平衡</span>`;
     if (area.direction === 'out') return `<span class="direction-badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-arrow-up"></i>调出 ${area.need}辆</span>`;
     return `<span class="direction-badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-arrow-down"></i>调入 ${area.need}辆</span>`;
+}
+
+function getFormulaText(area) {
+    const cc = area.currentCount ?? 0;
+    const a = area.a ?? 0;
+    const b = area.b ?? 0;
+    const ec = area.expectedCount ?? 0;
+    const xmin = area.xmin ?? 0;
+    const xmax = area.xmax ?? 0;
+    
+    let formula = `<span class="text-muted">公式: </span>`;
+    formula += `<span class="text-primary">${cc}</span>`;
+    formula += `<span class="text-muted"> + </span>`;
+    formula += `<span class="text-info">${a}</span>`;
+    formula += `<span class="text-muted"> - </span>`;
+    formula += `<span class="text-danger">${b}</span>`;
+    formula += `<span class="text-muted"> = </span>`;
+    formula += `<strong>${ec}</strong>`;
+    
+    if (area.direction === 'none') {
+        formula += `<span class="text-muted">, ${xmin} ≤ ${ec} ≤ ${xmax} → </span>`;
+        formula += `<span class="text-success">✅ 平衡</span>`;
+    } else if (area.direction === 'out') {
+        formula += `<span class="text-muted">, ${ec} > ${xmax} → </span>`;
+        formula += `<span class="text-danger">⬆ 需调出 ${area.need} 辆</span>`;
+    } else {
+        formula += `<span class="text-muted">, ${ec} < ${xmin} → </span>`;
+        formula += `<span class="text-warning">⬇ 需调入 ${Math.abs(area.need)} 辆</span>`;
+    }
+    
+    return formula;
 }
 
 function renderLogs(logs) {
@@ -466,14 +531,47 @@ function toggleRegion(regionKey, enabled) {
         })
         .then(r => r && r.json())
         .then(result => {
-            if (result && result.success) refreshData();
+            if (result && result.success) {
+                if (enabled) {
+                    // 启用时清理模拟数据
+                    fetch('/api/dispatch/clean_simulated/' + regionKey, {method: 'POST'})
+                        .then(r => r.json())
+                        .then(cleanResult => {
+                            if (cleanResult.success) {
+                                showToast(cleanResult.message, 'info');
+                            }
+                            refreshData();
+                        })
+                        .catch(() => refreshData());
+                } else {
+                    refreshData();
+                }
+            }
         })
         .catch(err => console.error('切换失败:', err));
 }
 
-function autoDispatch(areaId, areaName) {
-    if (!confirm(`确定对 ${areaName} 执行自动调车？`)) return;
-    alert(`已触发 ${areaName} 自动调车（模拟）`);
+function executeCalculation(regionKey, areaName) {
+    if (!confirm(`确定对 ${areaName} 执行完整计算流程？`)) return;
+    
+    showToast('正在执行计算...', 'info');
+    
+    fetch('/api/dispatch/execute/' + regionKey, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                if (data.dispatched) {
+                    const simLabel = data.simulated ? '（模拟）' : '（真实下发）';
+                    showToast(`${data.message} ${simLabel}`, data.simulated ? 'warning' : 'success');
+                } else {
+                    showToast(data.message, 'info');
+                }
+                refreshData();
+            } else {
+                showToast('执行失败: ' + (data.error || '未知错误'), 'danger');
+            }
+        })
+        .catch(err => showToast('执行失败: ' + err.message, 'danger'));
 }
 
 // ========== JSON 文件展开面板 ==========
@@ -529,6 +627,7 @@ function loadRegionFiles(regionKey) {
                     '<div class="file-actions">' +
                         '<button class="btn btn-sm btn-outline-primary" onclick="viewFile(\'' + regionKey + '\',\'' + f.filename + '\')"><i class="bi bi-eye"></i> 查看</button>' +
                         '<button class="btn btn-sm btn-outline-warning" onclick="editFile(\'' + regionKey + '\',\'' + f.filename + '\')"><i class="bi bi-pencil"></i> ' + (f.exists ? '编辑' : '创建') + '</button>' +
+                        (f.exists ? '<button class="btn btn-sm btn-outline-danger" onclick="clearFile(\'' + regionKey + '\',\'' + f.filename + '\')"><i class="bi bi-trash"></i> 清空</button>' : '') +
                     '</div>' +
                 '</div>';
             }).join('');
@@ -701,6 +800,121 @@ function closeViewer(regionKey) {
     currentViewerRegion = null;
     currentViewerFilename = null;
     currentViewerContent = null;
+}
+
+function clearFile(regionKey, filename) {
+    if (!confirm('确定清空文件 ' + filename + ' 吗？此操作不可恢复。')) return;
+    
+    fetch('/api/dispatch/region_file/' + regionKey + '/' + filename, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({content: '[]'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(filename + ' 已清空', 'success');
+            loadRegionFiles(regionKey);
+            refreshData();
+        } else {
+            showToast('清空失败: ' + (data.error || '未知错误'), 'danger');
+        }
+    })
+    .catch(err => showToast('清空失败: ' + err.message, 'danger'));
+}
+
+// ========== 下发记录展开面板 ==========
+
+function toggleDispatchLogPanel(regionKey, btn) {
+    const panel = document.getElementById('dispatch-log-panel-' + regionKey);
+    const isOpen = panel.classList.contains('open');
+    
+    // 关闭所有其他面板
+    document.querySelectorAll('.json-panel.open').forEach(p => p.classList.remove('open'));
+    
+    if (isOpen) {
+        panel.classList.remove('open');
+        return;
+    }
+    
+    panel.classList.add('open');
+    loadDispatchLogs(regionKey);
+}
+
+// 下发记录缓存（用于详情查看）
+let dispatchLogsCache = {};
+
+function loadDispatchLogs(regionKey) {
+    const listEl = document.getElementById('dispatch-log-list-' + regionKey);
+    listEl.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载下发记录...</div>';
+    
+    fetch('/api/dispatch/dispatch_log/' + regionKey)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                listEl.innerHTML = '<div class="text-center text-danger py-2">' + data.error + '</div>';
+                return;
+            }
+            if (!data.logs || data.logs.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-inbox me-2"></i>暂无下发记录</div>';
+                return;
+            }
+            // 缓存日志数据
+            dispatchLogsCache[regionKey] = data.logs;
+            
+            listEl.innerHTML = data.logs.map((log, idx) => {
+                const time = new Date(log.time).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                const dirLabel = log.direction === 'in' ? '来区域' : (log.direction === 'out' ? '离开' : '');
+                const dirColor = log.direction === 'in' ? 'success' : 'danger';
+                const simBadge = log.simulated 
+                    ? '<span class="badge bg-warning">⚠️ 模拟</span>' 
+                    : '<span class="badge bg-success">✅ 真实</span>';
+                return '<div class="json-file-item">' +
+                    '<div class="file-info">' +
+                        '<span class="text-muted small">' + time + '</span>' +
+                        '<strong>' + log.template_name + '</strong>' +
+                        '<span class="badge bg-' + dirColor + '">' + dirLabel + '</span>' +
+                        simBadge +
+                        '<small class="text-muted">' + (log.deviceNum || '') + '</small>' +
+                    '</div>' +
+                    '<div class="file-actions">' +
+                        '<button class="btn btn-sm btn-outline-primary" onclick="viewDispatchLog(\'' + regionKey + '\',' + idx + ')"><i class="bi bi-eye"></i> 详情</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        })
+        .catch(err => {
+            listEl.innerHTML = '<div class="text-center text-danger py-2">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function viewDispatchLog(regionKey, idx) {
+    const logs = dispatchLogsCache[regionKey];
+    if (!logs || !logs[idx]) return;
+    
+    const log = logs[idx];
+    const viewer = document.getElementById('dispatch-log-viewer-' + regionKey);
+    const title = document.getElementById('dispatch-log-title-' + regionKey);
+    const content = document.getElementById('dispatch-log-content-' + regionKey);
+    
+    viewer.style.display = 'block';
+    title.textContent = '📤 ' + log.template_name + ' (' + (log.simulated ? '模拟' : '真实') + ')';
+    
+    const bodyStr = JSON.stringify(log.request_body, null, 2);
+    const respStr = log.response_body ? JSON.stringify(log.response_body, null, 2) : '(无响应)';
+    content.textContent = 
+        '时间: ' + new Date(log.time).toLocaleString('zh-CN') + '\n' +
+        '模板: ' + log.template_name + '\n' +
+        '方向: ' + (log.direction === 'in' ? '来区域' : '离开') + '\n' +
+        '设备: ' + (log.deviceNum || '-') + ' / ' + (log.deviceCode || '-') + '\n' +
+        '类型: ' + (log.simulated ? '模拟数据（区域已禁用）' : '真实下发') + '\n' +
+        '结果: ' + (log.result || '-') + '\n' +
+        '──────────────────────────────\n' +
+        '下发地址: ' + log.dispatch_url + '\n' +
+        '──────────────────────────────\n' +
+        '请求报文:\n' + bodyStr + '\n' +
+        '──────────────────────────────\n' +
+        '响应报文:\n' + respStr;
 }
 
 function showToast(message, type) {
