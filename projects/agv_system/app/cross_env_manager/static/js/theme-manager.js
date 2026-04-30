@@ -11,8 +11,8 @@ class ThemeManager {
     }
 
     init() {
-        // 获取主题切换按钮
-        this.themeToggle = document.getElementById('themeToggle');
+        // 获取主题切换按钮（优先导航栏按钮，兼容旧版右下角浮动按钮）
+        this.themeToggle = document.getElementById('themeToggleNav') || document.getElementById('themeToggle');
         if (!this.themeToggle) {
             console.warn('主题切换按钮未找到，将在页面加载后重试');
             setTimeout(() => this.init(), 100);

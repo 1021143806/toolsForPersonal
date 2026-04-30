@@ -194,7 +194,7 @@
 
         .floating-action {
             position: fixed;
-            bottom: 80px;
+            bottom: 20px;
             right: 20px;
             z-index: 1000;
         }
@@ -366,14 +366,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- 主题切换按钮 -->
-    <div class="theme-switcher">
-        <button id="themeToggle" class="btn btn-primary theme-btn" title="切换主题">
-            <i class="bi bi-moon-stars"></i>
-        </button>
-    </div>
-
-    <!-- 浮动操作按钮 -->
+    <!-- 浮动操作按钮（仅保留回到顶部） -->
     <div class="floating-action">
         <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="btn btn-primary floating-btn" title="回到顶部">
             <i class="bi bi-arrow-up"></i>
@@ -616,12 +609,8 @@
             }
         }
 
-        // 同步导航栏中的主题切换按钮 + 登录状态
+        // 初始化登录状态
         $(document).ready(function() {
-            $('#themeToggleNav').click(function() {
-                $('#themeToggle').click();
-            });
-            
             // 检查登录状态
             fetch('/api/auth/status')
                 .then(r => r.json())

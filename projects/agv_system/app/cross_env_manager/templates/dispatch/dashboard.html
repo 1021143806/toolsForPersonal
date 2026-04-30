@@ -756,9 +756,12 @@ function updateTableCounts(tbody, templates) {
 function renderTemplateRows(templates) {
     if (!templates || templates.length === 0) return '<tr><td colspan="3" class="text-center text-muted">无配置</td></tr>';
     return templates.map(t => {
-        const icon = t.type === 'empty_in' || t.type === 'empty_out' ? 'bi-truck' : 'bi-box-seam';
-        return `<tr><td><code>${t.code}</code></td><td><i class="${icon} me-1 small opacity-50"></i>${t.name}</td>
-            <td class="text-center"><span class="badge ${t.count > 0 ? 'bg-primary' : 'bg-secondary'}">${t.count}</span></td></tr>`;
+        const is_empty = (t.task_type === 'empty_in' || t.task_type === 'empty_out');
+        const icon = is_empty ? 'bi-truck' : 'bi-box-seam';
+        const badgeClass = is_empty ? (t.count > 0 ? 'bg-warning text-dark' : 'bg-secondary') : (t.count > 0 ? 'bg-info text-dark' : 'bg-secondary');
+        const label = is_empty ? '<span class="badge bg-warning bg-opacity-25 text-warning small me-1">空车</span>' : '<span class="badge bg-info bg-opacity-25 text-info small me-1">负载</span>';
+        return `<tr><td><code>${t.code}</code></td><td>${label}<i class="${icon} me-1 small opacity-50"></i>${t.name}</td>
+            <td class="text-center"><span class="badge ${badgeClass}">${t.count}</span></td></tr>`;
     }).join('');
 }
 

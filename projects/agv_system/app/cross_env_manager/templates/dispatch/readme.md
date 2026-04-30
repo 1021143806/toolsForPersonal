@@ -74,7 +74,8 @@ data/dispatch/
 
 ```json
 {
-  "region_1": {
+  "auto_dispatch_debounce": 5,
+  "区域1": {
     "areaId": "1",
     "enabled": true,
     "max_dispatch_once": 3,
@@ -82,17 +83,29 @@ data/dispatch/
     "xmin": 2,
     "xmax": 4,
     "templates": [
-      {"name": "DKCqu",       "file": "DKCqu.json",        "direction": "in"},
-      {"name": "DKCback",     "file": "DKCback.json",      "direction": "out"}
+      {"name": "DKCqu",   "file": "DKCqu.json",   "task_type": "empty_in",  "shared": false},
+      {"name": "DKCback", "file": "DKCback.json", "task_type": "empty_out", "shared": false},
+      {"name": "load1",   "file": "load1.json",   "task_type": "load_in",   "shared": false},
+      {"name": "loadback","file": "loadback.json","task_type": "load_out",  "shared": false}
     ]
   }
 }
 ```
 
-- `direction: "in"` — 来区域模板（设备进入区域）
-- `direction: "out"` — 离开模板（设备离开区域）
+### task_type 四种类型
+
+| task_type | 含义 | 参与 a/b | 自动下发 | 互斥检查 | currentCount |
+|-----------|------|:---:|:---:|:---:|:---:|
+| `empty_in` | 🚛 自动调空车来 | ✅ a | ✅ | ✅ | 完成时 +1 |
+| `empty_out` | 🚛 自动调空车回 | ✅ b | ✅ | ✅ | 完成时 -1 |
+| `load_in` | 📦 其他来任务（货架+车） | ✅ a | ❌ | ❌ | 完成时 +1 |
+| `load_out` | 📦 其他回任务（货架+车） | ✅ b | ❌ | ❌ | 完成时 -1 |
+
+- `task_type` — 模板类型（替代旧 `direction` 字段，向后兼容自动推断）
+- `shared: true` — 跨区域共享模板，文件存储在 `_shared/` 目录
 - `enabled` — 区域启用/禁用开关
 - `max_dispatch_once` — 单次最大调车数（容量管控）
+- `auto_dispatch_debounce` — 自动调度防抖秒数（默认5）
 
 ### currentCount.json 格式
 

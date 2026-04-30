@@ -30,9 +30,10 @@
         color: var(--text-color);
         border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.9rem;
     }
-    .template-row .code-input { width: 120px; }
-    .template-row .name-input { flex: 1; min-width: 100px; }
-    .template-row .dir-select { width: 100px; }
+    .template-row .code-input { width: 100px; }
+    .template-row .name-input { flex: 1; min-width: 80px; }
+    .template-row .type-select { width: 130px; font-size: 0.8rem; }
+    .template-row .shared-check { width: 60px; text-align: center; }
     .region-card {
         background: var(--card-bg);
         border: 1px solid var(--border-color);
@@ -218,13 +219,17 @@ function renderVisualEditor(data) {
     entries.forEach(([key, region]) => {
         let templatesHtml = '';
         (region.templates || []).forEach((t, idx) => {
+            const taskType = t.task_type || (t.direction==='in'?'load_in':'load_out');
+            const typeOptions = [
+                ['empty_in','🚛 调空车来'],['empty_out','🚛 调空车回'],
+                ['load_in','📦 其他来'],['load_out','📦 其他回']
+            ].map(o=>`<option value="${o[0]}" ${taskType===o[0]?'selected':''}>${o[1]}</option>`).join('');
+            const sharedChecked = t.shared ? 'checked' : '';
             templatesHtml += `<div class="template-row">
                 <input class="code-input" value="${t.name||''}" placeholder="模板代码" onchange="updateTemplate('${key}',${idx},'name',this.value)">
                 <input class="name-input" value="${t.file||''}" placeholder="文件名" onchange="updateTemplate('${key}',${idx},'file',this.value)">
-                <select class="dir-select" onchange="updateTemplate('${key}',${idx},'direction',this.value)">
-                    <option value="in" ${t.direction==='in'?'selected':''}>来区域</option>
-                    <option value="out" ${t.direction==='out'?'selected':''}>离开</option>
-                </select>
+                <select class="type-select" onchange="updateTemplate('${key}',${idx},'task_type',this.value)">${typeOptions}</select>
+                <label class="shared-check" title="跨区域共享模板"><input type="checkbox" ${sharedChecked} onchange="updateTemplate('${key}',${idx},'shared',this.checked)"> 共享</label>
                 <button class="btn btn-sm btn-outline-danger" onclick="removeTemplate('${key}',${idx})"><i class="bi bi-x"></i></button>
             </div>`;
         });
@@ -321,7 +326,7 @@ function onDragEnd(e) {
 function updateRegionField(key, field, value) { if(configData[key]){configData[key][field]=value;syncSourceEditor();} }
 function updateRegionKey(oldKey, newKey) { if(oldKey===newKey||!newKey)return;configData[newKey]=configData[oldKey];delete configData[oldKey];renderVisualEditor(configData);syncSourceEditor(); }
 function updateTemplate(rk,idx,f,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx][f]=v;syncSourceEditor();} }
-function addTemplate(rk) { if(!configData[rk])return;if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({name:'',file:'',direction:'in'});renderVisualEditor(configData);syncSourceEditor(); }
+function addTemplate(rk) { if(!configData[rk])return;if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({name:'',file:'',task_type:'load_in',shared:false});renderVisualEditor(configData);syncSourceEditor(); }
 function removeTemplate(rk,idx) { if(!configData[rk])return;configData[rk].templates.splice(idx,1);renderVisualEditor(configData);syncSourceEditor(); }
 function addRegion() {
     const keys = Object.keys(configData);

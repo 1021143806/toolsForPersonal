@@ -51,6 +51,7 @@ DATA_DIR = os.path.join(BASE_DIR, 'data', 'dispatch')
 CACHE_INDEX_PATH = os.path.join(DATA_DIR, 'cache_index.json')
 BACKUP_DIR = os.path.join(DATA_DIR, 'backups')
 GLOBAL_LOG_PATH = os.path.join(DATA_DIR, 'global_log.json')
+SHARED_DIR = os.path.join(DATA_DIR, '_shared')  # 跨区域共享模板目录
 
 # 线程锁
 _write_lock = threading.Lock()
@@ -58,6 +59,39 @@ _write_lock = threading.Lock()
 # 自动调度防抖：记录每个区域上次自动调度时间
 _auto_dispatch_last = {}
 _AUTO_DISPATCH_DEBOUNCE = 5  # 同一区域5秒内最多自动调度一次
+
+
+# ========== task_type 兼容 ==========
+
+def _normalize_task_type(t):
+    """兼容旧配置：无 task_type 时根据 direction 和 name 推断"""
+    if 'task_type' in t:
+        return t['task_type']
+    # 旧配置兼容：direction + 名称推断
+    direction = t.get('direction', 'in')
+    name = t.get('name', '')
+    if name in ('DKCqu', 'DKCback'):
+        return 'empty_in' if direction == 'in' else 'empty_out'
+    return 'load_in' if direction == 'in' else 'load_out'
+
+
+def _is_empty_task(task_type):
+    """是否为空车任务（参与自动下发和互斥检查）"""
+    return task_type in ('empty_in', 'empty_out')
+
+
+def _is_in_direction(task_type):
+    """是否为来方向"""
+    return task_type in ('empty_in', 'load_in')
+
+
+def _get_template_file_path(region_key, t):
+    """获取模板文件路径，支持共享模板"""
+    if t.get('shared') and t.get('name'):
+        # 共享模板：按模板名存储在 _shared/ 目录
+        os.makedirs(SHARED_DIR, exist_ok=True)
+        return os.path.join(SHARED_DIR, f"{t['name']}.json")
+    return _get_region_file(region_key, t['file'])
 
 
 # ========== 数据读写 ==========
@@ -214,12 +248,13 @@ def calculate_area_balance(region_key, region_config):
     outgoing_templates = []
     
     for t in region_config.get('templates', []):
-        fpath = _get_region_file(region_key, t['file'])
+        fpath = _get_template_file_path(region_key, t)
         tasks = _load_json(fpath)
         count = len([task for task in tasks if task.get('status') == 6])
+        task_type = _normalize_task_type(t)
         
-        item = {"code": t['name'], "name": t['name'], "count": count}
-        if t['direction'] == 'in':
+        item = {"code": t['name'], "name": t['name'], "count": count, "task_type": task_type}
+        if _is_in_direction(task_type):
             a += count
             incoming_templates.append(item)
         else:
@@ -259,23 +294,24 @@ def calculate_area_balance(region_key, region_config):
     # 容量管控：限制每次下发数量
     dispatch_count = min(abs(need), max_once) if need != 0 else 0
     
-    # 互斥检查：只检查空车模板（DKCqu/DKCback）之间的互斥
+    # 互斥检查：只检查空车模板（empty_in/empty_out）之间的互斥
     # 负载模板不影响空车下发
     can_dispatch = True
     mutex_reason = ""
-    EMPTY_TPL_NAMES = {"DKCqu", "DKCback"}
     if enabled and need != 0:
         for t in region_config.get('templates', []):
+            task_type = _normalize_task_type(t)
             # 只检查空车模板
-            if t['name'] not in EMPTY_TPL_NAMES:
+            if not _is_empty_task(task_type):
                 continue
-            fpath = _get_region_file(region_key, t['file'])
+            fpath = _get_template_file_path(region_key, t)
             tasks = _load_json(fpath)
             pending = [task for task in tasks if task.get('status') == 6]
             if pending:
                 # 如果要下发去空车(in)，但存在未完成的回空车(out)任务
                 # 如果要下发回空车(out)，但存在未完成的去空车(in)任务
-                if t['direction'] != direction:
+                t_direction = 'in' if _is_in_direction(task_type) else 'out'
+                if t_direction != direction:
                     can_dispatch = False
                     mutex_reason = f"pending {t['name']} task, mutex"
                     break
@@ -320,6 +356,8 @@ def get_all_areas_status():
     balanced = 0
     
     for region_key, region in index.items():
+        if not isinstance(region, dict) or 'templates' not in region:
+            continue
         balance = calculate_area_balance(region_key, region)
         areas.append(balance)
         total_devices += balance['currentCount']
@@ -440,8 +478,8 @@ def handle_status_report(data):
     if not template_config:
         return False, f"模板 {template_name} 不存在于区域 {region_key}"
     
-    direction = template_config['direction']
-    template_file = _get_region_file(region_key, template_config['file'])
+    task_type = _normalize_task_type(template_config)
+    template_file = _get_template_file_path(region_key, template_config)
     now_file = _get_region_file(region_key, 'currentCount.json')
     
     now = datetime.now().isoformat()
@@ -484,9 +522,9 @@ def handle_status_report(data):
         tasks = [t for t in tasks if not (t.get('deviceCode') == device_code and t.get('status') == 6)]
         _save_json(template_file, tasks)
         
-        # 更新 currentCount.json
+        # 更新 currentCount.json（所有类型都更新，因为车确实在移动）
         now_devices = _load_json(now_file)
-        if direction == 'in':
+        if _is_in_direction(task_type):
             # 来区域完成：写入 currentCount.json
             if not any(d.get('deviceCode') == device_code for d in now_devices):
                 now_devices.append({
@@ -496,7 +534,7 @@ def handle_status_report(data):
                     "shelfNumber": data.get('shelfNumber', ''),
                     "create_time": now
                 })
-        elif direction == 'out':
+        else:
             # 离开完成：从 currentCount.json 删除
             now_devices = [d for d in now_devices if d.get('deviceCode') != device_code]
         
@@ -732,12 +770,14 @@ def api_region_files(region_key):
 
     files = []
     for t in region.get('templates', []):
-        fpath = _get_region_file(region_key, t['file'])
+        fpath = _get_template_file_path(region_key, t)
         exists = os.path.exists(fpath)
+        task_type = _normalize_task_type(t)
         files.append({
             'filename': t['file'],
             'name': t['name'],
-            'direction': t['direction'],
+            'task_type': task_type,
+            'shared': t.get('shared', False),
             'exists': exists,
             'size': os.path.getsize(fpath) if exists else 0
         })
@@ -746,7 +786,8 @@ def api_region_files(region_key):
     files.append({
         'filename': 'currentCount.json',
         'name': '当前设备',
-        'direction': 'system',
+        'task_type': 'system',
+        'shared': False,
         'exists': now_exists,
         'size': os.path.getsize(now_path) if now_exists else 0
     })
@@ -754,11 +795,31 @@ def api_region_files(region_key):
     return jsonify({'region_key': region_key, 'files': files})
 
 
+def _resolve_region_file_path(region_key, filename):
+    """解析文件路径，支持共享模板"""
+    # 先尝试区域目录
+    fpath = _get_region_file(region_key, filename)
+    if os.path.exists(fpath):
+        return fpath
+    # 再尝试共享目录
+    shared_path = os.path.join(SHARED_DIR, filename)
+    if os.path.exists(shared_path):
+        return shared_path
+    # 检查配置中该文件是否为共享模板
+    index = _load_cache_index()
+    region = index.get(region_key)
+    if region:
+        for t in region.get('templates', []):
+            if t['file'] == filename and t.get('shared'):
+                return shared_path
+    return fpath
+
+
 @dispatch_bp.route('/api/dispatch/region_file/<region_key>/<filename>')
 @login_required
 def api_region_file_get(region_key, filename):
     """获取区域文件内容"""
-    fpath = _get_region_file(region_key, filename)
+    fpath = _resolve_region_file_path(region_key, filename)
     if not os.path.exists(fpath):
         return jsonify({
             'region_key': region_key,
@@ -794,7 +855,7 @@ def api_region_file_save(region_key, filename):
         except json.JSONDecodeError as e:
             return jsonify({'error': f'JSON 格式错误: {str(e)}'}), 400
 
-        fpath = _get_region_file(region_key, filename)
+        fpath = _resolve_region_file_path(region_key, filename)
         _save_json(fpath, json.loads(content))
         return jsonify({'success': True, 'message': f'{filename} 保存成功'})
     except Exception as e:
@@ -868,10 +929,14 @@ def _execute_dispatch(region_key, region, balance):
     dispatch_count = balance['dispatch_count']
     direction = balance['direction']
     
-    # 选择对应方向的模板
+    # 选择对应方向的空车模板（只下发空车任务）
     target_template = None
     for t in region.get('templates', []):
-        if t['direction'] == direction:
+        task_type = _normalize_task_type(t)
+        if not _is_empty_task(task_type):
+            continue
+        t_direction = 'in' if _is_in_direction(task_type) else 'out'
+        if t_direction == direction:
             target_template = t
             break
     if not target_template:
@@ -912,7 +977,7 @@ def _execute_dispatch(region_key, region, balance):
             response_body = {"error": str(e)}
     
     # 写入模板 JSON
-    template_file = _get_region_file(region_key, target_template['file'])
+    template_file = _get_template_file_path(region_key, target_template)
     tasks = _load_json(template_file)
     now = datetime.now().isoformat()
     for i in range(dispatch_count):
