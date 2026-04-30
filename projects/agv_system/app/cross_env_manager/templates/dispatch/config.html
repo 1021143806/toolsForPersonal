@@ -96,6 +96,17 @@
     <div class="tab-content">
         <!-- 可视化编辑 -->
         <div class="tab-pane fade show active" id="visual">
+            <div class="config-section mb-3">
+                <div class="section-header"><span><i class="bi bi-sliders me-2"></i>全局设置</span></div>
+                <div class="section-body">
+                    <div class="row g-2">
+                        <div class="col-md-3"><label class="form-label small">自动调度防抖(秒)</label>
+                            <input class="form-control form-control-sm" type="number" id="globalDebounce" value="5" min="1" max="60" onchange="updateGlobalDebounce(parseInt(this.value)||5)">
+                            <div class="form-text">同一区域两次自动调度最小间隔</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="regionList"></div>
             <button class="btn btn-primary mt-2" onclick="addRegion()"><i class="bi bi-plus-lg"></i> 新增区域</button>
         </div>
@@ -180,11 +191,18 @@ function loadConfig() {
         .then(r => r.json())
         .then(data => {
             configData = data;
+            // 加载全局防抖设置
+            document.getElementById('globalDebounce').value = data.auto_dispatch_debounce || 5;
             renderVisualEditor(data);
             document.getElementById('sourceEditor').value = JSON.stringify(data, null, 2);
             loadBackups();
         })
         .catch(err => showToast('加载配置失败: ' + err.message, 'danger'));
+}
+
+function updateGlobalDebounce(value) {
+    configData.auto_dispatch_debounce = value;
+    syncSourceEditor();
 }
 
 function renderVisualEditor(data) {

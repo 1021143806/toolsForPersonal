@@ -4,12 +4,21 @@
 调车管理路由蓝图 - 空车调车模块
 """
 
-from flask import Blueprint, render_template, jsonify, request, session, redirect, url_for
+from flask import Blueprint, render_template, jsonify, request, session, redirect, url_for, Response
 from functools import wraps
 from datetime import datetime
 import os, json, threading
 
 dispatch_bp = Blueprint('dispatch', __name__, template_folder='../templates')
+
+
+def _json_resp(data, status=200):
+    """返回 JSON 响应，支持中文"""
+    return Response(
+        json.dumps(data, ensure_ascii=False),
+        status=status,
+        mimetype='application/json'
+    )
 
 
 def login_required(f):
@@ -45,6 +54,10 @@ GLOBAL_LOG_PATH = os.path.join(DATA_DIR, 'global_log.json')
 
 # 线程锁
 _write_lock = threading.Lock()
+
+# 自动调度防抖：记录每个区域上次自动调度时间
+_auto_dispatch_last = {}
+_AUTO_DISPATCH_DEBOUNCE = 5  # 同一区域5秒内最多自动调度一次
 
 
 # ========== 数据读写 ==========
@@ -87,9 +100,21 @@ def _save_json(filepath, data):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with _write_lock:
         tmp = filepath + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, filepath)
+        try:
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, filepath)
+        except UnicodeEncodeError as e:
+            print(f"[Dispatch] _save_json 编码错误: {e}, 尝试使用 repr 转义")
+            with open(tmp, 'w', encoding='utf-8') as f:
+                # 将数据中的字符串用 repr 处理
+                def _safe_str(obj):
+                    if isinstance(obj, str):
+                        return obj.encode('utf-8', errors='replace').decode('utf-8')
+                    return obj
+                safe_data = json.loads(json.dumps(data, default=_safe_str, ensure_ascii=False))
+                json.dump(safe_data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, filepath)
 
 
 def _get_region_file(region_key, filename):
@@ -234,12 +259,16 @@ def calculate_area_balance(region_key, region_config):
     # 容量管控：限制每次下发数量
     dispatch_count = min(abs(need), max_once) if need != 0 else 0
     
-    # 互斥检查：检查是否有未完成的同方向或反方向空车任务
+    # 互斥检查：只检查空车模板（DKCqu/DKCback）之间的互斥
+    # 负载模板不影响空车下发
     can_dispatch = True
     mutex_reason = ""
+    EMPTY_TPL_NAMES = {"DKCqu", "DKCback"}
     if enabled and need != 0:
-        # 检查所有模板中是否有未完成的空车任务
         for t in region_config.get('templates', []):
+            # 只检查空车模板
+            if t['name'] not in EMPTY_TPL_NAMES:
+                continue
             fpath = _get_region_file(region_key, t['file'])
             tasks = _load_json(fpath)
             pending = [task for task in tasks if task.get('status') == 6]
@@ -248,7 +277,7 @@ def calculate_area_balance(region_key, region_config):
                 # 如果要下发回空车(out)，但存在未完成的去空车(in)任务
                 if t['direction'] != direction:
                     can_dispatch = False
-                    mutex_reason = f"存在未完成的{t['name']}任务，互斥"
+                    mutex_reason = f"pending {t['name']} task, mutex"
                     break
     
     return {
@@ -533,8 +562,42 @@ def api_report_status():
         except:
             pass
         
+        # 自动调度：上报成功后，判断是否需要自动下发空车
+        auto_dispatched = False
         if success:
-            return jsonify({'success': True, 'message': message})
+            try:
+                rk = data.get('region_key') or ''
+                if rk:
+                    # 从配置读取防抖时间
+                    index = _load_cache_index()
+                    debounce = index.get('auto_dispatch_debounce', _AUTO_DISPATCH_DEBOUNCE)
+                    now = time.time()
+                    last = _auto_dispatch_last.get(rk, 0)
+                    if now - last >= debounce:
+                        _auto_dispatch_last[rk] = now
+                        # 异步执行调度（不阻塞上报响应）
+                        def _auto_dispatch():
+                            try:
+                                region = index.get(rk)
+                                if not region: return
+                                balance = calculate_area_balance(rk, region)
+                                if balance['direction'] == 'none':
+                                    return
+                                if not balance['can_dispatch']:
+                                    return
+                                # 调用 execute 的核心逻辑
+                                _execute_dispatch(rk, region, balance)
+                            except Exception as e:
+                                print(f"[Dispatch] 自动调度失败: {e}")
+                        threading.Thread(target=_auto_dispatch, daemon=True).start()
+                        auto_dispatched = True
+            except: pass
+        
+        resp = {'success': True, 'message': message}
+        if auto_dispatched:
+            resp['auto_dispatched'] = True
+        if success:
+            return jsonify(resp)
         else:
             return jsonify({'success': False, 'error': message}), 400
     except Exception as e:
@@ -665,7 +728,7 @@ def api_region_files(region_key):
     index = _load_cache_index()
     region = index.get(region_key)
     if not region:
-        return jsonify({'error': f'区域 {region_key} 不存在'}), 404
+        return _json_resp({'error': f'区域 {region_key} 不存在'}, 404)
 
     files = []
     for t in region.get('templates', []):
@@ -794,6 +857,109 @@ def api_dispatch_log_write(region_key):
         return jsonify({'error': f'写入失败: {str(e)}'}), 500
 
 
+# ========== 执行计算核心逻辑 ==========
+
+def _execute_dispatch(region_key, region, balance):
+    """执行下发核心逻辑（供 api_execute 和自动调度共用）"""
+    import random as _random
+    
+    enabled = region.get('enabled', False)
+    server = region.get('server', '')
+    dispatch_count = balance['dispatch_count']
+    direction = balance['direction']
+    
+    # 选择对应方向的模板
+    target_template = None
+    for t in region.get('templates', []):
+        if t['direction'] == direction:
+            target_template = t
+            break
+    if not target_template:
+        return
+    
+    sim_id = datetime.now().strftime('%Y%m%d%H%M%S')
+    simulated = not balance.get('effective_enabled', enabled)
+    
+    now_dt = datetime.now()
+    date_str = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+    ms = now_dt.microsecond // 1000
+    rand = _random.randint(0, 9999)
+    order_id = f"CEM_auto_{date_str}.{ms:03d}__{rand:04d}"
+    
+    dispatch_url = f"http://{server}/ics/taskOrder/addTask" if server else ''
+    request_body = [{
+        "modelProcessCode": target_template['name'],
+        "priority": 6,
+        "orderId": order_id,
+        "fromSystem": "CEM_auto",
+        "taskOrderDetail": {"taskPath": "", "shelfNumber": ""}
+    }]
+    
+    result = 'simulated'
+    response_body = None
+    if not simulated and dispatch_url:
+        try:
+            import urllib.request
+            req = urllib.request.Request(dispatch_url,
+                data=json.dumps(request_body).encode('utf-8'),
+                headers={'Content-Type': 'application/json'})
+            resp = urllib.request.urlopen(req, timeout=10)
+            resp_raw = resp.read().decode('utf-8')
+            response_body = json.loads(resp_raw)
+            result = 'success' if response_body.get('code') == 1000 else f'code={response_body.get("code")}'
+        except Exception as e:
+            result = f'请求失败: {str(e)}'
+            response_body = {"error": str(e)}
+    
+    # 写入模板 JSON
+    template_file = _get_region_file(region_key, target_template['file'])
+    tasks = _load_json(template_file)
+    now = datetime.now().isoformat()
+    for i in range(dispatch_count):
+        device_code = f"SIM_{sim_id}_{i}" if simulated else f"DISP_{sim_id}_{i}"
+        device_num = f"SIM_D{i}" if simulated else f"DISP_D{i}"
+        tasks.append({
+            "deviceCode": device_code, "deviceNum": device_num,
+            "status": 6, "_simulated": simulated,
+            "order_id": order_id, "create_time": now, "update_time": now
+        })
+    _save_json(template_file, tasks)
+    
+    # 判断 reason
+    log_url = dispatch_url if not simulated else f'(模拟-未实际请求)\n真实地址: {dispatch_url}'
+    if not region.get('enabled', False):
+        reason = 'manual_disabled'
+    elif balance.get('time_slot_active') and balance['time_slot_matched'] and \
+         balance['time_slot_matched'].get('xmin') == -1 and balance['time_slot_matched'].get('xmax') == -1:
+        reason = 'time_slot_disabled'
+    elif balance.get('time_slot_active'):
+        reason = 'time_slot'
+    else:
+        reason = 'manual'
+    
+    try:
+        write_dispatch_log(
+            region_key=region_key, template_name=target_template['name'],
+            direction=direction, dispatch_url=log_url, request_body=request_body,
+            simulated=simulated, device_code=f"SIM_{sim_id}" if simulated else f"DISP_{sim_id}",
+            device_num=f"共{dispatch_count}台", result=result, response_body=response_body, reason=reason
+        )
+    except Exception as e:
+        print(f"[Dispatch] 写入下发记录失败: {e}")
+    
+    try:
+        write_global_log('execute', region_key,
+            f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台, 模板:{target_template["name"]}, 方向:{direction}, 原因:{reason}')
+    except Exception as e:
+        print(f"[Dispatch] 写入操作日志失败: {e}")
+    
+    return {
+        'success': True, 'message': f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台设备',
+        'balance': balance, 'dispatched': True, 'simulated': simulated,
+        'dispatch_count': dispatch_count, 'template_name': target_template['name'], 'direction': direction
+    }
+
+
 # ========== 执行计算 API ==========
 
 @dispatch_bp.route('/api/dispatch/execute/<region_key>', methods=['POST'])
@@ -804,150 +970,31 @@ def api_execute(region_key):
         index = _load_cache_index()
         region = index.get(region_key)
         if not region:
-            return jsonify({'error': f'区域 {region_key} 不存在'}), 404
-        
-        enabled = region.get('enabled', False)
-        server = region.get('server', '')
-        max_once = region.get('max_dispatch_once', 3)
+            return _json_resp({'error': f'区域 {region_key} 不存在'}, 404)
         
         # 1. 计算平衡
         balance = calculate_area_balance(region_key, region)
         
         if balance['direction'] == 'none':
             write_global_log('execute_balanced', region_key, '区域平衡，无需下发')
-            return jsonify({
-                'success': True,
-                'message': '区域平衡，无需下发',
-                'balance': balance,
-                'dispatched': False
+            return _json_resp({
+                'success': True, 'message': '区域平衡，无需下发',
+                'balance': balance, 'dispatched': False
             })
         
         # 2. 互斥检查
         if not balance['can_dispatch']:
             write_global_log('execute_mutex', region_key, balance['mutex_reason'], 'warning')
-            return jsonify({
-                'success': False,
-                'error': balance['mutex_reason'],
-                'balance': balance
-            }), 409
+            return _json_resp({'success': False, 'error': balance['mutex_reason'], 'balance': balance}, 409)
         
-        # 3. 确定下发模板和方向
-        dispatch_count = balance['dispatch_count']
-        direction = balance['direction']
-        
-        # 选择对应方向的模板
-        target_template = None
-        for t in region.get('templates', []):
-            if t['direction'] == direction:
-                target_template = t
-                break
-        
-        if not target_template:
-            return jsonify({'error': f'未找到方向 {direction} 的模板'}), 400
-        
-        # 4. 构建下发请求体（与任务下发界面格式一致）
-        import random as _random
-        sim_id = datetime.now().strftime('%Y%m%d%H%M%S')
-        simulated = not balance.get('effective_enabled', enabled)
-        
-        # 生成 orderId: CEM_auto_YYYY-MM-DD HH:MM:SS.ms__随机数
-        now_dt = datetime.now()
-        date_str = now_dt.strftime('%Y-%m-%d %H:%M:%S')
-        ms = now_dt.microsecond // 1000
-        rand = _random.randint(0, 9999)
-        order_id = f"CEM_auto_{date_str}.{ms:03d}__{rand:04d}"
-        
-        dispatch_url = f"http://{server}/ics/taskOrder/addTask" if server else ''
-        request_body = [{
-            "modelProcessCode": target_template['name'],
-            "priority": 6,
-            "orderId": order_id,
-            "fromSystem": "CEM_auto",
-            "taskOrderDetail": {
-                "taskPath": "",
-                "shelfNumber": ""
-            }
-        }]
-        
-        # 5. 非模拟时实际发送 HTTP 请求
-        result = 'simulated'
-        response_body = None
-        if not simulated and dispatch_url:
-            try:
-                import urllib.request as _urllib
-                req = _urllib.Request(dispatch_url, 
-                    data=json.dumps(request_body).encode('utf-8'),
-                    headers={'Content-Type': 'application/json'})
-                resp = _urllib.urlopen(req, timeout=10)
-                resp_raw = resp.read().decode('utf-8')
-                response_body = json.loads(resp_raw)
-                result = 'success' if response_body.get('code') == 1000 else f'code={response_body.get("code")}'
-            except Exception as e:
-                result = f'请求失败: {str(e)}'
-                response_body = {"error": str(e)}
-        
-        # 6. 写入模板 JSON（模拟数据也写入）
-        template_file = _get_region_file(region_key, target_template['file'])
-        tasks = _load_json(template_file)
-        now = datetime.now().isoformat()
-        
-        for i in range(dispatch_count):
-            device_code = f"SIM_{sim_id}_{i}" if simulated else f"DISP_{sim_id}_{i}"
-            device_num = f"SIM_D{i}" if simulated else f"DISP_D{i}"
-            tasks.append({
-                "deviceCode": device_code,
-                "deviceNum": device_num,
-                "status": 6,
-                "_simulated": simulated,
-                "order_id": order_id,
-                "create_time": now,
-                "update_time": now
-            })
-        _save_json(template_file, tasks)
-        
-        # 7. 写入下发记录（区分原因）
-        log_url = dispatch_url if not simulated else f'(模拟-未实际请求)\n真实地址: {dispatch_url}'
-        # 判断 reason
-        if not region.get('enabled', False):
-            reason = 'manual_disabled'  # 手动禁用
-        elif balance.get('time_slot_active') and balance['time_slot_matched'] and \
-             balance['time_slot_matched'].get('xmin') == -1 and balance['time_slot_matched'].get('xmax') == -1:
-            reason = 'time_slot_disabled'  # 分时禁用
-        elif balance.get('time_slot_active'):
-            reason = 'time_slot'  # 分时控制
-        else:
-            reason = 'manual'  # 手动触发
-        
-        write_dispatch_log(
-            region_key=region_key,
-            template_name=target_template['name'],
-            direction=direction,
-            dispatch_url=log_url,
-            request_body=request_body,
-            simulated=simulated,
-            device_code=f"SIM_{sim_id}" if simulated else f"DISP_{sim_id}",
-            device_num=f"共{dispatch_count}台",
-            result=result,
-            response_body=response_body,
-            reason=reason
-        )
-        
-        write_global_log('execute', region_key,
-            f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台, 模板:{target_template["name"]}, 方向:{direction}, 原因:{reason}')
-        
-        return jsonify({
-            'success': True,
-            'message': f'{"模拟" if simulated else "真实"}下发 {dispatch_count} 台设备',
-            'balance': balance,
-            'dispatched': True,
-            'simulated': simulated,
-            'dispatch_count': dispatch_count,
-            'template_name': target_template['name'],
-            'direction': direction
-        })
+        # 3. 执行下发
+        result = _execute_dispatch(region_key, region, balance)
+        if result:
+            return _json_resp(result)
+        return _json_resp({'error': '下发失败'}, 500)
         
     except Exception as e:
-        return jsonify({'error': f'执行失败: {str(e)}'}), 500
+        return _json_resp({'error': f'执行失败: {str(e)}'}, 500)
 
 
 # ========== 清理模拟数据 API ==========

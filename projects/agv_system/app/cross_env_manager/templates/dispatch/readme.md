@@ -176,6 +176,111 @@ curl -X POST http://localhost:5000/api/dispatch/report_status \
   -d '{"region_key":"region_1","template_name":"DKCqu","deviceCode":"BL11637BAK00010","deviceNum":"C185","status":6}'
 ```
 
+## 调车模块核心流程
+
+### 整体业务流程
+
+```mermaid
+flowchart TD
+    A[外部设备上报任务状态] -->|POST /api/dispatch/report_status| B{status?}
+    B -->|6 任务开始| C[写入模板JSON<br/>a或b计数+1]
+    B -->|非6 任务完成/取消| D{方向?}
+    D -->|in 来方向| E[从模板JSON删除<br/>写入currentCount.json +1]
+    D -->|out 离方向| F[从模板JSON删除<br/>从currentCount.json删除 -1]
+    C --> G[看板实时展示]
+    E --> G
+    F --> G
+    G --> H{需要调度?}
+    H -->|手动触发| I[POST /api/dispatch/execute]
+    H -->|上报时自动触发<br/>防抖5s| I
+    I --> J[计算平衡<br/>expectedCount = cur + a - b]
+    J --> K{expectedCount vs xmin/xmax}
+    K -->|> xmax 车过多| L[下发DKCback回空车<br/>写入模板JSON b+1]
+    K -->|< xmin 车不够| M[下发DKCqu来空车<br/>写入模板JSON a+1]
+    K -->|平衡| N[无需下发]
+    L --> O[空车任务完成<br/>status=8]
+    M --> O
+    O -->|DKCqu完成| P[currentCount +1]
+    O -->|DKCback完成| Q[currentCount -1]
+```
+
+### 状态上报处理流程
+
+```mermaid
+flowchart TD
+    A[接收上报报文] --> B[解析字段<br/>deviceCode/deviceNum<br/>modelProcessCode/status]
+    B --> C[通过modelProcessCode<br/>自动匹配区域和模板]
+    C --> D{status?}
+    D -->|6 开始| E{模板JSON中<br/>已有该设备?}
+    E -->|是| F[覆盖更新记录]
+    E -->|否| G[新增记录<br/>status=6]
+    D -->|非6 完成/取消| H[从模板JSON删除<br/>status=6的记录]
+    H --> I{模板方向?}
+    I -->|in 来方向| J[写入currentCount.json<br/>记录deviceCode+deviceNum]
+    I -->|out 离方向| K[从currentCount.json删除<br/>匹配deviceCode]
+    F --> L[返回成功]
+    G --> L
+    J --> L
+    K --> L
+```
+
+### 执行计算流程
+
+```mermaid
+flowchart TD
+    A[POST /api/dispatch/execute/区域] --> B[加载区域配置]
+    B --> C[统计a和b<br/>遍历所有模板JSON<br/>计数status=6的任务]
+    C --> D[读取currentCount]
+    D --> E[计算expectedCount<br/>= currentCount + a - b]
+    E --> F{分时段配置?}
+    F -->|启用且匹配| G[使用时段xmin/xmax]
+    F -->|未启用| H[使用默认xmin/xmax]
+    G --> I{expectedCount vs xmin/xmax}
+    H --> I
+    I -->|> xmax| J[need = ec - xmax<br/>方向=out 调出]
+    I -->|< xmin| K[need = ec - xmin<br/>方向=in 调入]
+    I -->|平衡| L[无需下发]
+    J --> M{互斥检查<br/>空车模板间互斥?}
+    K --> M
+    M -->|通过| N{区域启用?}
+    M -->|阻止| O[返回互斥错误]
+    N -->|是| P[真实下发HTTP请求]
+    N -->|否| Q[模拟下发<br/>写入模板JSON<br/>标记_simulated]
+    P --> R[写入下发记录<br/>dispatch_log.json]
+    Q --> R
+    R --> S[写入操作日志<br/>global_log.json]
+```
+
+### 数据流全景
+
+```mermaid
+flowchart LR
+    subgraph 外部系统
+        AGV[AGV设备]
+    end
+    subgraph 调车模块
+        API[report_status API]
+        TPL[模板JSON文件<br/>DKCqu.json等]
+        CC[currentCount.json]
+        EXEC[execute API]
+        LOG[操作日志]
+    end
+    subgraph 看板
+        DASH[实时看板<br/>每0.5s刷新]
+    end
+    AGV -->|status=6/8| API
+    API -->|写入/删除| TPL
+    API -->|写入/删除| CC
+    TPL -->|统计a/b| EXEC
+    CC -->|读取cur| EXEC
+    EXEC -->|模拟下发| TPL
+    EXEC -->|记录| LOG
+    TPL -->|展示| DASH
+    CC -->|展示| DASH
+    LOG -->|展示| DASH
+    DASH -->|手动触发| EXEC
+```
+
 ## 设备平衡计算逻辑
 
 ```
@@ -197,7 +302,7 @@ else:
 # 容量管控
 dispatch_count = min(abs(need), max_dispatch_once)
 
-# 互斥逻辑
+# 互斥逻辑（仅检查空车模板 DKCqu/DKCback 之间）
 if 要下发去空车(in) 但存在未完成的回空车(out)任务 → 禁止下发
 if 要下发回空车(out) 但存在未完成的去空车(in)任务 → 禁止下发
 ```

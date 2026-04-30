@@ -1,24 +1,10 @@
 #!/usr/bin/env python3
-"""调车模块压力测试 - 按实际报文格式上报，随机多区域下发负载来/负载回"""
+"""调车模块压力测试 - 按实际报文格式上报，从配置文件动态获取区域和模板"""
 import urllib.request, json, time, random, sys
 from datetime import datetime
 from http.cookiejar import CookieJar
 
 BASE = "http://127.0.0.1:5000"
-
-# 多区域配置（从 cache_index.json 读取）
-REGIONS = {
-    "区域1": {
-        "in_tpls": ["DKCqu", "load_temp1", "load_temp2", "load_temp3"],
-        "out_tpls": ["DKCback", "loadback_temp1"]
-    },
-    "区域2": {
-        "in_tpls": ["DKCqu", "load_temp1", "load_temp2", "load_temp3"],
-        "out_tpls": ["DKCback", "loadback_temp1", "loadback_temp2"]
-    }
-}
-
-# 设备池（每个区域独立）
 DEV_POOL = [f"DJC{i}" for i in range(1, 61)]
 
 cookie_jar = CookieJar()
@@ -27,10 +13,17 @@ opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_j
 def req(m, u, d=None, auth=True):
     try:
         b = json.dumps(d).encode() if d else None
+        # URL 编码中文
+        from urllib.parse import quote
+        u = quote(u, safe='/:?=&')
         r = urllib.request.Request(u, data=b, method=m)
         if d: r.add_header('Content-Type','application/json')
-        with (opener if auth else urllib.request).urlopen(r, timeout=5) as x:
-            return json.loads(x.read().decode())
+        if auth:
+            with opener.open(r, timeout=5) as x:
+                return json.loads(x.read().decode())
+        else:
+            with urllib.request.urlopen(r, timeout=5) as x:
+                return json.loads(x.read().decode())
     except urllib.error.HTTPError as e:
         try: return json.loads(e.read().decode())
         except: return {"success":False,"error":f"HTTP {e.code}"}
@@ -41,7 +34,7 @@ def login():
     r = req("POST", f"{BASE}/api/login", {
         "username":"375563","password":"DHRTA@2018",
         "admin_username":"admin","admin_password":"admin123456"
-    }, auth=False)
+    }, auth=True)
     if r.get('success'):
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 登录成功")
         return True
@@ -49,7 +42,7 @@ def login():
     return False
 
 def report(tpl, dev, st, rk):
-    """按实际报文格式上报"""
+    """按实际报文格式上报（字段顺序与报文一致）"""
     data = {
         "shelfCurrPosition": str(random.randint(10000000, 99999999)),
         "subTaskStatus": "3",
@@ -74,6 +67,8 @@ def clean(rk): return req("POST", f"{BASE}/api/dispatch/clean_simulated/{rk}")
 def glog(): return req("GET", f"{BASE}/api/dispatch/global_log")
 def cfg(): return req("GET", f"{BASE}/api/dispatch/config")
 def save_cfg(d): return req("POST", f"{BASE}/api/dispatch/config", d)
+def region_files(rk): return req("GET", f"{BASE}/api/dispatch/region_files/{rk}")
+def region_file(rk, fn): return req("GET", f"{BASE}/api/dispatch/region_file/{rk}/{fn}")
 
 def pa(a):
     if not a: return
@@ -84,13 +79,92 @@ def pa(a):
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
+def load_regions_from_config():
+    """从配置文件动态加载区域和模板"""
+    c = cfg()
+    regions = {}
+    for rk, region in c.items():
+        if not isinstance(region, dict) or 'templates' not in region:
+            continue
+        in_tpls = []
+        out_tpls = []
+        for t in region.get('templates', []):
+            name = t.get('name', '')
+            direction = t.get('direction', '')
+            if direction == 'in':
+                in_tpls.append(name)
+            elif direction == 'out':
+                out_tpls.append(name)
+        if in_tpls or out_tpls:
+            regions[rk] = {'in_tpls': in_tpls, 'out_tpls': out_tpls}
+    return regions
+
+def get_backend_tasks(regions):
+    """从后端各区域模板文件中获取所有 status=6 的任务"""
+    tasks = []  # [(rk, template, deviceCode, deviceNum, create_time)]
+    try:
+        st = status()
+        for a in st.get('areas', []):
+            rk = a['region_key']
+            if rk not in regions:
+                continue
+            # 遍历来区域和离开模板
+            for t in a.get('templates', {}).get('incoming', []):
+                if t.get('count', 0) > 0:
+                    files_resp = region_files(rk)
+                    if files_resp.get('files'):
+                        for f in files_resp['files']:
+                            if f['filename'].replace('.json', '') == t['code'] and f.get('exists'):
+                                content_resp = region_file(rk, f['filename'])
+                                if content_resp.get('content'):
+                                    try:
+                                        for task in json.loads(content_resp['content']):
+                                            if task.get('status') == 6:
+                                                tasks.append((
+                                                    rk, t['code'],
+                                                    task.get('deviceCode', ''),
+                                                    task.get('deviceNum', ''),
+                                                    task.get('create_time', '')
+                                                ))
+                                    except: pass
+            for t in a.get('templates', {}).get('outgoing', []):
+                if t.get('count', 0) > 0:
+                    files_resp = region_files(rk)
+                    if files_resp.get('files'):
+                        for f in files_resp['files']:
+                            if f['filename'].replace('.json', '') == t['code'] and f.get('exists'):
+                                content_resp = region_file(rk, f['filename'])
+                                if content_resp.get('content'):
+                                    try:
+                                        for task in json.loads(content_resp['content']):
+                                            if task.get('status') == 6:
+                                                tasks.append((
+                                                    rk, t['code'],
+                                                    task.get('deviceCode', ''),
+                                                    task.get('deviceNum', ''),
+                                                    task.get('create_time', '')
+                                                ))
+                                    except: pass
+    except: pass
+    return tasks
+
 def main():
     print("="*60)
     print(f"  调车模块压力测试(实际报文格式)")
-    print(f"  区域:{list(REGIONS.keys())}  开始:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  开始:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*60)
     
     if not login(): sys.exit(1)
+    
+    # 从配置文件动态加载区域
+    REGIONS = load_regions_from_config()
+    if not REGIONS:
+        log("错误: 未从配置中找到有效区域")
+        sys.exit(1)
+    
+    log(f"从配置加载 {len(REGIONS)} 个区域: {list(REGIONS.keys())}")
+    for rk, r in REGIONS.items():
+        log(f"  {rk}: 来{len(r['in_tpls'])}个模板 {r['in_tpls']}, 离{len(r['out_tpls'])}个模板 {r['out_tpls']}")
     
     # 禁用所有区域（模拟下发模式）
     log("阶段1: 禁用所有区域(模拟下发模式)")
@@ -113,8 +187,7 @@ def main():
     
     log("阶段4: 开始循环(每1秒, Ctrl+C停止)")
     round_num = 0
-    # active: {region_key: {device: {template, direction, create_time}}}
-    active = {}
+    active = {}  # {region_key: {device: {template, direction, create_time}}}
     
     try:
         while True:
@@ -151,27 +224,39 @@ def main():
                     log(f"  [{rk}] OUT FAIL: {r.get('error','')}")
             
             elif op == 'complete':
-                # 收集所有区域中执行中的任务，按创建时间排序
-                all_tasks = []  # [(rk, dev, info)]
-                for rk2, devices in active.items():
-                    for dev, info in devices.items():
-                        all_tasks.append((rk2, dev, info))
+                # 优先从后端文件中获取已有 status=6 的任务上报状态8
+                backend_tasks = get_backend_tasks(REGIONS)
                 
-                if all_tasks:
+                if backend_tasks:
                     # 按创建时间升序排序（最早的排最前）
-                    all_tasks.sort(key=lambda x: x[2].get('create_time', 0))
-                    # 取创建时间最早的任务
-                    rk2, dev, info = all_tasks[0]
-                    del active[rk2][dev]
-                    if not active[rk2]:
-                        del active[rk2]
-                    r = report(info['template'], dev, 8, rk2)
-                    log(f"  [{rk2}] DONE {info['template']} {dev} {'OK' if r.get('success') else 'FAIL'}")
+                    backend_tasks.sort(key=lambda x: x[4] if x[4] else '')
+                    rk2, tpl, dev_code, dev_num, _ = backend_tasks[0]
+                    r = report(tpl, dev_num or dev_code, 8, rk2)
+                    log(f"  [{rk2}] DONE(后端记录) {tpl} {dev_num or dev_code} {'OK' if r.get('success') else 'FAIL'}")
+                    # 从 active 中同步移除
+                    if rk2 in active and (dev_num or dev_code) in active[rk2]:
+                        del active[rk2][dev_num or dev_code]
+                        if not active[rk2]:
+                            del active[rk2]
                 else:
-                    log(f"  无执行中的任务可完成")
+                    # 没有后端记录时，从 active 内存中取
+                    all_tasks = []
+                    for rk2, devices in active.items():
+                        for dev, info in devices.items():
+                            all_tasks.append((rk2, dev, info))
+                    
+                    if all_tasks:
+                        all_tasks.sort(key=lambda x: x[2].get('create_time', 0))
+                        rk2, dev, info = all_tasks[0]
+                        del active[rk2][dev]
+                        if not active[rk2]:
+                            del active[rk2]
+                        r = report(info['template'], dev, 8, rk2)
+                        log(f"  [{rk2}] DONE(内存) {info['template']} {dev} {'OK' if r.get('success') else 'FAIL'}")
+                    else:
+                        log(f"  无执行中的任务可完成")
             
             elif op == 'execute':
-                # 对随机区域执行计算
                 r = execute(rk)
                 if r.get('success'):
                     log(f"  [{rk}] EXEC: {'模拟' if r.get('simulated',True) else '真实'}下发{r.get('dispatch_count',0)}台 OK")

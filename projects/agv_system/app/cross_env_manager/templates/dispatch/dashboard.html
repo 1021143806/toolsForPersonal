@@ -1,4 +1,4 @@
-qu'y{% extends "base.html" %}
+ qu'y{% extends "base.html" %}
 {% block title %}空车调车管理系统{% endblock %}
 
 {% block extra_css %}
@@ -235,10 +235,26 @@ qu'y{% extends "base.html" %}
 let refreshInterval = null;
 let chartInstances = {};
 
+let lastDataRefresh = 0;
+const DATA_REFRESH_DEBOUNCE = 100; // 0.1s 防抖
+
 $(document).ready(function() {
     refreshData();
-    refreshInterval = setInterval(refreshData, 10000);
+    // 日志每0.5s刷新，连带刷新数据（带防抖）
+    refreshInterval = setInterval(refreshAll, 500);
 });
+
+function refreshAll() {
+    loadGlobalLog();
+    refreshDataDebounced();
+}
+
+function refreshDataDebounced() {
+    const now = Date.now();
+    if (now - lastDataRefresh < DATA_REFRESH_DEBOUNCE) return;
+    lastDataRefresh = now;
+    refreshData();
+}
 
 function refreshData() {
     fetch('/api/dispatch/status')
@@ -253,9 +269,6 @@ function refreshData() {
             }
         })
         .catch(err => console.error('获取数据失败:', err));
-    
-    // 加载全局操作日志
-    loadGlobalLog();
 }
 
 let allLogs = [];

@@ -162,6 +162,8 @@ flask_secret_key = (flask_config.get('secret_key') or
                    'cross_env_manager_secret_key_2026')
 app.secret_key = flask_secret_key
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+# 支持 JSON 响应中的中文
+app.json.ensure_ascii = False
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
