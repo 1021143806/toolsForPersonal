@@ -446,22 +446,17 @@ def handle_status_report(data):
                 break
     
     if not region_key or not template_name:
-        return False, "缺少 region_key 或 template_name，且无法通过 modelProcessCode 自动匹配区域"
+        # 无法匹配区域/模板，静默接受上报（不返回错误，避免 ICS 重试）
+        print(f"[Dispatch] report_status 无法匹配: region_key={region_key}, template_name={template_name}, deviceNum={device_num}")
+        return True, f"无法匹配区域/模板，已接收上报 (region_key={region_key}, template={template_name})", False
     
     # 查找模板配置
     index = _load_cache_index()
     region = index.get(region_key)
     if not region:
-        # 区域不存在，从配置中删除并清理文件夹
-        if region_key in index:
-            del index[region_key]
-            _save_cache_index(index)
-        # 清理区域文件夹
-        import shutil
-        region_dir = os.path.join(DATA_DIR, region_key)
-        if os.path.exists(region_dir):
-            shutil.rmtree(region_dir, ignore_errors=True)
-        return False, f"区域 {region_key} 不存在，已自动清理"
+        # 区域不存在，静默接受上报
+        print(f"[Dispatch] report_status 区域不存在: {region_key}, template={template_name}")
+        return True, f"区域 {region_key} 不存在，已接收上报", False
     
     template_config = None
     for t in region.get('templates', []):
@@ -477,7 +472,9 @@ def handle_status_report(data):
                 break
     
     if not template_config:
-        return False, f"模板 {template_name} 不存在于区域 {region_key}"
+        # 模板不存在于该区域，静默接受上报
+        print(f"[Dispatch] report_status 模板不存在: region_key={region_key}, template={template_name}")
+        return True, f"模板 {template_name} 不存在于区域 {region_key}，已接收上报", False
     
     task_type = _normalize_task_type(template_config)
     template_file = _get_template_file_path(region_key, template_config)
@@ -541,7 +538,7 @@ def handle_status_report(data):
         
         _save_json(now_file, now_devices)
     
-    return True, "状态上报成功"
+    return True, "状态上报成功", True
 
 
 # ========== 路由 ==========
@@ -583,13 +580,17 @@ def api_status():
 
 @dispatch_bp.route('/api/dispatch/report_status', methods=['POST'])
 def api_report_status():
-    """任务状态上报接口（外部设备上报，无需登录）"""
+    """任务状态上报接口（外部设备上报，无需登录）
+    始终返回 {"code": 1000, "desc": "success"}，即使 orderId 不存在也返回 1000，
+    否则服务器会尝试重新上报。
+    """
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': '请求体为空'}), 400
+            # 即使请求体为空也返回 1000，避免服务器重试
+            return jsonify({'code': 1000, 'desc': 'success'})
         
-        success, message = handle_status_report(data)
+        success, message, matched = handle_status_report(data)
         # 记录日志（不阻塞主流程）
         try:
             rk = data.get('region_key') or 'auto'
@@ -597,13 +598,12 @@ def api_report_status():
             dn = data.get('deviceNum', '?')
             st = data.get('status', '?')
             write_global_log('report_status', rk, f'{tn} {dn} status={st}: {message}',
-                           'info' if success else 'warning')
+                           'info' if matched else 'warning')
         except:
             pass
         
-        # 自动调度：上报成功后，判断是否需要自动下发空车
-        auto_dispatched = False
-        if success:
+        # 自动调度：仅匹配成功时触发
+        if matched:
             try:
                 rk = data.get('region_key') or ''
                 if rk:
@@ -629,18 +629,14 @@ def api_report_status():
                             except Exception as e:
                                 print(f"[Dispatch] 自动调度失败: {e}")
                         threading.Thread(target=_auto_dispatch, daemon=True).start()
-                        auto_dispatched = True
             except: pass
         
-        resp = {'success': True, 'message': message}
-        if auto_dispatched:
-            resp['auto_dispatched'] = True
-        if success:
-            return jsonify(resp)
-        else:
-            return jsonify({'success': False, 'error': message}), 400
+        # 始终返回 1000，额外返回 matched 标识是否匹配到模板
+        return jsonify({'code': 1000, 'desc': 'success', 'matched': matched})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        # 即使异常也返回 1000，避免服务器重试
+        print(f"[Dispatch] report_status 异常: {e}")
+        return jsonify({'code': 1000, 'desc': 'success'})
 
 
 @dispatch_bp.route('/api/dispatch/config')

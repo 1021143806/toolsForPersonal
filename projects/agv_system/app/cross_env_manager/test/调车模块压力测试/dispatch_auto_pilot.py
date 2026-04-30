@@ -231,7 +231,7 @@ def main():
                     load_tasks.sort(key=lambda x: x[4] if x[4] else '')
                     rk2, tpl, dev_code, dev_num, _, order_id = load_tasks[0]
                     r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code, order_id=order_id)
-                    if r.get('success'):
+                    if r.get('code') == 1000:
                         log(f"  [{rk2}] 完成负载 {tpl} {dev_num or dev_code}")
             except: pass
     
@@ -249,7 +249,7 @@ def main():
                     tasks.sort(key=lambda x: x[4] if x[4] else '')
                     rk2, tpl, dev_code, dev_num, _, order_id = tasks[0]
                     r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code, order_id=order_id)
-                    if r.get('success'):
+                    if r.get('code') == 1000:
                         log(f"  [{rk2}] 完成空车 {tpl} {dev_num or dev_code}")
             except: pass
     
@@ -287,7 +287,7 @@ def main():
                         dev_code_map[dev] = f"EM{random.randint(10000,99999)}DAK{random.randint(1000,9999)}"
                     dc = dev_code_map[dev]
                     r = report(tpl, dev, 6, rk, device_code=dc)
-                    if r.get('success'):
+                    if r.get('code') == 1000:
                         total_ops['load_in'] += 1
                         log(f"  [{rk}] 来负载 {tpl} {dev}")
             elif not is_in and region['out_tpls']:
@@ -300,7 +300,7 @@ def main():
                         dev_code_map[dev] = f"EM{random.randint(10000,99999)}DAK{random.randint(1000,9999)}"
                     dc = dev_code_map[dev]
                     r = report(tpl, dev, 6, rk, device_code=dc)
-                    if r.get('success'):
+                    if r.get('code') == 1000:
                         total_ops['load_out'] += 1
                         log(f"  [{rk}] 离负载 {tpl} {dev}")
             
