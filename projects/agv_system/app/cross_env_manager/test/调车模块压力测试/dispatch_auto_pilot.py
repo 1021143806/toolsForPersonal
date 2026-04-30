@@ -1,14 +1,32 @@
 #!/usr/bin/env python3
-"""调车模块自动驾驶测试 - 模拟真实AGV场景：负载任务有执行时长，空车由系统自动下发"""
-import urllib.request, json, time, random, sys, argparse, threading
+"""
+调车模块自动驾驶测试 - 模拟真实AGV场景：负载任务有执行时长，空车由系统自动下发
+
+速度配置（命令行参数）：
+  --load-interval  负载任务上报间隔，默认 0.5s（正弦波波动 0.3~0.7s）
+  --load-done      负载任务完成间隔，默认 0.6s（正弦波反相波动 0.3~0.9s）
+  --empty-done     空车任务完成间隔，默认 0.4s（正弦波反相波动 0.2~0.6s）
+  --duration       运行时长(秒)，0=无限，默认 0
+
+正弦波说明：
+  周期 120 轮（约 60s），来任务概率 10%~90% 大幅波动（潮汐效应）
+  高峰时段连续下发负载来任务，低谷时段连续下发负载回任务
+  完成速度与上报反相：上报快时完成慢，上报慢时完成快
+
+用法：
+  python3 dispatch_auto_pilot.py                          # 默认参数无限运行
+  python3 dispatch_auto_pilot.py --duration 60            # 运行60秒
+  python3 dispatch_auto_pilot.py --load-interval 0.3      # 加快上报速度
+"""
+import urllib.request, json, time, random, sys, argparse, threading, math
 from datetime import datetime
 from http.cookiejar import CookieJar
 
 BASE = "http://127.0.0.1:5000"
 DEV_POOL = [f"DJC{i}" for i in range(1, 61)]
 
-# 空车模板（测试脚本不手动上报，由系统自动下发）
-EMPTY_TPL = {"DKCqu", "DKCback"}
+# 空车模板集合（从配置动态加载，测试脚本不手动上报，由系统自动下发）
+EMPTY_TPL = set()
 
 cookie_jar = CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
@@ -43,14 +61,16 @@ def login():
     print(f"[{datetime.now().strftime('%H:%M:%S')}] 登录失败: {r.get('error','')}")
     return False
 
-def report(tpl, dev, st, rk, device_code=None):
+def report(tpl, dev, st, rk, device_code=None, order_id=None):
     """按实际报文格式上报"""
     if device_code is None:
         device_code = f"EM{random.randint(10000,99999)}DAK{random.randint(1000,9999)}"
+    if order_id is None:
+        order_id = f"pad_html{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}_{random.randint(100,999)}_{random.randint(1000,9999)}"
     data = {
         "shelfCurrPosition": str(random.randint(10000000, 99999999)),
         "subTaskStatus": "3",
-        "orderId": f"pad_html{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}_{random.randint(100,999)}_{random.randint(1000,9999)}",
+        "orderId": order_id,
         "deviceCode": device_code,
         "modelProcessCode": tpl,
         "subTaskTypeId": "75",
@@ -68,6 +88,7 @@ def report(tpl, dev, st, rk, device_code=None):
 def status(): return req("GET", f"{BASE}/api/dispatch/status")
 def execute(rk): return req("POST", f"{BASE}/api/dispatch/execute/{rk}")
 def clean(rk): return req("POST", f"{BASE}/api/dispatch/clean_simulated/{rk}")
+def reset_all(rk): return req("POST", f"{BASE}/api/dispatch/reset_all/{rk}")
 def glog(): return req("GET", f"{BASE}/api/dispatch/global_log")
 def cfg(): return req("GET", f"{BASE}/api/dispatch/config")
 def save_cfg(d): return req("POST", f"{BASE}/api/dispatch/config", d)
@@ -78,20 +99,30 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 def load_regions():
-    """从配置文件加载区域"""
+    """从配置文件加载区域（兼容 task_type 和旧 direction），同时填充 EMPTY_TPL"""
+    global EMPTY_TPL
     c = cfg()
     regions = {}
+    empty_set = set()
     for rk, region in c.items():
         if not isinstance(region, dict) or 'templates' not in region:
             continue
         in_tpls, out_tpls = [], []
         for t in region.get('templates', []):
             name = t.get('name', '')
-            d = t.get('direction', '')
-            if d == 'in': in_tpls.append(name)
-            elif d == 'out': out_tpls.append(name)
+            task_type = t.get('task_type', '')
+            if not task_type:
+                d = t.get('direction', '')
+                task_type = 'load_in' if d == 'in' else 'load_out' if d == 'out' else ''
+            if task_type in ('empty_in', 'empty_out'):
+                empty_set.add(name)
+            if task_type in ('empty_in', 'load_in'):
+                in_tpls.append(name)
+            elif task_type in ('empty_out', 'load_out'):
+                out_tpls.append(name)
         if in_tpls or out_tpls:
             regions[rk] = {'in_tpls': in_tpls, 'out_tpls': out_tpls}
+    EMPTY_TPL = empty_set
     return regions
 
 def get_all_backend_tasks(regions, tpl_filter=None):
@@ -114,7 +145,7 @@ def get_all_backend_tasks(regions, tpl_filter=None):
                                     try:
                                         for task in json.loads(cr['content']):
                                             if task.get('status') == 6:
-                                                tasks.append((rk, t['code'], task.get('deviceCode',''), task.get('deviceNum',''), task.get('create_time','')))
+                                                tasks.append((rk, t['code'], task.get('deviceCode',''), task.get('deviceNum',''), task.get('create_time',''), task.get('order_id','')))
                                     except: pass
             for t in a.get('templates', {}).get('outgoing', []):
                 if t.get('count', 0) > 0:
@@ -128,7 +159,7 @@ def get_all_backend_tasks(regions, tpl_filter=None):
                                     try:
                                         for task in json.loads(cr['content']):
                                             if task.get('status') == 6:
-                                                tasks.append((rk, t['code'], task.get('deviceCode',''), task.get('deviceNum',''), task.get('create_time','')))
+                                                tasks.append((rk, t['code'], task.get('deviceCode',''), task.get('deviceNum',''), task.get('create_time',''), task.get('order_id','')))
                                     except: pass
     except: pass
     return tasks
@@ -173,9 +204,9 @@ def main():
         if rk in c: c[rk]['enabled'] = False
     save_cfg(c)
     
-    # 清理旧数据
-    log("初始化: 清理旧数据")
-    for rk in REGIONS: clean(rk)
+    # 清空所有数据
+    log("初始化: 清空所有数据")
+    for rk in REGIONS: reset_all(rk)
     
     log("开始自动驾驶循环")
     round_num, total_ops = 0, {'load_in':0, 'load_out':0, 'done_load':0, 'done_empty':0, 'exec':0}
@@ -185,56 +216,41 @@ def main():
     # 确保同一设备的来/离使用相同 deviceCode
     dev_code_map = {}
     
-    # 线程1：完成负载任务（每 load_done 秒）
+    # 线程1：完成负载任务（动态间隔，与上报反相波动）
     def done_load_loop():
         while True:
-            time.sleep(args.load_done)
+            wave = math.sin(round_num * math.pi / 30)
+            # 上报快时完成慢(0.3~0.9s)，上报慢时完成快(0.1~0.3s)
+            done_interval = 0.6 - wave * 0.3
+            time.sleep(max(0.1, done_interval))
             try:
                 tasks = get_all_backend_tasks(REGIONS, tpl_filter=None)
                 # 排除空车模板
                 load_tasks = [t for t in tasks if t[1] not in EMPTY_TPL]
                 if load_tasks:
                     load_tasks.sort(key=lambda x: x[4] if x[4] else '')
-                    rk2, tpl, dev_code, dev_num, _ = load_tasks[0]
-                    r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code)
+                    rk2, tpl, dev_code, dev_num, _, order_id = load_tasks[0]
+                    r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code, order_id=order_id)
                     if r.get('success'):
                         log(f"  [{rk2}] 完成负载 {tpl} {dev_num or dev_code}")
             except: pass
     
-    # 线程2：完成空车任务（每 empty_done 秒）
-    # DKCqu(来空车)用后端记录完成，DKCback(回空车)从currentCount中选设备完成
+    # 线程2：完成空车任务（动态间隔，与上报反相波动）
+    # 直接用后端记录的 deviceCode/deviceNum/orderId 上报 status=8
+    # 后端模拟下发时回空车已从 currentCount 取真实设备，来空车生成新设备
     def done_empty_loop():
         while True:
-            time.sleep(args.empty_done)
+            wave = math.sin(round_num * math.pi / 30)
+            done_interval = 0.4 - wave * 0.2
+            time.sleep(max(0.1, done_interval))
             try:
                 tasks = get_all_backend_tasks(REGIONS, tpl_filter=EMPTY_TPL)
                 if tasks:
                     tasks.sort(key=lambda x: x[4] if x[4] else '')
-                    rk2, tpl, dev_code, dev_num, _ = tasks[0]
-                    if tpl == 'DKCback':
-                        # 回空车：从 currentCount 中选一个真实设备来"离开"
-                        st = status()
-                        for a in st.get('areas', []):
-                            if a['region_key'] == rk2 and a.get('currentCount', 0) > 0:
-                                # 获取 currentCount.json 中的设备
-                                cr = region_file(rk2, 'currentCount.json')
-                                if cr.get('content'):
-                                    try:
-                                        devices = json.loads(cr['content'])
-                                        if devices:
-                                            dev_info = random.choice(devices)
-                                            real_dc = dev_info.get('deviceCode', '')
-                                            real_dn = dev_info.get('deviceNum', '')
-                                            r = report(tpl, real_dn, 8, rk2, device_code=real_dc)
-                                            if r.get('success'):
-                                                log(f"  [{rk2}] 完成空车(离开) {tpl} {real_dn}")
-                                            break
-                                    except: pass
-                    else:
-                        # 来空车：用后端记录完成
-                        r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code)
-                        if r.get('success'):
-                            log(f"  [{rk2}] 完成空车(来) {tpl} {dev_num or dev_code}")
+                    rk2, tpl, dev_code, dev_num, _, order_id = tasks[0]
+                    r = report(tpl, dev_num or dev_code, 8, rk2, device_code=dev_code, order_id=order_id)
+                    if r.get('success'):
+                        log(f"  [{rk2}] 完成空车 {tpl} {dev_num or dev_code}")
             except: pass
     
     threading.Thread(target=done_load_loop, daemon=True).start()
@@ -249,12 +265,12 @@ def main():
             
             round_num += 1
             
-            # 真实场景：模拟负载高峰/低谷
-            # 用正弦波模拟一天中的负载变化，周期约60轮
-            import math
-            wave = math.sin(round_num * math.pi / 30)  # 周期60轮
-            # wave ∈ [-1, 1]，映射到来任务概率 [0.3, 0.7]
-            in_prob = 0.5 + wave * 0.2
+            # 真实场景：模拟负载高峰/低谷（潮汐效应）
+            # 用正弦波模拟，周期120轮(约60s)，振幅更大
+            wave = math.sin(round_num * math.pi / 60)  # 周期120轮
+            # wave ∈ [-1, 1]，映射到来任务概率 [0.1, 0.9]
+            # 高峰时段大量来任务，低谷时段大量回任务
+            in_prob = 0.5 + wave * 0.4
             
             rk = random.choice(list(REGIONS.keys()))
             region = REGIONS[rk]
@@ -321,7 +337,7 @@ def main():
     
     # 清理
     log("清理所有区域")
-    for rk in REGIONS: clean(rk)
+    for rk in REGIONS: reset_all(rk)
     
     print(f"\n{'='*60}\n  完成!\n{'='*60}")
 

@@ -47,7 +47,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     START([每0.6s触发]) --> GET[获取所有status=6的任务]
-    GET --> FILTER[过滤: 排除空车模板<br/>DKCqu/DKCback]
+    GET -->    FILTER[过滤: 排除空车模板<br/>从配置动态获取]
     FILTER --> SORT[按create_time升序排序<br/>优先完成最早的任务]
     SORT --> PICK[取第一个任务]
     PICK --> REPORT[使用后端记录的deviceCode<br/>上报status=8]
@@ -61,12 +61,11 @@ flowchart TD
 ```mermaid
 flowchart TD
     START([每0.4s触发]) --> GET[获取所有status=6的任务]
-    GET --> FILTER[过滤: 只取空车模板<br/>DKCqu/DKCback]
+    GET -->    FILTER[过滤: 只取空车模板<br/>从配置动态获取]
     FILTER --> SORT[按create_time升序排序]
     SORT --> PICK[取第一个任务]
     PICK --> TYPE{模板类型?}
-    TYPE -->|DKCqu<br/>来空车| IN[使用后端记录的deviceCode<br/>上报status=8]
-    TYPE -->|DKCback<br/>回空车| OUT[从currentCount.json<br/>随机选一个设备<br/>使用其deviceCode+deviceNum<br/>上报status=8]
+    TYPE -->|空车任务| DONE[使用后端记录的deviceCode+deviceNum<br/>上报status=8]
     IN --> BACKEND_IN[后端: 从模板JSON删除<br/>写入currentCount.json +1]
     OUT --> BACKEND_OUT[后端: 从模板JSON删除<br/>从currentCount.json删除 -1]
 ```
@@ -78,13 +77,13 @@ flowchart LR
     subgraph 来方向
         A1[负载来 status=6] -->|a+1| T1[模板JSON]
         T1 -->|完成 status=8| C1[currentCount.json +1]
-        A2[DKCqu来空车 status=6] -->|a+1| T2[模板JSON]
+        A2[empty_in来空车 status=6] -->|a+1| T2[模板JSON]
         T2 -->|完成 status=8| C2[currentCount.json +1]
     end
     subgraph 离方向
         B1[负载离 status=6] -->|b+1| T3[模板JSON]
         T3 -->|完成 status=8| C3[currentCount.json -1]
-        B2[DKCback回空车 status=6] -->|b+1| T4[模板JSON]
+        B2[empty_out回空车 status=6] -->|b+1| T4[模板JSON]
         T4 -->|完成 status=8| C4[currentCount.json -1<br/>从currentCount选设备]
     end
 ```
@@ -97,8 +96,8 @@ flowchart TD
     A[a = 来方向status=6任务数] --> EC
     B[b = 离方向status=6任务数] --> EC
     EC[expectedCount = currentCount + a - b] --> CMP{比较}
-    CMP -->|> xmax| OUT[need = expectedCount - xmax<br/>正数, 需调出<br/>下发DKCback回空车]
-    CMP -->|< xmin| IN[need = expectedCount - xmin<br/>负数, 需调入<br/>下发DKCqu来空车]
+    CMP -->|> xmax| OUT[need = expectedCount - xmax<br/>正数, 需调出<br/>下发empty_out回空车]
+    CMP -->|< xmin| IN[need = expectedCount - xmin<br/>负数, 需调入<br/>下发empty_in来空车]
     CMP -->|xmin ≤ ec ≤ xmax| BAL[need = 0<br/>平衡, 无需下发]
 ```
 

@@ -225,9 +225,10 @@ function renderVisualEditor(data) {
                 ['load_in','📦 其他来'],['load_out','📦 其他回']
             ].map(o=>`<option value="${o[0]}" ${taskType===o[0]?'selected':''}>${o[1]}</option>`).join('');
             const sharedChecked = t.shared ? 'checked' : '';
+            const autoFile = (t.name ? t.name + '.json' : '');
             templatesHtml += `<div class="template-row">
-                <input class="code-input" value="${t.name||''}" placeholder="模板代码" onchange="updateTemplate('${key}',${idx},'name',this.value)">
-                <input class="name-input" value="${t.file||''}" placeholder="文件名" onchange="updateTemplate('${key}',${idx},'file',this.value)">
+                <input class="code-input" value="${t.name||''}" placeholder="模板代码" onchange="updateTemplateName('${key}',${idx},this.value)">
+                <span class="name-input text-muted small d-flex align-items-center" style="min-width:80px;" title="自动生成: ${autoFile}">📄 ${autoFile||'(自动)'}</span>
                 <select class="type-select" onchange="updateTemplate('${key}',${idx},'task_type',this.value)">${typeOptions}</select>
                 <label class="shared-check" title="跨区域共享模板"><input type="checkbox" ${sharedChecked} onchange="updateTemplate('${key}',${idx},'shared',this.checked)"> 共享</label>
                 <button class="btn btn-sm btn-outline-danger" onclick="removeTemplate('${key}',${idx})"><i class="bi bi-x"></i></button>
@@ -326,6 +327,7 @@ function onDragEnd(e) {
 function updateRegionField(key, field, value) { if(configData[key]){configData[key][field]=value;syncSourceEditor();} }
 function updateRegionKey(oldKey, newKey) { if(oldKey===newKey||!newKey)return;configData[newKey]=configData[oldKey];delete configData[oldKey];renderVisualEditor(configData);syncSourceEditor(); }
 function updateTemplate(rk,idx,f,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx][f]=v;syncSourceEditor();} }
+function updateTemplateName(rk,idx,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx].name=v;configData[rk].templates[idx].file=v? v+'.json' : '';renderVisualEditor(configData);syncSourceEditor();} }
 function addTemplate(rk) { if(!configData[rk])return;if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({name:'',file:'',task_type:'load_in',shared:false});renderVisualEditor(configData);syncSourceEditor(); }
 function removeTemplate(rk,idx) { if(!configData[rk])return;configData[rk].templates.splice(idx,1);renderVisualEditor(configData);syncSourceEditor(); }
 function addRegion() {

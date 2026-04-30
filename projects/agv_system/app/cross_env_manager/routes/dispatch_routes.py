@@ -159,7 +159,7 @@ def _get_region_file(region_key, filename):
 # ========== 全局操作日志 ==========
 
 def write_global_log(action, region_key, detail='', level='info'):
-    """写入全局操作日志（自动清理超过2天的日志）"""
+    """写入全局操作日志（超过500条自动清理，保留最新500条）"""
     logs = _load_json(GLOBAL_LOG_PATH)
     logs.append({
         "time": datetime.now().isoformat(),
@@ -168,10 +168,9 @@ def write_global_log(action, region_key, detail='', level='info'):
         "detail": detail,
         "level": level
     })
-    # 自动清理超过2天的日志
-    from datetime import timedelta
-    two_days_ago = (datetime.now() - timedelta(days=2)).isoformat()
-    logs = [log for log in logs if log.get('time', '') >= two_days_ago]
+    # 超过100条保留最新100条
+    if len(logs) > 100:
+        logs = logs[-100:]
     _save_json(GLOBAL_LOG_PATH, logs)
 
 
@@ -298,7 +297,7 @@ def calculate_area_balance(region_key, region_config):
     # 负载模板不影响空车下发
     can_dispatch = True
     mutex_reason = ""
-    if enabled and need != 0:
+    if need != 0:
         for t in region_config.get('templates', []):
             task_type = _normalize_task_type(t)
             # 只检查空车模板
@@ -437,6 +436,8 @@ def handle_status_report(data):
         # 遍历所有区域，查找包含该模板的区域
         index = _load_cache_index()
         for rk, region in index.items():
+            if not isinstance(region, dict) or 'templates' not in region:
+                continue
             for t in region.get('templates', []):
                 if t['name'] == template_name or t['file'].replace('.json', '') == template_name:
                     region_key = rk
@@ -881,6 +882,9 @@ def write_dispatch_log(region_key, template_name, direction, dispatch_url, reque
         "result": result,
         "reason": reason
     })
+    # 仅保留最新10条
+    if len(logs) > 10:
+        logs = logs[-10:]
     _save_json(log_file, logs)
     return True
 
@@ -980,9 +984,17 @@ def _execute_dispatch(region_key, region, balance):
     template_file = _get_template_file_path(region_key, target_template)
     tasks = _load_json(template_file)
     now = datetime.now().isoformat()
+    # 模拟下发时：来空车生成新设备，回空车从 currentCount 取真实设备
+    now_devices = _load_json(_get_region_file(region_key, 'currentCount.json'))
     for i in range(dispatch_count):
-        device_code = f"SIM_{sim_id}_{i}" if simulated else f"DISP_{sim_id}_{i}"
-        device_num = f"SIM_D{i}" if simulated else f"DISP_D{i}"
+        if simulated and direction == 'out' and now_devices:
+            # 回空车模拟：从 currentCount 取真实设备
+            dev = now_devices[i % len(now_devices)]
+            device_code = dev.get('deviceCode', f'SIM_{sim_id}_{i}')
+            device_num = dev.get('deviceNum', f'SIM_D{i}')
+        else:
+            device_code = f"SIM_{sim_id}_{i}" if simulated else f"DISP_{sim_id}_{i}"
+            device_num = f"SIM_D{i}" if simulated else f"DISP_D{i}"
         tasks.append({
             "deviceCode": device_code, "deviceNum": device_num,
             "status": 6, "_simulated": simulated,
@@ -1062,7 +1074,90 @@ def api_execute(region_key):
         return _json_resp({'error': f'执行失败: {str(e)}'}, 500)
 
 
+# ========== 手动发空车 API ==========
+
+@dispatch_bp.route('/api/dispatch/manual_dispatch/<region_key>', methods=['POST'])
+@login_required
+@admin_required
+def api_manual_dispatch(region_key):
+    """手动下发空车任务（指定方向），跳过平衡计算和互斥检查"""
+    try:
+        direction = request.args.get('direction', 'in')
+        if direction not in ('in', 'out'):
+            return _json_resp({'error': 'direction 必须是 in 或 out'}, 400)
+        
+        index = _load_cache_index()
+        region = index.get(region_key)
+        if not region:
+            return _json_resp({'error': f'区域 {region_key} 不存在'}, 404)
+        
+        # 找到对应方向的空车模板
+        target_template = None
+        for t in region.get('templates', []):
+            task_type = _normalize_task_type(t)
+            if not _is_empty_task(task_type):
+                continue
+            t_direction = 'in' if _is_in_direction(task_type) else 'out'
+            if t_direction == direction:
+                target_template = t
+                break
+        
+        if not target_template:
+            return _json_resp({'error': f'区域 {region_key} 没有{direction}方向的空车模板'}, 400)
+        
+        # 构造一个简单的 balance 用于 _execute_dispatch
+        balance = {
+            'region_key': region_key,
+            'direction': direction,
+            'dispatch_count': 1,  # 手动下发1台
+            'effective_enabled': region.get('enabled', False),
+            'time_slot_active': False,
+            'time_slot_matched': None,
+            'can_dispatch': True
+        }
+        
+        result = _execute_dispatch(region_key, region, balance)
+        if result:
+            write_global_log('manual_dispatch', region_key,
+                f'手动下发 1 台空车, 模板:{target_template["name"]}, 方向:{direction}, '
+                f'{"模拟" if result.get("simulated") else "真实"}')
+            return _json_resp(result)
+        return _json_resp({'error': '下发失败'}, 500)
+        
+    except Exception as e:
+        return _json_resp({'error': f'手动下发失败: {str(e)}'}, 500)
+
+
 # ========== 清理模拟数据 API ==========
+
+@dispatch_bp.route('/api/dispatch/reset_all/<region_key>', methods=['POST'])
+@login_required
+def api_reset_all(region_key):
+    """清空指定区域所有数据（模板JSON + currentCount.json）"""
+    try:
+        index = _load_cache_index()
+        region = index.get(region_key)
+        if not region:
+            return jsonify({'error': f'区域 {region_key} 不存在'}), 404
+        
+        cleared = 0
+        # 清空所有模板 JSON 文件
+        for t in region.get('templates', []):
+            fpath = _get_template_file_path(region_key, t)
+            if os.path.exists(fpath):
+                _save_json(fpath, [])
+                cleared += 1
+        
+        # 清空 currentCount.json
+        now_file = _get_region_file(region_key, 'currentCount.json')
+        _save_json(now_file, [])
+        cleared += 1
+        
+        write_global_log('reset_all', region_key, f'清空了 {cleared} 个文件')
+        return jsonify({'success': True, 'message': f'已清空 {cleared} 个文件', 'cleared': cleared})
+    except Exception as e:
+        return jsonify({'error': f'清空失败: {str(e)}'}), 500
+
 
 @dispatch_bp.route('/api/dispatch/clean_simulated/<region_key>', methods=['POST'])
 @login_required

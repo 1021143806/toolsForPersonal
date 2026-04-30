@@ -1,4 +1,4 @@
- qu'y{% extends "base.html" %}
+ai qu'y{% extends "base.html" %}
 {% block title %}空车调车管理系统{% endblock %}
 
 {% block extra_css %}
@@ -66,6 +66,12 @@
     }
     .template-table tr:last-child td { border-bottom: none; }
     .template-table tr:hover td { background: var(--detail-card-bg); }
+    .template-table .tpl-name {
+        word-break: break-all;
+        max-width: 140px;
+        display: inline-block;
+        vertical-align: middle;
+    }
     .template-section-title {
         font-size: 0.85rem; font-weight: 600;
         padding: 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;
@@ -245,7 +251,7 @@ $(document).ready(function() {
 });
 
 function refreshAll() {
-    loadGlobalLog();
+    if (logAutoScroll) loadGlobalLog();
     refreshDataDebounced();
 }
 
@@ -445,7 +451,7 @@ function renderAreas(areas) {
                                     ${renderChartLegend(area.templates?.incoming || [], 'in')}
                                 </div>
                             </div>
-                            <div class="template-section-title text-success"><i class="bi bi-box-arrow-in-down"></i> 来区域</div>
+                            <div class="template-section-title text-success"><i class="bi bi-box-arrow-in-down"></i> 来区域 <button class="btn btn-sm btn-outline-success ms-2" onclick="manualDispatch('${area.region_key}','in','${area.enabled}')" title="手动发空车来"><i class="bi bi-truck"></i> 发空车</button></div>
                             <table class="template-table" style="width:100%;">
                                 <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${incomingRows}</tbody>
@@ -464,7 +470,7 @@ function renderAreas(areas) {
                                     ${renderChartLegend(area.templates?.outgoing || [], 'out')}
                                 </div>
                             </div>
-                            <div class="template-section-title text-danger"><i class="bi bi-box-arrow-up"></i> 离开</div>
+                            <div class="template-section-title text-danger"><i class="bi bi-box-arrow-up"></i> 离开 <button class="btn btn-sm btn-outline-danger ms-2" onclick="manualDispatch('${area.region_key}','out','${area.enabled}')" title="手动发空车回"><i class="bi bi-truck"></i> 发空车</button></div>
                             <table class="template-table" style="width:100%;">
                                 <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${outgoingRows}</tbody>
@@ -555,6 +561,10 @@ function createDoughnutChart(canvasId, labels, data, colors) {
             responsive: false,
             maintainAspectRatio: false,
             cutout: '60%',
+            animation: {
+                duration: 400,
+                easing: 'easeOutQuad'
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -744,10 +754,11 @@ function updateTableCounts(tbody, templates) {
     const rows = tbody.querySelectorAll('tr');
     templates.forEach((t, idx) => {
         if (rows[idx]) {
-            const badge = rows[idx].querySelector('.badge');
+            const badge = rows[idx].querySelector('.count-badge');
             if (badge) {
                 badge.textContent = t.count;
-                badge.className = 'badge ' + (t.count > 0 ? 'bg-primary' : 'bg-secondary');
+                const is_empty = (t.task_type === 'empty_in' || t.task_type === 'empty_out');
+                badge.className = 'badge count-badge ' + (t.count > 0 ? (is_empty ? 'bg-warning text-dark' : 'bg-info text-dark') : 'bg-secondary');
             }
         }
     });
@@ -760,8 +771,8 @@ function renderTemplateRows(templates) {
         const icon = is_empty ? 'bi-truck' : 'bi-box-seam';
         const badgeClass = is_empty ? (t.count > 0 ? 'bg-warning text-dark' : 'bg-secondary') : (t.count > 0 ? 'bg-info text-dark' : 'bg-secondary');
         const label = is_empty ? '<span class="badge bg-warning bg-opacity-25 text-warning small me-1">空车</span>' : '<span class="badge bg-info bg-opacity-25 text-info small me-1">负载</span>';
-        return `<tr><td><code>${t.code}</code></td><td>${label}<i class="${icon} me-1 small opacity-50"></i>${t.name}</td>
-            <td class="text-center"><span class="badge ${badgeClass}">${t.count}</span></td></tr>`;
+        return `<tr><td><code>${t.code}</code></td><td>${label}<i class="${icon} me-1 small opacity-50"></i><span class="tpl-name">${t.name}</span></td>
+            <td class="text-center"><span class="badge count-badge ${badgeClass}">${t.count}</span></td></tr>`;
     }).join('');
 }
 
@@ -1184,7 +1195,7 @@ function loadDispatchLogs(regionKey) {
                         '<small class="text-muted">' + (log.deviceNum || '') + '</small>' +
                     '</div>' +
                     '<div class="file-actions">' +
-                        '<button class="btn btn-sm btn-outline-primary" onclick="viewDispatchLog(\'' + regionKey + '\',' + idx + ')"><i class="bi bi-eye"></i> 详情</button>' +
+                        '<button class="btn btn-sm btn-outline-primary" onclick="viewDispatchLog(\'' + regionKey + '\',' + idx + ')"><i class="bi bi-eye"></i> 详细</button>' +
                     '</div>' +
                 '</div>';
             }).join('');
@@ -1221,6 +1232,29 @@ function viewDispatchLog(regionKey, idx) {
         '请求报文:\n' + bodyStr + '\n' +
         '──────────────────────────────\n' +
         '响应报文:\n' + respStr;
+}
+
+// ========== 手动发空车 ==========
+
+function manualDispatch(regionKey, direction, enabled) {
+    const dirLabel = direction === 'in' ? '来区域（调空车来）' : '离开（调空车回）';
+    const statusLabel = enabled === 'True' || enabled === true
+        ? '⚠️ 区域已启用，将发送真实POST请求到服务器'
+        : 'ℹ️ 区域已禁用，将走模拟下发逻辑';
+    const msg = `确认手动下发空车任务？\n\n方向：${dirLabel}\n${statusLabel}\n\n点击确定继续`;
+    if (!confirm(msg)) return;
+    
+    fetch(`/api/dispatch/manual_dispatch/${encodeURIComponent(regionKey)}?direction=${direction}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || '下发成功', 'success');
+                refreshData();
+            } else {
+                showToast(data.error || '下发失败', 'danger');
+            }
+        })
+        .catch(err => showToast('请求失败: ' + err.message, 'danger'));
 }
 
 // ========== 分时配置展开面板 ==========
