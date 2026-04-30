@@ -925,7 +925,6 @@ def _execute_dispatch(region_key, region, balance):
     import random as _random
     
     enabled = region.get('enabled', False)
-    server = region.get('server', '')
     dispatch_count = balance['dispatch_count']
     direction = balance['direction']
     
@@ -951,9 +950,16 @@ def _execute_dispatch(region_key, region, balance):
     rand = _random.randint(0, 9999)
     order_id = f"CEM_auto_{date_str}.{ms:03d}__{rand:04d}"
     
-    dispatch_url = f"http://{server}/ics/taskOrder/addTask" if server else ''
+    # 空车下发配置：优先使用 empty_dispatch，回退到旧 server 拼接
+    empty_dispatch = region.get('empty_dispatch', {})
+    dispatch_template = empty_dispatch.get('template', '') or target_template['name']
+    dispatch_url = empty_dispatch.get('url', '')
+    if not dispatch_url:
+        server = region.get('server', '')
+        dispatch_url = f"http://{server}/ics/taskOrder/addTask" if server else ''
+    
     request_body = [{
-        "modelProcessCode": target_template['name'],
+        "modelProcessCode": dispatch_template,
         "priority": 6,
         "orderId": order_id,
         "fromSystem": "CEM_auto",

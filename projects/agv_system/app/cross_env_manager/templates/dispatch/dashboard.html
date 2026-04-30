@@ -1,4 +1,4 @@
-ai qu'y{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}空车调车管理系统{% endblock %}
 
 {% block extra_css %}
@@ -394,6 +394,7 @@ function renderAreas(areas) {
                     <span class="area-title">
                         <i class="bi bi-geo-alt me-1 text-primary"></i>${area.name}
                         <small class="text-muted ms-2" style="font-size:0.8rem;">xmin:${area.xmin} xmax:${area.xmax}</small>
+                        ${area.server ? `<small class="text-muted ms-2" style="font-size:0.75rem;opacity:0.6;">📡 ${area.server}</small>` : ''}
                         <div class="form-check form-switch d-inline-block ms-2">
                             <input class="form-check-input" type="checkbox" ${area.enabled ? 'checked' : ''} onchange="toggleRegion('${area.region_key}', this.checked)" style="cursor:pointer;">
                             <label class="form-check-label small ${area.enabled ? 'text-success' : 'text-muted'}">${area.enabled ? '已启用' : '已禁用'}</label>
