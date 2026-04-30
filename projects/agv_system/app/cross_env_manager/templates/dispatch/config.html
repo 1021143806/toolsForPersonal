@@ -272,7 +272,22 @@ function renderVisualEditor(data) {
                     <input class="form-control form-control-sm" type="number" value="${region.max_dispatch_once||3}" onchange="updateRegionField('${key}','max_dispatch_once',parseInt(this.value)||3)"></div>
             </div>
             <label class="form-label small fw-bold">模板列表：</label>${templatesHtml}
-            <button class="btn btn-sm btn-outline-primary mt-1" onclick="addTemplate('${key}')"><i class="bi bi-plus"></i> 新增模板</button></div>`;
+            <button class="btn btn-sm btn-outline-primary mt-1" onclick="addTemplate('${key}')"><i class="bi bi-plus"></i> 新增模板</button>
+            <hr class="my-2">
+            <details class="mb-2"><summary class="form-label small fw-bold" style="cursor:pointer;display:inline;">🩺 自恢复配置</summary>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3"><label class="form-label small">启用</label>
+                    <select class="form-select form-select-sm" onchange="updateRegionField('${key}','self_heal',{...configData['${key}']?.self_heal||{},enabled:this.value==='true'})">
+                        <option value="false" ${(region.self_heal||{}).enabled?'':'selected'}>关闭</option>
+                        <option value="true" ${(region.self_heal||{}).enabled?'selected':''}>启用</option>
+                    </select></div>
+                <div class="col-md-3"><label class="form-label small">检查间隔(秒)</label>
+                    <input class="form-control form-control-sm" type="number" value="${(region.self_heal||{}).check_interval||300}" onchange="updateSelfHeal('${key}','check_interval',parseInt(this.value)||300)"></div>
+                <div class="col-md-3"><label class="form-label small">异常超时恢复间隔(分钟)</label>
+                    <input class="form-control form-control-sm" type="number" value="${(region.self_heal||{}).recover_timeout_minutes||30}" onchange="updateSelfHeal('${key}','recover_timeout_minutes',parseInt(this.value)||30)"></div>
+                <div class="col-md-3"><label class="form-label small">查询API路径</label>
+                    <input class="form-control form-control-sm" value="${(region.self_heal||{}).device_query_api||'/ics/out/device/list/deviceInfo'}" onchange="updateSelfHeal('${key}','device_query_api',this.value)"></div>
+            </div></details></div>`;
         container.appendChild(card);
     });
 }
@@ -328,6 +343,7 @@ function updateRegionField(key, field, value) { if(configData[key]){configData[k
 function updateRegionKey(oldKey, newKey) { if(oldKey===newKey||!newKey)return;configData[newKey]=configData[oldKey];delete configData[oldKey];renderVisualEditor(configData);syncSourceEditor(); }
 function updateTemplate(rk,idx,f,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx][f]=v;syncSourceEditor();} }
 function updateTemplateName(rk,idx,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx].name=v;configData[rk].templates[idx].file=v? v+'.json' : '';renderVisualEditor(configData);syncSourceEditor();} }
+function updateSelfHeal(rk, field, value) { if(configData[rk]){if(!configData[rk].self_heal)configData[rk].self_heal={};configData[rk].self_heal[field]=value;syncSourceEditor();} }
 function addTemplate(rk) { if(!configData[rk])return;if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({name:'',file:'',task_type:'load_in',shared:false});renderVisualEditor(configData);syncSourceEditor(); }
 function removeTemplate(rk,idx) { if(!configData[rk])return;configData[rk].templates.splice(idx,1);renderVisualEditor(configData);syncSourceEditor(); }
 function addRegion() {

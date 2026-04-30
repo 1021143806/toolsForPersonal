@@ -482,6 +482,7 @@ function renderAreas(areas) {
                         <button class="btn btn-outline-info btn-sm" onclick="toggleJsonPanel('${area.region_key}', this)"><i class="bi bi-filetype-json"></i> JSON文件</button>
                         <button class="btn btn-outline-teal btn-sm" onclick="toggleDispatchLogPanel('${area.region_key}', this)"><i class="bi bi-send"></i> 下发记录</button>
                         <button class="btn btn-outline-purple btn-sm" onclick="toggleTimeSlotPanel('${area.region_key}', this)"><i class="bi bi-clock"></i> 分时配置</button>
+                        <button class="btn btn-outline-success btn-sm" onclick="toggleSelfHealPanel('${area.region_key}', this)"><i class="bi bi-heart-pulse"></i> 自恢复</button>
                         <a href="/dispatch/config" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> 配置</a>
                     </div>
                 </div>
@@ -521,6 +522,12 @@ function renderAreas(areas) {
                 <div class="json-panel" id="time-slot-panel-${area.region_key}">
                     <div id="time-slot-content-${area.region_key}">
                         <div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载分时配置...</div>
+                    </div>
+                </div>
+                <!-- 自恢复状态面板 -->
+                <div class="json-panel" id="self-heal-panel-${area.region_key}">
+                    <div id="self-heal-content-${area.region_key}">
+                        <div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载自恢复状态...</div>
                     </div>
                 </div>
             </div>
@@ -1539,6 +1546,57 @@ function showToast(message, type) {
     t.innerHTML = '<div class="d-flex"><div class="toast-body">' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
     container.appendChild(t);
     setTimeout(() => t.remove(), 3000);
+}
+
+// ========== 自恢复面板 ==========
+
+function toggleSelfHealPanel(regionKey, btn) {
+    const panel = document.getElementById('self-heal-panel-' + regionKey);
+    const isOpen = panel.classList.contains('open');
+    document.querySelectorAll('.json-panel.open').forEach(p => p.classList.remove('open'));
+    if (isOpen) { panel.classList.remove('open'); return; }
+    panel.classList.add('open');
+    loadSelfHealStatus(regionKey);
+}
+
+function loadSelfHealStatus(regionKey) {
+    const el = document.getElementById('self-heal-content-' + regionKey);
+    el.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载自恢复状态...</div>';
+    fetch('/api/dispatch/self_heal/status')
+        .then(r => r.json())
+        .then(data => {
+            const st = data.status[regionKey];
+            if (!st) {
+                el.innerHTML = '<div class="text-muted py-2">暂无自恢复记录（需在配置中启用）</div>';
+                return;
+            }
+            const lastCheck = st.last_check ? new Date(st.last_check).toLocaleString('zh-CN') : '从未';
+            el.innerHTML = '<div class="small">' +
+                '<div><strong>上次检查：</strong>' + lastCheck + '</div>' +
+                '<div><strong>清理数量：</strong>' + (st.cleaned_count || 0) + '</div>' +
+                (st.errors && st.errors.length > 0 ? '<div class="text-danger"><strong>错误：</strong>' + st.errors.join(', ') + '</div>' : '') +
+                '<button class="btn btn-sm btn-outline-success mt-2" onclick="triggerSelfHeal(\'' + regionKey + '\')"><i class="bi bi-heart-pulse"></i> 手动触发检查</button>' +
+                '</div>';
+        })
+        .catch(err => { el.innerHTML = '<div class="text-danger py-2">加载失败: ' + err.message + '</div>'; });
+}
+
+function triggerSelfHeal(regionKey) {
+    const el = document.getElementById('self-heal-content-' + regionKey);
+    el.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>正在检查...</div>';
+    fetch('/api/dispatch/self_heal/check?region_key=' + encodeURIComponent(regionKey), { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('自恢复检查完成，清理 ' + (data.cleaned || 0) + ' 个异常任务', 'success');
+                loadSelfHealStatus(regionKey);
+                refreshData();
+            } else {
+                showToast(data.error || '检查失败', 'danger');
+                loadSelfHealStatus(regionKey);
+            }
+        })
+        .catch(err => { el.innerHTML = '<div class="text-danger py-2">检查失败: ' + err.message + '</div>'; });
 }
 </script>
 {% endblock %}

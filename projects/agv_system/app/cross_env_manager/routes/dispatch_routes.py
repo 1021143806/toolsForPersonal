@@ -1202,3 +1202,188 @@ def api_clean_simulated(region_key):
     except Exception as e:
         write_global_log('clean_simulated_error', region_key, str(e), 'error')
         return jsonify({'error': f'清理失败: {str(e)}'}), 500
+
+
+# ========== 自恢复逻辑 ==========
+
+# 自恢复状态记录
+_self_heal_status = {}  # {region_key: {last_check, cleaned_count, errors}}
+_self_heal_lock = threading.Lock()
+
+SELF_HEAL_DEFAULTS = {
+    'enabled': False,
+    'check_interval': 300,       # 检查间隔（秒）
+    'recover_timeout_minutes': 30,  # 异常超时恢复间隔（分钟）
+    'device_query_api': '/ics/out/device/list/deviceInfo'
+}
+
+
+def _query_device_status(server, api_path, area_id, device_code):
+    """查询单个设备状态"""
+    url = f"http://{server}{api_path}"
+    body = {"areaId": str(area_id), "deviceType": "0", "deviceCode": device_code}
+    try:
+        req = urllib.request.Request(url,
+            data=json.dumps(body).encode('utf-8'),
+            headers={'Content-Type': 'application/json'})
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read().decode('utf-8'))
+        if data.get('code') == 1000 and data.get('data'):
+            return data['data'][0]
+        return None
+    except Exception as e:
+        return None
+
+
+def _should_clean_device(device_info):
+    """判断设备是否应该被清理"""
+    if not device_info:
+        return True  # 查询失败，保守清理
+    state = device_info.get('state', '')
+    # 离线/下线/空闲/充电 → 清理
+    if state in ('Offline', 'Downlined', 'Idle', 'InCharging'):
+        return True
+    # 任务中/故障/升级中 → 保留
+    return False
+
+
+def _self_heal_check_region(region_key, region):
+    """检查单个区域的异常任务并清理"""
+    sh = region.get('self_heal', {})
+    if not sh.get('enabled', SELF_HEAL_DEFAULTS['enabled']):
+        return {'cleaned': 0, 'errors': []}
+    
+    timeout_minutes = sh.get('recover_timeout_minutes', SELF_HEAL_DEFAULTS['recover_timeout_minutes'])
+    server = region.get('server', '')
+    area_id = region.get('areaId', '0')
+    api_path = sh.get('device_query_api', SELF_HEAL_DEFAULTS['device_query_api'])
+    
+    if not server:
+        return {'cleaned': 0, 'errors': ['无服务器配置']}
+    
+    from datetime import timedelta
+    threshold = (datetime.now() - timedelta(minutes=timeout_minutes)).isoformat()
+    cleaned = 0
+    errors = []
+    
+    for t in region.get('templates', []):
+        fpath = _get_template_file_path(region_key, t)
+        tasks = _load_json(fpath)
+        stale_tasks = [task for task in tasks
+                       if task.get('status') == 6
+                       and not task.get('_simulated')
+                       and task.get('create_time', '') < threshold]
+        
+        if not stale_tasks:
+            continue
+        
+        # 最多检查10个异常任务
+        for task in stale_tasks[:10]:
+            device_code = task.get('deviceCode', '')
+            if not device_code:
+                continue
+            device_info = _query_device_status(server, api_path, area_id, device_code)
+            if _should_clean_device(device_info):
+                # 从模板 JSON 删除
+                tasks = [t for t in tasks if t.get('deviceCode') != device_code or t.get('status') != 6]
+                # 从 currentCount 删除
+                now_file = _get_region_file(region_key, 'currentCount.json')
+                now_devices = _load_json(now_file)
+                now_devices = [d for d in now_devices if d.get('deviceCode') != device_code]
+                _save_json(now_file, now_devices)
+                cleaned += 1
+        
+        _save_json(fpath, tasks)
+    
+    return {'cleaned': cleaned, 'errors': errors}
+
+
+def _self_heal_check_all():
+    """检查所有区域（后台线程调用）"""
+    index = _load_cache_index()
+    total_cleaned = 0
+    for rk, region in index.items():
+        if not isinstance(region, dict) or 'templates' not in region:
+            continue
+        sh = region.get('self_heal', {})
+        if not sh.get('enabled', SELF_HEAL_DEFAULTS['enabled']):
+            continue
+        result = _self_heal_check_region(rk, region)
+        total_cleaned += result['cleaned']
+        with _self_heal_lock:
+            _self_heal_status[rk] = {
+                'last_check': datetime.now().isoformat(),
+                'cleaned_count': result['cleaned'],
+                'errors': result['errors']
+            }
+        if result['cleaned'] > 0:
+            write_global_log('self_heal', rk,
+                f'自恢复清理 {result["cleaned"]} 个异常任务')
+    return total_cleaned
+
+
+def _start_self_heal_thread():
+    """启动自恢复后台线程"""
+    def _loop():
+        while True:
+            try:
+                index = _load_cache_index()
+                for rk, region in index.items():
+                    if not isinstance(region, dict):
+                        continue
+                    sh = region.get('self_heal', {})
+                    if not sh.get('enabled', SELF_HEAL_DEFAULTS['enabled']):
+                        continue
+                    interval = sh.get('check_interval', SELF_HEAL_DEFAULTS['check_interval'])
+                    # 检查是否需要执行
+                    with _self_heal_lock:
+                        last = _self_heal_status.get(rk, {}).get('last_check', '')
+                    if last:
+                        elapsed = (datetime.now() - datetime.fromisoformat(last)).total_seconds()
+                        if elapsed < interval:
+                            continue
+                    _self_heal_check_region(rk, region)
+                time.sleep(30)  # 每30秒检查一次是否需要执行
+            except Exception as e:
+                print(f"[SelfHeal] 后台线程异常: {e}")
+                time.sleep(60)
+    
+    t = threading.Thread(target=_loop, daemon=True)
+    t.start()
+
+
+# ========== 自恢复 API ==========
+
+@dispatch_bp.route('/api/dispatch/self_heal/status')
+@login_required
+def api_self_heal_status():
+    """获取自恢复状态"""
+    with _self_heal_lock:
+        return jsonify({'status': dict(_self_heal_status)})
+
+
+@dispatch_bp.route('/api/dispatch/self_heal/check', methods=['POST'])
+@login_required
+@admin_required
+def api_self_heal_check():
+    """手动触发自恢复检查"""
+    try:
+        region_key = request.args.get('region_key', '')
+        if region_key:
+            index = _load_cache_index()
+            region = index.get(region_key)
+            if not region:
+                return jsonify({'error': f'区域 {region_key} 不存在'}), 404
+            result = _self_heal_check_region(region_key, region)
+            with _self_heal_lock:
+                _self_heal_status[region_key] = {
+                    'last_check': datetime.now().isoformat(),
+                    'cleaned_count': result['cleaned'],
+                    'errors': result['errors']
+                }
+            return jsonify({'success': True, 'region_key': region_key, **result})
+        else:
+            total = _self_heal_check_all()
+            return jsonify({'success': True, 'total_cleaned': total})
+    except Exception as e:
+        return jsonify({'error': f'自恢复检查失败: {str(e)}'}), 500
