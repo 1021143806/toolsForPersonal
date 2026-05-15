@@ -14,6 +14,9 @@ import subprocess
 import sys
 import os
 
+# 使用当前 Python 解释器路径，确保子脚本使用相同的 Python 环境
+PYTHON_CMD = sys.executable
+
 # ========== 统一配置参数（请根据实际情况修改）==========
 
 # 数据库通用配置
@@ -29,11 +32,11 @@ DB_CONFIG = {
 
 # 设备型号同步配置（copy_agv_model_init.py）
 MODEL_SYNC_ENABLED = True             # 是否启用设备型号同步
-MODEL_NAMES = "RTA-C060-LQ-L-410"     # 需要同步的型号列表，多个用逗号分隔
+MODEL_NAMES = "OEM-RTA-C060-LQ-2L2T-410"     # 需要同步的型号列表，多个用逗号分隔
 
 # 设备主表同步配置（copy_robot.py）
 ROBOT_SYNC_ENABLED = True             # 是否启用设备主表同步
-DEVICE_TYPE = "RTA-C060-LQ-L-410"     # 设备类型
+DEVICE_TYPE = "OEM-RTA-C060-LQ-2L2T-410"     # 设备类型
 TABLE_NAME = "agv_robot"              # 目标表名
 
 # 设备扩展表同步配置（add_device_ext.py）
@@ -78,7 +81,7 @@ def run_command(cmd_args, script_name):
         print(f"标准错误:\n{e.stderr}")
         return False
     except FileNotFoundError:
-        print(f"错误: 找不到脚本文件 {cmd_args[0]}")
+        print(f"错误: 找不到脚本文件 {cmd_args[1]}")
         print(f"请确保脚本文件存在且路径正确")
         return False
 
@@ -89,7 +92,7 @@ def run_model_sync():
         return True
     
     cmd = [
-        "python", MODEL_SYNC_SCRIPT,
+        PYTHON_CMD, MODEL_SYNC_SCRIPT,
         "--source-host", DB_CONFIG['SOURCE_HOST'],
         "--source-port", str(DB_CONFIG['PORT']),
         "--source-user", DB_CONFIG['USER'],
@@ -113,7 +116,7 @@ def run_robot_sync():
         return True
     
     cmd = [
-        "python", ROBOT_SYNC_SCRIPT,
+        PYTHON_CMD, ROBOT_SYNC_SCRIPT,
         "--source-host", DB_CONFIG['SOURCE_HOST'],
         "--source-port", str(DB_CONFIG['PORT']),
         "--source-user", DB_CONFIG['USER'],
@@ -138,7 +141,7 @@ def run_device_ext_sync():
         return True
     
     cmd = [
-        "python", DEVICE_EXT_SYNC_SCRIPT,
+        PYTHON_CMD, DEVICE_EXT_SYNC_SCRIPT,
         "--source-host", DB_CONFIG['SOURCE_HOST'],
         "--source-port", str(DB_CONFIG['PORT']),
         "--source-user", DB_CONFIG['USER'],

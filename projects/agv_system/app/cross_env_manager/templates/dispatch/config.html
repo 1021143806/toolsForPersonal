@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}调车配置管理{% endblock %}
+{% block favicon %}
+<link rel="icon" type="image/png" href="/static/img/agv/favicon-edit.png?v=1">
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -41,14 +44,6 @@
         margin-bottom: 1rem;
         overflow: hidden;
         transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .region-card.drag-over {
-        border-color: var(--primary-color, #0d6efd);
-        box-shadow: 0 0 0 2px var(--primary-color, #0d6efd);
-        transform: scale(1.01);
-    }
-    .region-card.dragging {
-        opacity: 0.4;
     }
     .region-card .region-header {
         padding: 0.75rem 1rem;
@@ -105,6 +100,29 @@
                             <input class="form-control form-control-sm" type="number" id="globalDebounce" value="5" min="1" max="60" onchange="updateGlobalDebounce(parseInt(this.value)||5)">
                             <div class="form-text">同一区域两次自动调度最小间隔</div>
                         </div>
+                        <div class="col-md-3"><label class="form-label small">定时轮询间隔(秒)</label>
+                            <input class="form-control form-control-sm" type="number" id="globalPollInterval" value="60" min="10" max="3600" onchange="updateGlobalPollInterval(parseInt(this.value)||60)">
+                            <div class="form-text">后台定时检查所有区域平衡状态</div>
+                        </div>
+                        <div class="col-md-3"><label class="form-label small">数据刷新间隔(ms)</label>
+                            <input class="form-control form-control-sm" type="number" id="globalDataInterval" value="5000" min="1000" max="60000" step="500" onchange="updateGlobalDataInterval(parseInt(this.value)||5000)">
+                            <div class="form-text">看板区域数据刷新频率</div>
+                        </div>
+                        <div class="col-md-3"><label class="form-label small">日志刷新间隔(ms)</label>
+                            <input class="form-control form-control-sm" type="number" id="globalLogInterval" value="2000" min="500" max="30000" step="500" onchange="updateGlobalLogInterval(parseInt(this.value)||2000)">
+                            <div class="form-text">看板操作日志刷新频率</div>
+                        </div>
+                        <div class="col-md-3"><label class="form-label small">全局空车任务上限</label>
+                            <input class="form-control form-control-sm" type="number" id="globalEmptyTaskLimit" value="4" min="0" max="100" onchange="updateGlobalEmptyTaskLimit(parseInt(this.value)||4)">
+                            <div class="form-text">每个区域同时存在的空车任务(status=6)上限，0=不限制</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 p-2 small text-muted" style="background:var(--detail-card-bg);border-radius:6px;">
+                        <strong>📊 刷新间隔与服务器负载参考：</strong><br>
+                        • <b>高频</b>（数据1s/日志0.5s）：实时性强，单页面约120次请求/分钟，适合调试<br>
+                        • <b>标准</b>（数据5s/日志2s）：推荐配置，单页面约42次请求/分钟，平衡实时性与负载<br>
+                        • <b>低频</b>（数据30s/日志10s）：单页面约8次请求/分钟，适合多用户或低配服务器<br>
+                        • 数据刷新会触发所有区域重新计算平衡，区域越多开销越大
                     </div>
                 </div>
             </div>
@@ -192,8 +210,12 @@ function loadConfig() {
         .then(r => r.json())
         .then(data => {
             configData = data;
-            // 加载全局防抖设置
+            // 加载全局设置
             document.getElementById('globalDebounce').value = data.auto_dispatch_debounce || 5;
+            document.getElementById('globalPollInterval').value = data.poll_dispatch_interval || 60;
+            document.getElementById('globalDataInterval').value = data.data_refresh_interval || 5000;
+            document.getElementById('globalLogInterval').value = data.log_refresh_interval || 2000;
+            document.getElementById('globalEmptyTaskLimit').value = data.global_empty_task_limit ?? 4;
             renderVisualEditor(data);
             document.getElementById('sourceEditor').value = JSON.stringify(data, null, 2);
             loadBackups();
@@ -202,7 +224,27 @@ function loadConfig() {
 }
 
 function updateGlobalDebounce(value) {
-    configData.auto_dispatch_debounce = value;
+    configData.auto_dispatch_debounce = Math.max(value, 1);
+    syncSourceEditor();
+}
+
+function updateGlobalPollInterval(value) {
+    configData.poll_dispatch_interval = Math.max(value, 10);
+    syncSourceEditor();
+}
+
+function updateGlobalDataInterval(value) {
+    configData.data_refresh_interval = Math.max(value, 1000);
+    syncSourceEditor();
+}
+
+function updateGlobalLogInterval(value) {
+    configData.log_refresh_interval = Math.max(value, 500);
+    syncSourceEditor();
+}
+
+function updateGlobalEmptyTaskLimit(value) {
+    configData.global_empty_task_limit = Math.max(value, 0);
     syncSourceEditor();
 }
 
@@ -225,30 +267,26 @@ function renderVisualEditor(data) {
                 ['load_in','📦 其他来'],['load_out','📦 其他回']
             ].map(o=>`<option value="${o[0]}" ${taskType===o[0]?'selected':''}>${o[1]}</option>`).join('');
             const sharedChecked = t.shared ? 'checked' : '';
-            const autoFile = (t.name ? t.name + '.json' : '');
+            // 兼容旧配置：code 优先，无则取 name
+            const templateCode = t.code || t.name || '';
+            const displayName = t.display_name || '';
+            const autoFile = (templateCode ? templateCode + '.json' : '');
             templatesHtml += `<div class="template-row">
-                <input class="code-input" value="${t.name||''}" placeholder="模板代码" onchange="updateTemplateName('${key}',${idx},this.value)">
-                <span class="name-input text-muted small d-flex align-items-center" style="min-width:80px;" title="自动生成: ${autoFile}">📄 ${autoFile||'(自动)'}</span>
+                <input class="code-input" value="${templateCode}" placeholder="模板代码" title="计算用的模板代码，同时用于生成文件名" onchange="updateTemplateCode('${key}',${idx},this.value)">
+                <input class="name-input" value="${displayName}" placeholder="显示名称" title="看板界面显示的中文名称" onchange="updateTemplate('${key}',${idx},'display_name',this.value)">
+                <span class="text-muted small d-flex align-items-center" style="min-width:60px;" title="自动生成文件: ${autoFile}">📄 ${autoFile||'(自动)'}</span>
                 <select class="type-select" onchange="updateTemplate('${key}',${idx},'task_type',this.value)">${typeOptions}</select>
                 <label class="shared-check" title="跨区域共享模板"><input type="checkbox" ${sharedChecked} onchange="updateTemplate('${key}',${idx},'shared',this.checked)"> 共享</label>
                 <button class="btn btn-sm btn-outline-danger" onclick="removeTemplate('${key}',${idx})"><i class="bi bi-x"></i></button>
             </div>`;
         });
         card = document.createElement('div'); card.className='region-card';
-        card.draggable = true;
         card.dataset.regionKey = key;
-        // 拖动事件
-        card.addEventListener('dragstart', onDragStart);
-        card.addEventListener('dragenter', onDragEnter);
-        card.addEventListener('dragleave', onDragLeave);
-        card.addEventListener('dragover', onDragOver);
-        card.addEventListener('drop', onDrop);
-        card.addEventListener('dragend', onDragEnd);
         
         const enabledChecked = region.enabled ? 'checked' : '';
         const regionId = region.id !== undefined ? region.id : '-';
         card.innerHTML = `<div class="region-header">
-            <span><i class="bi bi-grip-vertical me-2" style="cursor:grab;color:var(--text-muted);"></i><span class="badge bg-secondary me-2">#${regionId}</span><strong>${key}</strong> <small class="text-muted ms-2">areaId: ${region.areaId||''}</small></span>
+            <span><span class="badge bg-secondary me-2">#${regionId}</span><strong>${key}</strong> <small class="text-muted ms-2">areaId（父）: ${region.areaId||''}</small></span>
             <div class="form-check form-switch d-inline-block">
                 <input class="form-check-input" type="checkbox" ${enabledChecked} onchange="updateRegionField('${key}','enabled',this.checked)">
                 <label class="form-check-label small">启用</label>
@@ -258,12 +296,12 @@ function renderVisualEditor(data) {
             <div class="row g-2 mb-3">
                 <div class="col-md-3"><label class="form-label small">区域标识</label>
                     <input class="form-control form-control-sm" value="${key}" onchange="updateRegionKey('${key}',this.value)"></div>
-                <div class="col-md-1"><label class="form-label small">areaId</label>
+                <div class="col-md-1"><label class="form-label small">areaId（父）</label>
                     <input class="form-control form-control-sm" value="${region.areaId||''}" onchange="updateRegionField('${key}','areaId',this.value)"></div>
                 <div class="col-md-2"><label class="form-label small">id</label>
                     <input class="form-control form-control-sm" type="number" value="${region.id||0}" onchange="updateRegionField('${key}','id',parseInt(this.value)||0)"></div>
-                <div class="col-md-4"><label class="form-label small">服务器</label>
-                    <input class="form-control form-control-sm" value="${region.server||''}" placeholder="10.68.2.31:7000" onchange="updateRegionField('${key}','server',this.value)"></div>
+                <div class="col-md-4"><label class="form-label small">服务器备注</label>
+                    <input class="form-control form-control-sm" value="${region.server||''}" placeholder="10.68.2.32（仅作展示）" onchange="updateRegionField('${key}','server',this.value)"></div>
                 <div class="col-md-2"><label class="form-label small">xmin</label>
                     <input class="form-control form-control-sm" type="number" value="${region.xmin||2}" onchange="updateRegionField('${key}','xmin',parseInt(this.value)||2)"></div>
                 <div class="col-md-2"><label class="form-label small">xmax</label>
@@ -272,89 +310,62 @@ function renderVisualEditor(data) {
             <div class="row g-2 mb-3">
                 <div class="col-md-3"><label class="form-label small">单次最大调车数</label>
                     <input class="form-control form-control-sm" type="number" value="${region.max_dispatch_once||3}" onchange="updateRegionField('${key}','max_dispatch_once',parseInt(this.value)||3)"></div>
+                <div class="col-md-3"><label class="form-label small">空车任务上限</label>
+                    <input class="form-control form-control-sm" type="number" value="${region.empty_task_limit ?? -1}" min="-1" max="100" onchange="updateRegionField('${key}','empty_task_limit',parseInt(this.value) ?? -1)">
+                    <div class="form-text">-1=使用全局, 0=不限制, >0=自定义</div></div>
             </div>
             <label class="form-label small fw-bold">模板列表：</label>${templatesHtml}
             <button class="btn btn-sm btn-outline-primary mt-1" onclick="addTemplate('${key}')"><i class="bi bi-plus"></i> 新增模板</button>
             <hr class="my-2">
             <details class="mb-2"><summary class="form-label small fw-bold" style="cursor:pointer;display:inline;">🚛 空车下发配置</summary>
             <div class="row g-2 mt-1">
-                <div class="col-md-5"><label class="form-label small">下发模板代码</label>
-                    <input class="form-control form-control-sm" value="${(region.empty_dispatch||{}).template||''}" placeholder="如 EmptyCarstoHY1_503" onchange="updateEmptyDispatch('${key}','template',this.value)"></div>
-                <div class="col-md-7"><label class="form-label small">下发地址 (URL)</label>
-                    <input class="form-control form-control-sm" value="${(region.empty_dispatch||{}).url||''}" placeholder="http://10.68.2.40:7000/ics/taskOrder/addTask" onchange="updateEmptyDispatch('${key}','url',this.value)"></div>
+                <div class="col-md-6"><label class="form-label small">空车来模板 (template_in)</label>
+                    <input class="form-control form-control-sm" value="${(region.empty_dispatch||{}).template_in||''}" placeholder="如 EmptyCarstoHY1_503" onchange="updateEmptyDispatch('${key}','template_in',this.value)"></div>
+                <div class="col-md-6"><label class="form-label small">空车回模板 (template_out)</label>
+                    <input class="form-control form-control-sm" value="${(region.empty_dispatch||{}).template_out||''}" placeholder="如 EmptyCarsfromHY1_503" onchange="updateEmptyDispatch('${key}','template_out',this.value)"></div>
+                <div class="col-md-12"><label class="form-label small">下发地址 (URL)</label>
+                    <input class="form-control form-control-sm" value="${(region.empty_dispatch||{}).url||''}" placeholder="http://10.68.2.32:7000/ics/taskOrder/addTask" onchange="updateEmptyDispatch('${key}','url',this.value)"></div>
             </div></details>
             <details class="mb-2"><summary class="form-label small fw-bold" style="cursor:pointer;display:inline;">🩺 自恢复配置</summary>
             <div class="row g-2 mt-1">
                 <div class="col-md-3"><label class="form-label small">启用</label>
                     <select class="form-select form-select-sm" onchange="updateRegionField('${key}','self_heal',{...configData['${key}']?.self_heal||{},enabled:this.value==='true'})">
-                        <option value="false" ${(region.self_heal||{}).enabled?'':'selected'}>关闭</option>
-                        <option value="true" ${(region.self_heal||{}).enabled?'selected':''}>启用</option>
+                        <option value="false" ${(region.self_heal||{}).enabled===false?'selected':''}>关闭</option>
+                        <option value="true" ${(region.self_heal||{}).enabled!==false?'selected':''}>启用</option>
                     </select></div>
                 <div class="col-md-3"><label class="form-label small">检查间隔(秒)</label>
                     <input class="form-control form-control-sm" type="number" value="${(region.self_heal||{}).check_interval||300}" onchange="updateSelfHeal('${key}','check_interval',parseInt(this.value)||300)"></div>
                 <div class="col-md-3"><label class="form-label small">异常超时恢复间隔(分钟)</label>
                     <input class="form-control form-control-sm" type="number" value="${(region.self_heal||{}).recover_timeout_minutes||30}" onchange="updateSelfHeal('${key}','recover_timeout_minutes',parseInt(this.value)||30)"></div>
-                <div class="col-md-3"><label class="form-label small">查询API路径</label>
-                    <input class="form-control form-control-sm" value="${(region.self_heal||{}).device_query_api||'/ics/out/device/list/deviceInfo'}" onchange="updateSelfHeal('${key}','device_query_api',this.value)"></div>
+                <div class="col-md-3"><label class="form-label small">查询API地址</label>
+                    <input class="form-control form-control-sm" placeholder="10.68.2.XX:7000/ics/out/device/list/deviceInfo" value="${(region.self_heal||{}).device_query_api||'10.68.2.XX:7000/ics/out/device/list/deviceInfo'}" onchange="updateSelfHeal('${key}','device_query_api',this.value)"></div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3"><label class="form-label small">🔋 低电量回空车</label>
+                    <select class="form-select form-select-sm" onchange="updateSelfHeal('${key}','low_battery_enabled',this.value==='true')">
+                        <option value="false" ${(region.self_heal||{}).low_battery_enabled!==true?'selected':''}>关闭</option>
+                        <option value="true" ${(region.self_heal||{}).low_battery_enabled===true?'selected':''}>启用</option>
+                    </select></div>
+                <div class="col-md-3"><label class="form-label small">低电量阈值(%) <small class="text-muted">-1=全局默认30%</small></label>
+                    <input class="form-control form-control-sm" type="number" min="-1" max="100" value="${(region.self_heal||{}).low_battery_threshold??-1}" onchange="updateSelfHeal('${key}','low_battery_threshold',parseInt(this.value)??-1)"></div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3"><label class="form-label small">⏰ 任务超时清理(小时) <small class="text-muted">0=禁用</small></label>
+                    <input class="form-control form-control-sm" type="number" min="0" max="72" value="${(region.self_heal||{}).task_timeout_hours||6}" onchange="updateSelfHeal('${key}','task_timeout_hours',parseInt(this.value)||6)"></div>
+                <div class="col-md-3"><label class="form-label small">🔄 定时全量查询(小时) <small class="text-muted">0=禁用</small></label>
+                    <input class="form-control form-control-sm" type="number" min="0" max="24" value="${(region.self_heal||{}).fetch_all_interval_hours||0}" onchange="updateSelfHeal('${key}','fetch_all_interval_hours',parseInt(this.value)||0)"></div>
             </div></details></div>`;
         container.appendChild(card);
     });
 }
 
-// ========== 拖动排序 ==========
-let dragSrcKey = null;
-
-function onDragStart(e) {
-    dragSrcKey = this.dataset.regionKey;
-    this.style.opacity = '0.5';
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', this.dataset.regionKey);
-}
-
-function onDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-}
-
-function onDragEnter(e) {
-    e.preventDefault();
-    this.classList.add('drag-over');
-}
-
-function onDragLeave(e) {
-    this.classList.remove('drag-over');
-}
-
-function onDrop(e) {
-    e.preventDefault();
-    this.classList.remove('drag-over');
-    const targetKey = this.dataset.regionKey;
-    if (!dragSrcKey || dragSrcKey === targetKey) return;
-    
-    // 交换 id 值
-    const srcId = configData[dragSrcKey].id || 999;
-    const tgtId = configData[targetKey].id || 999;
-    configData[dragSrcKey].id = tgtId;
-    configData[targetKey].id = srcId;
-    
-    renderVisualEditor(configData);
-    syncSourceEditor();
-    showToast('区域顺序已调整', 'success');
-}
-
-function onDragEnd(e) {
-    this.style.opacity = '1';
-    document.querySelectorAll('.region-card').forEach(c => c.classList.remove('drag-over'));
-    dragSrcKey = null;
-}
-
 function updateRegionField(key, field, value) { if(configData[key]){configData[key][field]=value;syncSourceEditor();} }
 function updateRegionKey(oldKey, newKey) { if(oldKey===newKey||!newKey)return;configData[newKey]=configData[oldKey];delete configData[oldKey];renderVisualEditor(configData);syncSourceEditor(); }
 function updateTemplate(rk,idx,f,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx][f]=v;syncSourceEditor();} }
-function updateTemplateName(rk,idx,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx].name=v;configData[rk].templates[idx].file=v? v+'.json' : '';renderVisualEditor(configData);syncSourceEditor();} }
+function updateTemplateCode(rk,idx,v) { if(configData[rk]&&configData[rk].templates[idx]){configData[rk].templates[idx].code=v;configData[rk].templates[idx].file=v? v+'.json' : '';renderVisualEditor(configData);syncSourceEditor();} }
 function updateSelfHeal(rk, field, value) { if(configData[rk]){if(!configData[rk].self_heal)configData[rk].self_heal={};configData[rk].self_heal[field]=value;syncSourceEditor();} }
 function updateEmptyDispatch(rk, field, value) { if(configData[rk]){if(!configData[rk].empty_dispatch)configData[rk].empty_dispatch={};configData[rk].empty_dispatch[field]=value;syncSourceEditor();} }
-function addTemplate(rk) { if(!configData[rk])return;if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({name:'',file:'',task_type:'load_in',shared:false});renderVisualEditor(configData);syncSourceEditor(); }
+function addTemplate(rk) { if(!configData[rk])configData[rk]={};if(!configData[rk].templates)configData[rk].templates=[];configData[rk].templates.push({code:'',display_name:'',file:'',task_type:'load_in',shared:false});renderVisualEditor(configData);syncSourceEditor(); }
 function removeTemplate(rk,idx) { if(!configData[rk])return;configData[rk].templates.splice(idx,1);renderVisualEditor(configData);syncSourceEditor(); }
 function addRegion() {
     const keys = Object.keys(configData);

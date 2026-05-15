@@ -48,7 +48,7 @@ python快捷处理sql脚本/
 
 **使用方法**：
 ```bash
-python copy_robot.py --source-host 10.68.2.32 --source-password CCshenda889 \
+python3 copy_robot.py --source-host 10.68.2.32 --source-password CCshenda889 \
                      --target-host 10.68.2.40 --target-password CCshenda889 \
                      --device-type "RTA-C060-Q-2L-410" --table agv_robot
 ```
@@ -63,7 +63,7 @@ python copy_robot.py --source-host 10.68.2.32 --source-password CCshenda889 \
 
 **使用方法**：
 ```bash
-python add_device_ext.py --source-host 10.68.2.27 --source-password CCshenda889 \
+python3 add_device_ext.py --source-host 10.68.2.27 --source-password CCshenda889 \
                          --target-host 10.68.2.40 --target-password CCshenda889 \
                          --group-name "所有四代车脚本用" --target-area 3
 ```
@@ -125,7 +125,7 @@ pip install pymysql
 ```bash
 # 1. 修改 自动同步设备脚本.py 顶部的配置参数
 # 2. 运行脚本
-python 自动同步设备脚本.py
+python3 自动同步设备脚本.py
 
 # 脚本会显示当前配置并询问是否继续
 # 输入 y 确认执行，将自动调用 copy_robot.py 和 add_device_ext.py
@@ -134,10 +134,10 @@ python 自动同步设备脚本.py
 ### 示例2：同步特定型号设备
 ```bash
 # 使用主脚本（需先修改配置）
-python 自动同步同一型号设备.py
+python3 自动同步同一型号设备.py
 
 # 使用可配置脚本
-python function/copy_robot.py \
+python3 function/copy_robot.py \
   --source-host 10.68.2.32 \
   --source-password CCshenda889 \
   --target-host 10.68.2.40 \
@@ -147,7 +147,7 @@ python function/copy_robot.py \
 
 ### 示例3：同步设备组扩展信息
 ```bash
-python function/add_device_ext.py \
+python3 function/add_device_ext.py \
   --source-host 10.68.2.27 \
   --source-password CCshenda889 \
   --target-host 10.68.2.40 \
@@ -158,8 +158,8 @@ python function/add_device_ext.py \
 
 ### 示例4：查看帮助信息
 ```bash
-python function/copy_robot.py -h
-python function/add_device_ext.py -h
+python3 function/copy_robot.py -h
+python3 function/add_device_ext.py -h
 ```
 
 ## 脚本执行流程

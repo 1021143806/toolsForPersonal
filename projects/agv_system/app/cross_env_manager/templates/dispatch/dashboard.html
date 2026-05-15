@@ -53,6 +53,247 @@
     .balance-item .label { font-size: 0.75rem; opacity: 0.7; }
     .balance-divider { width: 1px; height: 40px; background: var(--border-color); }
 
+    /* 区域设备网格 */
+    .device-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0.6rem 1rem;
+        border-top: 1px solid var(--border-color);
+        min-height: 2.5rem;
+        align-items: center;
+    }
+    .device-grid:empty::after {
+        content: '暂无设备';
+        font-size: 0.8rem;
+        opacity: 0.4;
+    }
+    .agv-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 6px;
+        background: var(--detail-card-bg);
+        border: 1.5px solid var(--border-color);
+        font-size: 0.78rem;
+        transition: all 0.3s ease;
+        cursor: default;
+        white-space: nowrap;
+    }
+    .agv-icon .agv-sprite {
+        width: 24px; height: 24px;
+        background-image: url('/static/img/agv/rcsagv.png');
+        background-size: 240px 240px;  /* 1280/1280 缩放到 240 = 5.33x 缩小 */
+        image-rendering: auto;
+        flex-shrink: 0;
+    }
+    /* 蓝色AGV（空闲/空车任务中）- 第6行第1列: 0, -120px */
+    .agv-icon .agv-sprite.blue {
+        background-position: 0 -120px;
+    }
+    /* 青蓝+黄色AGV（负载带货架任务中）- 第6行第9列: -192px, -120px */
+    .agv-icon .agv-sprite.loaded {
+        background-position: -192px -120px;
+    }
+    /* 灰色AGV（离线设备）- 第6行第5列: -96px, -120px */
+    .agv-icon .agv-sprite.offline {
+        background-position: -96px -120px;
+    }
+    .agv-icon .dev-num { font-weight: 600; }
+    .agv-icon:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    /* 在区域中（空闲） */
+    .agv-icon.idle {
+        border-color: #28a745;
+        background: rgba(40, 167, 69, 0.06);
+    }
+    .agv-icon.idle .dev-num { color: #28a745; }
+    /* 待确认（刚完成任务，等待设备检查确认） */
+    .agv-icon.pending {
+        border-color: #1a8e71;
+        background: rgba(26, 142, 113, 0.06);
+    }
+    .agv-icon.pending .dev-num { color: #1a8e71; }
+    /* 任务中（自恢复查出 InTask） */
+    .agv-icon.busy {
+        border-color: #0d6efd;
+        background: rgba(13, 110, 253, 0.06);
+    }
+    .agv-icon.busy .dev-num { color: #0d6efd; }
+    /* 充电中（自恢复查出 Charging） */
+    .agv-icon.charging {
+        border-color: #ffc107;
+        background: rgba(255, 193, 7, 0.06);
+    }
+    .agv-icon.charging .dev-num { color: #cc9a06; }
+    /* 异常（自恢复查出 Error 等） */
+    .agv-icon.error {
+        border-color: #dc3545;
+        background: rgba(220, 53, 69, 0.06);
+    }
+    .agv-icon.error .dev-num { color: #dc3545; }
+    /* 来负载 */
+    .agv-icon.load-in {
+        border-color: #0d6efd;
+        background: rgba(13, 110, 253, 0.06);
+    }
+    .agv-icon.load-in .dev-num { color: #0d6efd; }
+    .agv-icon.load-in .agv-sprite { animation: agvPulse 1.5s ease-in-out infinite; }
+    /* 回负载 */
+    .agv-icon.load-out {
+        border-color: #fd7e14;
+        background: rgba(253, 126, 20, 0.06);
+    }
+    .agv-icon.load-out .dev-num { color: #fd7e14; }
+    .agv-icon.load-out .agv-sprite { animation: agvPulse 1.5s ease-in-out infinite; }
+    /* 来空车 */
+    .agv-icon.empty-in {
+        border-color: #6ea8fe;
+        background: rgba(110, 168, 254, 0.06);
+    }
+    .agv-icon.empty-in .dev-num { color: #6ea8fe; }
+    .agv-icon.empty-in .agv-sprite { animation: agvPulse 1.5s ease-in-out infinite; }
+    /* 回空车 */
+    .agv-icon.empty-out {
+        border-color: #feb272;
+        background: rgba(254, 178, 114, 0.06);
+    }
+    .agv-icon.empty-out .dev-num { color: #feb272; }
+    .agv-icon.empty-out .agv-sprite { animation: agvPulse 1.5s ease-in-out infinite; }
+    @keyframes agvPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    /* 电池指示器 */
+    .battery-indicator {
+        display: inline-block;
+        width: 18px; height: 9px;
+        border: 1px solid #666;
+        border-radius: 2px;
+        position: relative;
+        margin-left: 2px;
+        vertical-align: middle;
+        background: #333;
+    }
+    .battery-indicator::after {
+        content: '';
+        position: absolute;
+        right: -3px; top: 2px;
+        width: 2px; height: 5px;
+        background: #666;
+        border-radius: 0 1px 1px 0;
+    }
+    .battery-indicator::before {
+        content: '';
+        position: absolute;
+        left: 1px; top: 1px;
+        bottom: 1px;
+        border-radius: 1px;
+    }
+    .battery-indicator.battery-high::before {
+        background: #28a745;
+        right: 1px;
+    }
+    .battery-indicator.battery-mid::before {
+        background: #ffc107;
+        right: 40%;
+    }
+    .battery-indicator.battery-low::before {
+        background: #dc3545;
+        right: 70%;
+        animation: batteryBlink 1s ease-in-out infinite;
+    }
+    @keyframes batteryBlink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    /* 低电量回空车 badge */
+    .low-battery-badge {
+        background: #6f42c1 !important;
+        color: #fff !important;
+        font-size: 0.65rem;
+        padding: 1px 5px;
+        border-radius: 10px;
+        margin-left: 2px;
+        vertical-align: middle;
+    }
+    .agv-icon.entering {
+        animation: agvEnter 0.4s ease-out;
+    }
+    @keyframes agvEnter {
+        from { opacity: 0; transform: scale(0.8) translateY(-8px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .agv-icon.leaving {
+        animation: agvLeave 0.4s ease-in forwards;
+    }
+    @keyframes agvLeave {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.8); }
+    }
+
+    .agv-tooltip {
+        position: fixed;
+        z-index: 9999;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        pointer-events: none;
+        white-space: nowrap;
+    }
+    .agv-tooltip .tt-code { color: var(--text-muted); font-family: monospace; }
+    .agv-tooltip .tt-label { font-weight: 600; }
+    .agv-tooltip .tt-time { opacity: 0.6; }
+    .agv-tooltip .tt-battery { opacity: 0.7; }
+
+    /* 离线设备 */
+    .agv-icon.offline-device {
+        border-color: #6c757d;
+        background: rgba(108, 117, 125, 0.06);
+        opacity: 0.7;
+    }
+    .agv-icon.offline-device .dev-num { color: #6c757d; }
+
+    /* 设备历史展开区域 */
+    .device-history-section {
+        border-top: 1px dashed var(--border-color);
+        padding: 0.4rem 1rem;
+        display: none;
+    }
+    .device-history-section.expanded {
+        display: block;
+    }
+    .device-history-section .history-label {
+        font-size: 0.7rem;
+        opacity: 0.5;
+        margin-bottom: 0.3rem;
+    }
+    .device-history-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .device-history-actions .btn {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+    }
+    .detail-toggle {
+        font-size: 0.75rem;
+        cursor: pointer;
+        user-select: none;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+    .detail-toggle:hover { opacity: 1; }
+
     .template-table { width: 100%; font-size: 0.9rem; }
     .template-table th {
         font-weight: 600; font-size: 0.8rem;
@@ -68,7 +309,7 @@
     .template-table tr:hover td { background: var(--detail-card-bg); }
     .template-table .tpl-name {
         word-break: break-all;
-        max-width: 140px;
+        max-width: 200px;
         display: inline-block;
         vertical-align: middle;
     }
@@ -162,7 +403,7 @@
             <p class="text-muted mb-0">实时监控各区域设备平衡状态，自动调度空车任务</p>
         </div>
         <div>
-            <button id="refreshBtn" class="btn btn-outline-primary btn-sm me-2" onclick="refreshData()">
+            <button id="refreshBtn" class="btn btn-outline-primary btn-sm me-2" onclick="refreshAll()">
                 <i class="bi bi-arrow-clockwise"></i> 刷新
             </button>
             <a href="{{ url_for('dispatch.config_page') }}" class="btn btn-outline-secondary btn-sm me-2">
@@ -219,14 +460,63 @@
             </div>
         </div>
         <div class="area-body" style="padding:0;">
-            <div class="d-flex border-bottom" style="padding:0.5rem 1rem;gap:0.25rem;">
+            <div class="d-flex border-bottom align-items-center" style="padding:0.5rem 1rem;gap:0.25rem;">
                 <button class="btn btn-sm log-tab active" data-filter="all" onclick="switchLogTab('all')">全部</button>
                 <button class="btn btn-sm log-tab" data-filter="execute" onclick="switchLogTab('execute')">执行</button>
                 <button class="btn btn-sm log-tab" data-filter="report_status" onclick="switchLogTab('report_status')">上报</button>
                 <button class="btn btn-sm log-tab" data-filter="clean" onclick="switchLogTab('clean')">清理</button>
+                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="exportLogs()" title="导出全部日志（含大日志）">📥 导出</button>
+                <input type="text" id="logSearch" class="form-control form-control-sm ms-auto" placeholder="搜索日志..." style="width:160px;" oninput="onLogSearch()">
             </div>
-            <div id="logContainer" style="max-height:300px;overflow-y:auto;padding:0.5rem 1rem;">
+            <div id="logContainer" style="max-height:300px;overflow-y:auto;padding:0.5rem 1rem;" onscroll="onLogScroll()">
                 <div class="text-center text-muted py-3">加载中...</div>
+                <div class="text-center py-1" id="easterEgg" style="opacity:0.08;cursor:default;user-select:none;font-size:0.7rem;transition:opacity 0.3s;"
+                     onclick="if(parseFloat(this.style.opacity)>=0.4)window.location.href='/dispatch/test'"
+                     title="彩蛋：滚动到底部点击进入测试">©</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 查看报文模态框 -->
+<div class="modal fade" id="rawDataModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="rawDataModalTitle"><i class="bi bi-file-code me-2"></i>报文内容</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rawDataStatus" style="display:none;padding:0.5rem 1rem;border-radius:6px;margin-bottom:0.75rem;font-size:0.9rem;font-weight:600;"></div>
+                <pre id="rawDataContent" style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:8px;max-height:60vh;overflow:auto;font-size:0.85rem;white-space:pre-wrap;word-break:break-all;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-outline-primary" onclick="copyRawData()"><i class="bi bi-clipboard"></i> 复制</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 设备详情 Modal -->
+<div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-truck me-2"></i><span id="dmTitle">设备详情</span></h6>
+                <div class="btn-group btn-group-sm me-2" id="dmTabs" style="display:none;">
+                    <button class="btn btn-outline-secondary active" onclick="switchDeviceTab('info')">📋 详情</button>
+                    <button class="btn btn-outline-secondary" onclick="switchDeviceTab('trace')">🔍 任务追踪</button>
+                </div>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-2">
+                <div id="dmBody">
+                    <div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>加载中...</div>
+                </div>
+                <div id="dmTrace" style="display:none;max-height:55vh;overflow-y:auto;">
+                    <div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>加载追踪数据...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -238,34 +528,91 @@
 {% block extra_js %}
 <script src="/static/vendor/chart.js/chart.min.js"></script>
 <script>
-let refreshInterval = null;
+let logTimer = null;
+let dataTimer = null;
+let calcInfoTimer = null;
 let chartInstances = {};
+let pageVisible = true;
 
-let lastDataRefresh = 0;
-const DATA_REFRESH_DEBOUNCE = 100; // 0.1s 防抖
+// 刷新间隔（默认值，会被 API 返回的 refresh_config 覆盖）
+let LOG_INTERVAL = 2000;
+let DATA_INTERVAL = 5000;
 
 $(document).ready(function() {
     refreshData();
-    // 日志每0.5s刷新，连带刷新数据（带防抖）
-    refreshInterval = setInterval(refreshAll, 500);
+    loadGlobalLog();
+    startTimers();
+    
+    // 日志容器滚动监听：滚到顶部自动开启自动滚动，往下翻自动关闭
+    const logContainer = document.getElementById('logContainer');
+    if (logContainer) {
+        logContainer.addEventListener('scroll', onLogScroll);
+    }
+    
+    // 页面可见性变化时暂停/恢复轮询
+    document.addEventListener('visibilitychange', () => {
+        pageVisible = !document.hidden;
+        if (pageVisible) {
+            refreshData();
+            loadGlobalLog();
+            startTimers();
+        } else {
+            stopTimers();
+        }
+    });
 });
 
-function refreshAll() {
-    if (logAutoScroll) loadGlobalLog();
-    refreshDataDebounced();
+function startTimers() {
+    stopTimers();
+    logTimer = setInterval(loadGlobalLog, LOG_INTERVAL);
+    dataTimer = setInterval(refreshData, DATA_INTERVAL);
+    calcInfoTimer = setInterval(updateCalcInfoTimestamps, 1000);
 }
 
-function refreshDataDebounced() {
-    const now = Date.now();
-    if (now - lastDataRefresh < DATA_REFRESH_DEBOUNCE) return;
-    lastDataRefresh = now;
+function stopTimers() {
+    if (logTimer) { clearInterval(logTimer); logTimer = null; }
+    if (dataTimer) { clearInterval(dataTimer); dataTimer = null; }
+    if (calcInfoTimer) { clearInterval(calcInfoTimer); calcInfoTimer = null; }
+}
+
+function formatTimeDiff(targetMs, isFuture) {
+    const diff = Math.floor((Date.now() - targetMs) / 1000);
+    const seconds = Math.abs(diff);
+    const suffix = diff < 0 ? '后' : '前';
+    if (seconds < 60) return `${seconds}s${suffix}`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m${seconds % 60}s${suffix}`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}h${m}m${suffix}`;
+}
+
+function updateCalcInfoTimestamps() {
+    document.querySelectorAll('[data-timestamp]').forEach(el => {
+        const ts = el.getAttribute('data-timestamp');
+        if (!ts) return;
+        el.textContent = formatTimeDiff(new Date(ts).getTime());
+    });
+}
+
+function refreshAll() {
     refreshData();
+    loadGlobalLog();
 }
 
 function refreshData() {
     fetch('/api/dispatch/status')
         .then(r => r.json())
         .then(data => {
+            // 动态更新刷新间隔
+            if (data.refresh_config) {
+                const newDataInt = data.refresh_config.data_interval || 5000;
+                const newLogInt = data.refresh_config.log_interval || 2000;
+                if (newDataInt !== DATA_INTERVAL || newLogInt !== LOG_INTERVAL) {
+                    DATA_INTERVAL = newDataInt;
+                    LOG_INTERVAL = newLogInt;
+                    startTimers();  // 重启定时器
+                }
+            }
             renderSummary(data.summary);
             const container = document.getElementById('areaCardsContainer');
             if (!container.hasChildNodes() || container.children.length === 0) {
@@ -277,13 +624,110 @@ function refreshData() {
         .catch(err => console.error('获取数据失败:', err));
 }
 
+// 只刷新单个区域（不全量刷新所有区域）
+function refreshSingleRegion(regionKey) {
+    fetch('/api/dispatch/status')
+        .then(r => r.json())
+        .then(data => {
+            const area = (data.areas || []).find(a => a.region_key === regionKey);
+            if (area) {
+                updateSingleArea(area);
+            }
+        })
+        .catch(err => console.error('刷新单区域失败:', err));
+}
+
+// 更新单个区域卡片
+function updateSingleArea(area) {
+    const card = document.querySelector(`[data-region="${area.region_key}"]`) ||
+                 document.getElementById('card-' + area.region_key);
+    if (!card) return;
+    
+    // 更新设备网格
+    const deviceGrid = card.querySelector('.device-grid');
+    if (deviceGrid) {
+        const currentDevs = filterCurrentDevices(area.current_devices || [], area.pending_devices || []);
+        const pendingDevs = area.pending_devices || [];
+        const allDevs = [...currentDevs.map(d => ({...d, isPending: false})), ...pendingDevs.map(d => ({...d, isPending: true}))];
+        allDevs.sort((a, b) => (a.create_time || '').localeCompare(b.create_time || ''));
+        
+        const newDataMap = {};
+        allDevs.forEach(d => { newDataMap[d.deviceNum] = d; });
+        const newNums = new Set(allDevs.map(d => d.deviceNum));
+        
+        const existingIcons = deviceGrid.querySelectorAll('.agv-icon');
+        existingIcons.forEach(icon => {
+            const dn = icon.querySelector('.dev-num')?.textContent;
+            if (!dn) return;
+            if (!newNums.has(dn)) {
+                icon.classList.add('leaving');
+                setTimeout(() => icon.remove(), 400);
+            }
+        });
+        
+        const existingNums = new Set(Array.from(deviceGrid.querySelectorAll('.agv-icon')).map(el => el.querySelector('.dev-num')?.textContent));
+        allDevs.forEach(d => {
+            if (!existingNums.has(d.deviceNum)) {
+                const html = renderDeviceIcon(d, d.isPending);
+                const temp = document.createElement('span');
+                temp.innerHTML = html;
+                const newIcon = temp.firstChild;
+                newIcon.classList.add('entering');
+                deviceGrid.appendChild(newIcon);
+            }
+        });
+    }
+    
+    // 更新历史设备网格
+    updateHistoryDeviceGrid(area.region_key);
+    
+    // 更新公式行
+    const formulaRow = card.querySelector('.formula-row');
+    if (formulaRow) formulaRow.innerHTML = getFormulaText(area);
+    
+    // 更新计算信息行
+    const calcInfoRow = card.querySelector('.calc-info-row');
+    if (calcInfoRow) calcInfoRow.innerHTML = getCalcInfoText(area);
+}
+
 let allLogs = [];
 let logFilter = 'all';
 let logAutoScroll = true;
 
+// 滚动时自动同步开关状态：顶部→开，往下→关
+function onLogScroll() {
+    const container = document.getElementById('logContainer');
+    const checkbox = document.getElementById('logAutoScroll');
+    if (!container || !checkbox) return;
+    const atTop = container.scrollTop <= 10;
+    if (atTop !== logAutoScroll) {
+        logAutoScroll = atTop;
+        checkbox.checked = atTop;
+        if (atTop) {
+            if (!logTimer) logTimer = setInterval(loadGlobalLog, LOG_INTERVAL);
+        } else {
+            if (logTimer) { clearInterval(logTimer); logTimer = null; }
+        }
+    }
+    // 彩蛋：滚动到底部时 © 变为50%透明度
+    const egg = document.getElementById('easterEgg');
+    if (egg) {
+        const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 10;
+        egg.style.opacity = atBottom ? '0.5' : '0.08';
+        egg.style.cursor = atBottom ? 'pointer' : 'default';
+    }
+}
+
 function toggleLogAutoScroll() {
     logAutoScroll = document.getElementById('logAutoScroll').checked;
-    if (logAutoScroll) scrollLogToTop();
+    if (logAutoScroll) {
+        scrollLogToTop();
+        // 恢复日志轮询
+        if (!logTimer) logTimer = setInterval(loadGlobalLog, LOG_INTERVAL);
+    } else {
+        // 停止日志轮询
+        if (logTimer) { clearInterval(logTimer); logTimer = null; }
+    }
 }
 
 function switchLogTab(filter) {
@@ -306,11 +750,21 @@ function getLogActionMeta(action, level) {
 }
 
 function filterLogs(logs, filter) {
-    if (filter === 'all') return logs;
-    if (filter === 'execute') return logs.filter(l => l.action && l.action.startsWith('execute'));
-    if (filter === 'report_status') return logs.filter(l => l.action === 'report_status');
-    if (filter === 'clean') return logs.filter(l => l.action && (l.action.startsWith('clean') || l.action.startsWith('clean_simulated')));
-    return logs;
+    let result = logs;
+    if (filter === 'execute') result = result.filter(l => l.action && l.action.startsWith('execute'));
+    else if (filter === 'report_status') result = result.filter(l => l.action === 'report_status');
+    else if (filter === 'clean') result = result.filter(l => l.action && (l.action.startsWith('clean') || l.action.startsWith('clean_simulated')));
+    // 文本搜索筛选
+    const searchInput = document.getElementById('logSearch');
+    const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    if (searchText) {
+        result = result.filter(l =>
+            (l.region_key || '').toLowerCase().includes(searchText) ||
+            (l.detail || '').toLowerCase().includes(searchText) ||
+            (l.action || '').toLowerCase().includes(searchText)
+        );
+    }
+    return result;
 }
 
 function renderLogs() {
@@ -324,7 +778,7 @@ function renderLogs() {
         return;
     }
     
-    container.innerHTML = filtered.map(log => {
+    container.innerHTML = filtered.map((log, idx) => {
         const time = log.time || '';
         const timeStr = time.length > 16 ? time.slice(11, 19) : time;
         const action = log.action || '';
@@ -332,13 +786,51 @@ function renderLogs() {
         const region = log.region_key || '';
         const level = log.level || 'info';
         const meta = getLogActionMeta(action, level);
+        const hasRaw = log.raw_data && Object.keys(log.raw_data).length > 0;
+        // 使用日志唯一标识（time+action+detail）代替数组索引，避免日志更新后索引错位
+        const logId = encodeURIComponent(time + '|' + action + '|' + detail);
+        const rawTitle = action === 'execute' ? '查看下发报文' : '查看上报报文';
+        const rawBtn = hasRaw ? `<button class="btn btn-sm btn-outline-info ms-1" style="font-size:0.65rem;padding:0 0.3rem;" onclick="viewLogRawData('${logId}')" title="${rawTitle}"><i class="bi bi-file-code"></i></button>` : '';
+        
+        // 从 detail 中提取模板名、设备编号和状态，生成前置标签
+        const devMatch = detail.match(/(\S+)\s+(\S+)\s+status=(\d+)/);
+        let prefixBadges = '';
+        let cleanDetail = detail;
+        if (devMatch) {
+            const tplName = devMatch[1];
+            const devNum = devMatch[2];
+            const statusNum = parseInt(devMatch[3]);
+            // 状态颜色
+            let stCls = 'bg-secondary';
+            let stLabel = 'status=' + statusNum;
+            if (statusNum === 6) { stCls = 'bg-info text-dark'; stLabel = '运行中'; }
+            else if (statusNum === 8) { stCls = 'bg-success'; stLabel = '完成'; }
+            else if (statusNum === 3) { stCls = 'bg-warning text-dark'; stLabel = '已取消'; }
+            else if (statusNum === 7) { stCls = 'bg-danger'; stLabel = '失败'; }
+            prefixBadges = `<span class="badge bg-primary me-1" style="font-size:0.7rem;">${tplName}</span>` +
+                           `<span class="badge bg-light text-dark border me-1" style="font-size:0.7rem;">${devNum}</span>` +
+                           `<span class="badge ${stCls} me-1" style="font-size:0.7rem;">${stLabel}</span>`;
+            // 去掉 detail 中已提取的部分（模板名 设备号 status=N），保留后面的消息
+            cleanDetail = detail.replace(/^\S+\s+\S+\s+status=\d+\s*/, '');
+        }
+        // 提取重复标记（放在 detail 开头，格式: (重复#N)）
+        let dupBadge = '';
+        const dupMatch = cleanDetail.match(/^\(重复#(\d+)\)\s*/);
+        if (dupMatch) {
+            dupBadge = `<span class="badge bg-warning text-dark me-1" style="font-size:0.7rem;">重复#${dupMatch[1]}</span>`;
+            cleanDetail = cleanDetail.replace(/^\(重复#\d+\)\s*/, '');
+        }
+        // orderId 加框（兼容含空格的订单ID，匹配到 : 或行尾）
+        cleanDetail = cleanDetail.replace(/orderId=(.+?)(?=: |$)/g, '<span class="badge bg-light text-dark border me-1" style="font-size:0.7rem;">订单:$1</span>');
         
         return `<div class="log-item">
             <div class="log-time">${timeStr}</div>
             <div class="log-icon ${meta.color}"><i class="bi ${meta.icon}"></i></div>
             <div style="flex:1;min-width:0;">
                 <span class="badge bg-secondary me-1" style="font-size:0.7rem;">${region}</span>
-                <span>${detail || action}</span>
+                ${prefixBadges}
+                ${dupBadge}
+                <span>${cleanDetail || action}</span>${rawBtn}
             </div>
         </div>`;
     }).join('');
@@ -348,24 +840,214 @@ function renderLogs() {
 
 function scrollLogToTop() {
     const container = document.getElementById('logContainer');
-    if (container) container.scrollTop = 0;
+    if (!container) return;
+    container.scrollTop = 0;
 }
 
+let _lastLogTime = '';  // 记录最后一条日志的时间戳，用于增量拉取
+
 function loadGlobalLog() {
-    fetch('/api/dispatch/global_log?_=' + Date.now())
+    if (_searchMode) return;  // 搜索模式下跳过自动刷新
+    let url = '/api/dispatch/global_log';
+    if (_lastLogTime) {
+        url += '?since=' + encodeURIComponent(_lastLogTime);
+    }
+    fetch(url)
         .then(r => {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
         .then(data => {
-            allLogs = data.logs || [];
-            renderLogs();
+            const newLogs = data.logs || [];
+            if (newLogs.length > 0) {
+                // 更新最后时间戳
+                _lastLogTime = newLogs[0].time || _lastLogTime;
+                if (_lastLogTime && !allLogs.length) {
+                    // 首次加载：全量替换
+                    allLogs = newLogs;
+                } else {
+                    // 增量模式：合并去重（按 time+action+detail 去重）
+                    const existingKeys = new Set(allLogs.map(l => (l.time||'') + '|' + (l.action||'') + '|' + (l.detail||'')));
+                    newLogs.forEach(l => {
+                        const key = (l.time||'') + '|' + (l.action||'') + '|' + (l.detail||'');
+                        if (!existingKeys.has(key)) {
+                            allLogs.unshift(l);
+                        }
+                    });
+                    // 缓存最多400条
+                    if (allLogs.length > 400) {
+                        allLogs = allLogs.slice(0, 400);
+                    }
+                }
+                renderLogs();
+            }
         })
         .catch(err => {
             console.error('加载日志失败:', err);
             const container = document.getElementById('logContainer');
-            if (container) container.innerHTML = '<div class="text-center text-muted py-3">加载日志失败</div>';
+            if (container && !allLogs.length) {
+                container.innerHTML = '<div class="text-center text-muted py-3">加载日志失败</div>';
+            }
         });
+}
+
+// 搜索时加载大日志并暂停自动刷新
+let _searchMode = false;
+let _archiveLogsLoaded = false;
+
+function onLogSearch() {
+    const searchInput = document.getElementById('logSearch');
+    const searchText = searchInput ? searchInput.value.trim() : '';
+    
+    if (searchText && !_archiveLogsLoaded) {
+        // 有搜索内容且还没加载大日志：加载大日志
+        _searchMode = true;
+        stopLogTimer();
+        fetch('/api/dispatch/global_log/export')
+            .then(r => r.json())
+            .then(archiveLogs => {
+                _archiveLogsLoaded = true;
+                // 合并去重
+                const existingKeys = new Set(allLogs.map(l => (l.time||'') + '|' + (l.action||'') + '|' + (l.detail||'')));
+                (archiveLogs || []).forEach(l => {
+                    const key = (l.time||'') + '|' + (l.action||'') + '|' + (l.detail||'');
+                    if (!existingKeys.has(key)) {
+                        allLogs.push(l);
+                    }
+                });
+                allLogs.sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+                renderLogs();
+            })
+            .catch(() => { renderLogs(); });
+    } else if (!searchText && _searchMode) {
+        // 清空搜索：恢复自动刷新
+        _searchMode = false;
+        startLogTimer();
+    }
+    renderLogs();
+}
+
+function stopLogTimer() {
+    if (logTimer) { clearInterval(logTimer); logTimer = null; }
+}
+
+function startLogTimer() {
+    stopLogTimer();
+    logTimer = setInterval(loadGlobalLog, LOG_INTERVAL);
+}
+
+function exportLogs() {
+    // 如果有筛选条件，导出筛选后的数据；否则导出全部
+    const searchInput = document.getElementById('logSearch');
+    const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const filtered = filterLogs(allLogs, logFilter);
+    
+    if (searchText || logFilter !== 'all') {
+        // 有筛选：导出筛选后的数据
+        const blob = new Blob([JSON.stringify(filtered, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dispatch_logs_filtered_' + new Date().toISOString().slice(0,19).replace(/:/g,'') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    } else {
+        // 无筛选：导出全部（含大日志）
+        window.open('/api/dispatch/global_log/export', '_blank');
+    }
+}
+
+let currentRawData = null;
+
+function viewLogRawData(logId) {
+    const filtered = filterLogs(allLogs, logFilter);
+    const log = filtered.find(l => {
+        const id = encodeURIComponent((l.time || '') + '|' + (l.action || '') + '|' + (l.detail || ''));
+        return id === logId;
+    });
+    if (!log || !log.raw_data) return;
+    currentRawData = log.raw_data;
+    
+    // 根据操作类型格式化显示内容
+    const titleEl = document.getElementById('rawDataModalTitle');
+    const contentEl = document.getElementById('rawDataContent');
+    if (log.action === 'execute' && log.raw_data.request_body) {
+        // 下发日志：显示请求+响应报文
+        titleEl.innerHTML = '<i class="bi bi-send me-2"></i>下发报文详情';
+        const rd = log.raw_data;
+        const statusEl = document.getElementById('rawDataStatus');
+        
+        // 响应状态条
+        if (rd.response_body) {
+            const respCode = rd.response_body.code;
+            const respDesc = rd.response_body.desc || '';
+            const isSuccess = respCode === 1000;
+            statusEl.style.display = 'block';
+            statusEl.style.background = isSuccess ? '#064e3b' : '#7f1d1d';
+            statusEl.style.color = isSuccess ? '#6ee7b7' : '#fca5a5';
+            statusEl.style.border = '1px solid ' + (isSuccess ? '#065f46' : '#991b1b');
+            statusEl.innerHTML = '<span style="opacity:0.7;">响应:</span> code=<strong>' + respCode + '</strong>' +
+                (respDesc ? ' <span style="opacity:0.7;">desc=</span><strong>' + respDesc + '</strong>' : '');
+        } else if (rd.simulated) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#1e3a5f';
+            statusEl.style.color = '#93c5fd';
+            statusEl.style.border = '1px solid #1e40af';
+            statusEl.innerHTML = '模拟下发，未实际请求';
+        } else {
+            statusEl.style.display = 'none';
+        }
+        
+        let display = '';
+        display += '═══════ 请求报文 ═══════\n';
+        display += 'URL: ' + (rd.dispatch_url || 'N/A') + '\n';
+        display += '模拟: ' + (rd.simulated ? '是' : '否') + '\n\n';
+        display += JSON.stringify(rd.request_body, null, 2);
+        if (rd.response_body) {
+            display += '\n\n═══════ 响应报文 ═══════\n';
+            display += JSON.stringify(rd.response_body, null, 2);
+        }
+        contentEl.textContent = display;
+    } else {
+        // 上报日志：显示请求+响应报文
+        titleEl.innerHTML = '<i class="bi bi-file-code me-2"></i>上报报文内容';
+        const statusEl = document.getElementById('rawDataStatus');
+        const rd = log.raw_data;
+        // 响应状态条
+        if (rd.response_body) {
+            const respCode = rd.response_body.code;
+            const respDesc = rd.response_body.desc || '';
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#064e3b';
+            statusEl.style.color = '#6ee7b7';
+            statusEl.style.border = '1px solid #065f46';
+            statusEl.innerHTML = '<span style="opacity:0.7;">响应:</span> code=<strong>' + respCode + '</strong>' +
+                (respDesc ? ' <span style="opacity:0.7;">desc=</span><strong>' + respDesc + '</strong>' : '');
+        } else {
+            statusEl.style.display = 'none';
+        }
+        // 构造显示内容：请求报文 + 响应报文
+        let display = '';
+        display += '═══════ 请求报文 ═══════\n';
+        const requestData = {};
+        for (const [k, v] of Object.entries(rd)) {
+            if (k !== 'response_body') requestData[k] = v;
+        }
+        display += JSON.stringify(requestData, null, 2);
+        if (rd.response_body) {
+            display += '\n\n═══════ 响应报文 ═══════\n';
+            display += JSON.stringify(rd.response_body, null, 2);
+        }
+        contentEl.textContent = display;
+    }
+    new bootstrap.Modal(document.getElementById('rawDataModal')).show();
+}
+
+function copyRawData() {
+    if (!currentRawData) return;
+    navigator.clipboard.writeText(JSON.stringify(currentRawData, null, 2))
+        .then(() => showToast('报文已复制到剪贴板', 'success'))
+        .catch(() => showToast('复制失败', 'danger'));
 }
 
 function renderSummary(summary) {
@@ -385,22 +1067,27 @@ function renderAreas(areas) {
     let html = '<div class="row">';
     areas.forEach(area => {
         const dirBadge = getDirectionBadge(area);
-        const incomingRows = renderTemplateRows(area.templates.incoming);
-        const outgoingRows = renderTemplateRows(area.templates.outgoing);
+        const incomingRows = renderTemplateRows(area.templates.incoming, area.region_key);
+        const outgoingRows = renderTemplateRows(area.templates.outgoing, area.region_key);
         html += `
         <div class="col-lg-6">
             <div class="area-card">
-                <div class="area-header">
-                    <span class="area-title">
-                        <i class="bi bi-geo-alt me-1 text-primary"></i>${area.name}
-                        <small class="text-muted ms-2" style="font-size:0.8rem;">xmin:${area.xmin} xmax:${area.xmax}</small>
-                        ${area.server ? `<small class="text-muted ms-2" style="font-size:0.75rem;opacity:0.6;">📡 ${area.server}</small>` : ''}
-                        <div class="form-check form-switch d-inline-block ms-2">
+                <div class="area-header" style="flex-direction:column;align-items:stretch;gap:0.4rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <span class="area-title">
+                            <i class="bi bi-geo-alt me-1 text-primary"></i>${area.name}
+                            ${area.id !== undefined ? `<span class="badge bg-secondary ms-1" style="font-size:0.65rem;font-weight:400;" title="区域ID">ID:${area.id}</span>` : ''}
+                        </span>
+                        ${dirBadge}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;font-size:0.78rem;">
+                        <span class="text-muted">xmin:${area.xmin} xmax:${area.xmax}</span>
+                        ${area.server ? `<span class="text-muted" style="opacity:0.6;">📡 ${area.server}</span>` : ''}
+                        <div class="form-check form-switch d-inline-block mb-0">
                             <input class="form-check-input" type="checkbox" ${area.enabled ? 'checked' : ''} onchange="toggleRegion('${area.region_key}', this.checked)" style="cursor:pointer;">
                             <label class="form-check-label small ${area.enabled ? 'text-success' : 'text-muted'}">${area.enabled ? '已启用' : '已禁用'}</label>
                         </div>
-                    </span>
-                    ${dirBadge}
+                    </div>
                 </div>
                 <div class="area-body">
                     <div class="balance-panel">
@@ -435,9 +1122,43 @@ function renderAreas(areas) {
                             </div>
                         </div>
                     </div>
+                    <div class="device-grid" id="devices-${area.region_key}">
+                        ${renderDeviceIcons(filterCurrentDevices(area.current_devices || [], area.pending_devices || []), false, area.low_battery_threshold)}
+                        ${renderDeviceIcons(area.pending_devices || [], true, area.low_battery_threshold)}
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 1rem 0.2rem;">
+                        <span class="detail-toggle" onclick="toggleDeviceHistory('${area.region_key}')" id="toggle-${area.region_key}">
+                            📋 详细 ▾
+                        </span>
+                    </div>
+                    <div class="device-history-section" id="history-${area.region_key}">
+                        <div class="history-label">历史设备（加载中...）</div>
+                        <div class="device-grid" id="history-devices-${area.region_key}"></div>
+                        <div class="device-history-actions">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="fetchAllDevices('${area.region_key}')" id="btn-fetch-all-${area.region_key}">
+                                🔄 全量获取设备状态
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="checkDeviceHistory('${area.region_key}')" id="btn-check-history-${area.region_key}">
+                                🕐 48h检查
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="cleanDeviceHistory('${area.region_key}')" id="btn-clean-history-${area.region_key}">
+                                🗑️ 清理48h+
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewDeviceHistoryFile('${area.region_key}')">
+                                📝 查看/编辑
+                            </button>
+                        </div>
+                    </div>
                     <div class="formula-row" id="formula-${area.region_key}" style="font-size:0.8rem;padding:0.25rem 0;opacity:0.8;">
                         ${getFormulaText(area)}
                     </div>
+                    <div class="calc-info-row" id="calc-info-${area.region_key}" style="font-size:0.75rem;padding:0.15rem 0;opacity:0.7;">
+                        ${getCalcInfoText(area)}
+                    </div>
+                    <div class="daily-stats-row" style="font-size:0.72rem;padding:0.2rem 0;opacity:0.75;border-top:1px dashed var(--border-color);margin-top:0.25rem;">
+                        ${getDailyStatsText(area)}
+                    </div>
+                    <canvas id="spark-${area.region_key}" width="600" height="70" style="width:100%;max-width:600px;height:70px;margin-top:0.15rem;"></canvas>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="d-flex align-items-start gap-2 mb-2">
@@ -452,9 +1173,9 @@ function renderAreas(areas) {
                                     ${renderChartLegend(area.templates?.incoming || [], 'in')}
                                 </div>
                             </div>
-                            <div class="template-section-title text-success"><i class="bi bi-box-arrow-in-down"></i> 来区域 <button class="btn btn-sm btn-outline-success ms-2" onclick="manualDispatch('${area.region_key}','in','${area.enabled}')" title="手动发空车来"><i class="bi bi-truck"></i> 发空车</button></div>
+                            <div class="template-section-title" style="color:#0d6efd;"><i class="bi bi-box-arrow-in-down"></i> 来区域 <button class="btn btn-sm ms-2" style="border-color:#0d6efd;color:#0d6efd;" onclick="manualDispatch('${area.region_key}','in','${area.enabled}')" title="手动发空车来"><i class="bi bi-truck"></i> 发空车</button></div>
                             <table class="template-table" style="width:100%;">
-                                <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
+                                <thead><tr><th>模板</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${incomingRows}</tbody>
                             </table>
                         </div>
@@ -471,9 +1192,9 @@ function renderAreas(areas) {
                                     ${renderChartLegend(area.templates?.outgoing || [], 'out')}
                                 </div>
                             </div>
-                            <div class="template-section-title text-danger"><i class="bi bi-box-arrow-up"></i> 离开 <button class="btn btn-sm btn-outline-danger ms-2" onclick="manualDispatch('${area.region_key}','out','${area.enabled}')" title="手动发空车回"><i class="bi bi-truck"></i> 发空车</button></div>
+                            <div class="template-section-title" style="color:#fd7e14;"><i class="bi bi-box-arrow-up"></i> 离开 <button class="btn btn-sm ms-2" style="border-color:#fd7e14;color:#fd7e14;" onclick="manualDispatch('${area.region_key}','out','${area.enabled}')" title="手动发空车回"><i class="bi bi-truck"></i> 发空车</button></div>
                             <table class="template-table" style="width:100%;">
-                                <thead><tr><th>模板</th><th>名称</th><th class="text-center">数量</th></tr></thead>
+                                <thead><tr><th>模板</th><th class="text-center">数量</th></tr></thead>
                                 <tbody>${outgoingRows}</tbody>
                             </table>
                         </div>
@@ -484,7 +1205,7 @@ function renderAreas(areas) {
                         <button class="btn btn-outline-teal btn-sm" onclick="toggleDispatchLogPanel('${area.region_key}', this)"><i class="bi bi-send"></i> 下发记录</button>
                         <button class="btn btn-outline-purple btn-sm" onclick="toggleTimeSlotPanel('${area.region_key}', this)"><i class="bi bi-clock"></i> 分时配置</button>
                         <button class="btn btn-outline-success btn-sm" onclick="toggleSelfHealPanel('${area.region_key}', this)"><i class="bi bi-heart-pulse"></i> 自恢复</button>
-                        <a href="/dispatch/config" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> 配置</a>
+                        <button class="btn btn-outline-danger btn-sm" onclick="cancelEmptyTasks('${area.region_key}')" title="取消该区域所有空车任务"><i class="bi bi-x-octagon"></i> 取消空车</button>
                     </div>
                 </div>
                 <!-- JSON 文件展开面板 -->
@@ -598,9 +1319,9 @@ function initDualCharts(area) {
     const inCols = [];
     (area.templates?.incoming || []).forEach((t, i) => {
         if (t.count > 0) {
-            inLabels.push(t.code);
+            inLabels.push(t.name || t.code);
             inData.push(t.count);
-            inCols.push(CHART_COLORS.in[i % 5]);
+            inCols.push(getChartColor(t));
         }
     });
     if (chartInstances['in-' + rk]) chartInstances['in-' + rk].destroy();
@@ -612,13 +1333,16 @@ function initDualCharts(area) {
     const outCols = [];
     (area.templates?.outgoing || []).forEach((t, i) => {
         if (t.count > 0) {
-            outLabels.push(t.code);
+            outLabels.push(t.name || t.code);
             outData.push(t.count);
-            outCols.push(CHART_COLORS.out[i % 5]);
+            outCols.push(getChartColor(t));
         }
     });
     if (chartInstances['out-' + rk]) chartInstances['out-' + rk].destroy();
     chartInstances['out-' + rk] = createDoughnutChart('chart-out-' + rk, outLabels, outData, outCols);
+    
+    // 渲染折线图
+    renderSparkline(area);
 }
 
 function updateDualCharts(area) {
@@ -630,9 +1354,9 @@ function updateDualCharts(area) {
     const inCols = [];
     (area.templates?.incoming || []).forEach((t, i) => {
         if (t.count > 0) {
-            inLabels.push(t.code);
+            inLabels.push(t.name || t.code);
             inData.push(t.count);
-            inCols.push(CHART_COLORS.in[i % 5]);
+            inCols.push(getChartColor(t));
         }
     });
     let chart = chartInstances['in-' + rk];
@@ -652,9 +1376,9 @@ function updateDualCharts(area) {
     const outCols = [];
     (area.templates?.outgoing || []).forEach((t, i) => {
         if (t.count > 0) {
-            outLabels.push(t.code);
+            outLabels.push(t.name || t.code);
             outData.push(t.count);
-            outCols.push(CHART_COLORS.out[i % 5]);
+            outCols.push(getChartColor(t));
         }
     });
     chart = chartInstances['out-' + rk];
@@ -679,6 +1403,9 @@ function updateDualCharts(area) {
     if (legendIn) legendIn.innerHTML = renderChartLegend(area.templates?.incoming || [], 'in');
     const legendOut = document.getElementById('legend-out-' + rk);
     if (legendOut) legendOut.innerHTML = renderChartLegend(area.templates?.outgoing || [], 'out');
+    
+    // 渲染折线图
+    renderSparkline(area);
 }
 
 /**
@@ -730,11 +1457,40 @@ function updateAreasData(areas) {
             formulaRow.innerHTML = getFormulaText(area);
         }
         
-        // 更新方向徽章
+        // 更新计算信息行（增量更新 data-timestamp，不重建 DOM）
+        const calcInfoRow = card.querySelector('.calc-info-row');
+        if (calcInfoRow) {
+            // 更新上次计算事件的 timestamp
+            const calc = area.last_calc_info;
+            const lastTsEl = calcInfoRow.querySelector('[data-timestamp]');
+            if (calc && calc.time && lastTsEl) {
+                if (lastTsEl.getAttribute('data-timestamp') !== calc.time) {
+                    lastTsEl.setAttribute('data-timestamp', calc.time);
+                }
+            }
+            // 更新轮询倒计时的 timestamp
+            const pollTsEls = calcInfoRow.querySelectorAll('[data-timestamp]');
+            if (pollTsEls.length >= 2) {
+                const pollInterval = area.poll_dispatch_interval || 60;
+                const pollLast = area.poll_dispatch_last || 0;
+                const baseTime = pollLast > 0 ? pollLast : (Date.now() / 1000);
+                const nextPoll = new Date(baseTime * 1000 + pollInterval * 1000).toISOString();
+                pollTsEls[1].setAttribute('data-timestamp', nextPoll);
+            }
+            // 如果结构变化（如分时配置切换），才全量重建
+            const hasTimeSlot = calcInfoRow.textContent.includes('⏰');
+            const shouldHaveTimeSlot = area.time_slot_active && area.time_slot_matched;
+            if (hasTimeSlot !== shouldHaveTimeSlot) {
+                calcInfoRow.innerHTML = getCalcInfoText(area);
+            }
+        }
+        
+        // 更新方向徽章（在 header 第一行右侧）
         const header = card.querySelector('.area-header');
         const oldBadge = header.querySelector('.direction-badge');
         if (oldBadge) oldBadge.remove();
-        header.insertAdjacentHTML('beforeend', getDirectionBadge(area));
+        const headerRow1 = header.querySelector('div:first-child');
+        if (headerRow1) headerRow1.insertAdjacentHTML('beforeend', getDirectionBadge(area));
         
         // 更新方向文本
         const dirText = card.querySelector('.balance-item.flex-grow-1 .small');
@@ -752,6 +1508,65 @@ function updateAreasData(areas) {
             updateTableCounts(tables[1], area.templates.outgoing);
         }
         
+        // 更新设备网格（增量更新，保留呼吸灯动画）
+        const deviceGrid = card.querySelector('.device-grid');
+        if (deviceGrid) {
+            const currentDevs = filterCurrentDevices(area.current_devices || [], area.pending_devices || []);
+            const pendingDevs = area.pending_devices || [];
+            const allDevs = [...currentDevs.map(d => ({...d, isPending: false})), ...pendingDevs.map(d => ({...d, isPending: true}))];
+            // 按 create_time 排序
+            allDevs.sort((a, b) => (a.create_time || '').localeCompare(b.create_time || ''));
+            
+            // 构建新数据映射：deviceNum -> 新数据
+            const newDataMap = {};
+            allDevs.forEach(d => { newDataMap[d.deviceNum] = d; });
+            const newNums = new Set(allDevs.map(d => d.deviceNum));
+            
+            const existingIcons = deviceGrid.querySelectorAll('.agv-icon');
+            
+            // 移除离开的设备 + 更新状态变化的设备
+            existingIcons.forEach(icon => {
+                const dn = icon.querySelector('.dev-num')?.textContent;
+                if (!dn) return;
+                if (!newNums.has(dn)) {
+                    // 离开
+                    icon.classList.add('leaving');
+                    setTimeout(() => icon.remove(), 400);
+                } else {
+                    // 还在，检查状态是否变化
+                    const newData = newDataMap[dn];
+                    // 判断旧图标是否为 pending 状态（有任务类型 class：load-in/load-out/empty-in/empty-out）
+                    const wasPending = icon.classList.contains('load-in') || icon.classList.contains('load-out')
+                        || icon.classList.contains('empty-in') || icon.classList.contains('empty-out');
+                    if (newData && newData.isPending !== wasPending) {
+                        // 状态变了，更新图标
+                        const html = renderDeviceIcon(newData, newData.isPending);
+                        const temp = document.createElement('span');
+                        temp.innerHTML = html;
+                        const newIcon = temp.firstChild;
+                        // 复制旧图标的子元素位置，替换
+                        icon.replaceWith(newIcon);
+                    }
+                }
+            });
+            
+            // 添加新设备
+            const existingNums = new Set(Array.from(deviceGrid.querySelectorAll('.agv-icon')).map(el => el.querySelector('.dev-num')?.textContent));
+            allDevs.forEach(d => {
+                if (!existingNums.has(d.deviceNum)) {
+                    const html = renderDeviceIcon(d, d.isPending);
+                    const temp = document.createElement('span');
+                    temp.innerHTML = html;
+                    const newIcon = temp.firstChild;
+                    newIcon.classList.add('entering');
+                    deviceGrid.appendChild(newIcon);
+                }
+            });
+        }
+        
+        // 增量更新历史设备网格（如果已展开）
+        updateHistoryDeviceGrid(area.region_key);
+        
         // 更新双环形图
         updateDualCharts(area);
 
@@ -765,40 +1580,94 @@ function updateTableCounts(tbody, templates) {
             const badge = rows[idx].querySelector('.count-badge');
             if (badge) {
                 badge.textContent = t.count;
-                const is_empty = (t.task_type === 'empty_in' || t.task_type === 'empty_out');
-                badge.className = 'badge count-badge ' + (t.count > 0 ? (is_empty ? 'bg-warning text-dark' : 'bg-info text-dark') : 'bg-secondary');
+                const taskType = t.task_type || '';
+                const badgeStyle = getBadgeStyle(taskType, t.count);
+                badge.setAttribute('style', badgeStyle);
+            }
+            // 更新低电量 badge
+            const lbBadge = rows[idx].querySelector('.low-battery-badge');
+            const lbCount = t.low_battery_count || 0;
+            if (lbCount > 0 && (t.task_type === 'empty_out')) {
+                if (lbBadge) {
+                    lbBadge.textContent = '+' + lbCount;
+                    lbBadge.style.display = '';
+                } else {
+                    // 动态添加低电量 badge
+                    const td = rows[idx].querySelector('td:last-child');
+                    if (td) {
+                        const newLb = document.createElement('span');
+                        newLb.className = 'badge low-battery-badge';
+                        newLb.title = '低电量回空车';
+                        newLb.textContent = '+' + lbCount;
+                        td.appendChild(newLb);
+                    }
+                }
+            } else if (lbBadge) {
+                lbBadge.style.display = 'none';
             }
         }
     });
 }
 
-function renderTemplateRows(templates) {
-    if (!templates || templates.length === 0) return '<tr><td colspan="3" class="text-center text-muted">无配置</td></tr>';
+function getBadgeStyle(taskType, count) {
+    const color = TASK_TYPE_COLORS[taskType] || '#6c757d';
+    if (count === 0) return `background:#6c757d;color:#fff;`;
+    return `background:${color};color:#fff;`;
+}
+
+function getTypeLabel(taskType) {
+    const map = {
+        'load_in': '<span class="badge small me-1" style="background:#0d6efd;color:#fff;">来负载</span>',
+        'load_out': '<span class="badge small me-1" style="background:#fd7e14;color:#fff;">回负载</span>',
+        'empty_in': '<span class="badge small me-1" style="background:#6ea8fe;color:#000;">来空车</span>',
+        'empty_out': '<span class="badge small me-1" style="background:#feb272;color:#000;">回空车</span>'
+    };
+    return map[taskType] || '';
+}
+
+function renderTemplateRows(templates, regionKey) {
+    if (!templates || templates.length === 0) return '<tr><td colspan="2" class="text-center text-muted">无配置</td></tr>';
     return templates.map(t => {
-        const is_empty = (t.task_type === 'empty_in' || t.task_type === 'empty_out');
+        const taskType = t.task_type || '';
+        const is_empty = (taskType === 'empty_in' || taskType === 'empty_out');
         const icon = is_empty ? 'bi-truck' : 'bi-box-seam';
-        const badgeClass = is_empty ? (t.count > 0 ? 'bg-warning text-dark' : 'bg-secondary') : (t.count > 0 ? 'bg-info text-dark' : 'bg-secondary');
-        const label = is_empty ? '<span class="badge bg-warning bg-opacity-25 text-warning small me-1">空车</span>' : '<span class="badge bg-info bg-opacity-25 text-info small me-1">负载</span>';
-        return `<tr><td><code>${t.code}</code></td><td>${label}<i class="${icon} me-1 small opacity-50"></i><span class="tpl-name">${t.name}</span></td>
-            <td class="text-center"><span class="badge count-badge ${badgeClass}">${t.count}</span></td></tr>`;
+        const badgeStyle = getBadgeStyle(taskType, t.count);
+        const label = getTypeLabel(taskType);
+        const displayName = t.name || t.code;
+        const tplCode = t.code || '';
+        // 低电量回空车计数（仅空车回模板显示）
+        const lbCount = t.low_battery_count || 0;
+        let countHtml = `<span class="badge count-badge" style="${badgeStyle}">${t.count}</span>`;
+        if (lbCount > 0 && taskType === 'empty_out') {
+            countHtml = `<span class="badge count-badge" style="${badgeStyle}">${t.count}</span>
+                <span class="badge low-battery-badge" title="低电量回空车">+${lbCount}</span>`;
+        }
+        return `<tr style="cursor:pointer;" onclick="showTemplateDetail('${regionKey}','${tplCode}')" title="点击查看模板详情">
+            <td style="word-break:break-all;overflow-wrap:break-word;">${label}<br><small class="text-muted"><code>${tplCode}</code></small><br><span class="tpl-name">${displayName}</span></td>
+            <td class="text-center" style="width:50px;white-space:nowrap;">${countHtml}</td></tr>`;
     }).join('');
 }
 
-// 颜色配置：高对比度色板
-const CHART_COLORS = {
-    in: ['#059669', '#2563eb', '#7c3aed', '#d97706', '#0891b2'],  // 翠绿/蓝/紫/橙/青
-    out: ['#dc2626', '#db2777', '#ea580c', '#9333ea', '#0d9488']  // 正红/玫红/橙红/紫/青绿
+// task_type → 颜色映射（与设备图标CSS一致）
+const TASK_TYPE_COLORS = {
+    'load_in': '#0d6efd',
+    'load_out': '#fd7e14',
+    'empty_in': '#6ea8fe',
+    'empty_out': '#feb272'
 };
+
+function getChartColor(t) {
+    return TASK_TYPE_COLORS[t.task_type] || '#6c757d';
+}
 
 function renderChartLegend(templates, direction) {
     if (!templates || templates.length === 0) return '<div class="text-muted">无任务</div>';
-    const colors = CHART_COLORS[direction] || CHART_COLORS.in;
     return templates.map((t, i) => {
-        const color = colors[i % colors.length];
+        const color = getChartColor(t);
         const count = t.count || 0;
         return `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${t.code}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${t.name || t.code}</span>
             <span style="font-weight:600;flex-shrink:0;">${count}</span>
         </div>`;
     }).join('');
@@ -808,6 +1677,201 @@ function getDirectionBadge(area) {
     if (area.direction === 'none') return `<span class="direction-badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i>平衡</span>`;
     if (area.direction === 'out') return `<span class="direction-badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-arrow-up"></i>调出 ${area.need}辆</span>`;
     return `<span class="direction-badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-arrow-down"></i>调入 ${area.need}辆</span>`;
+}
+
+function cancelEmptyTasks(regionKey) {
+    if (!confirm(`确定取消 ${regionKey} 所有空车任务？\n\n这将调用 ICS 取消接口，请谨慎操作。`)) return;
+    showToast('正在取消空车任务...', 'info');
+    fetch(`/api/dispatch/cancel_empty_tasks/${encodeURIComponent(regionKey)}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // 弹窗显示详细结果
+                let html = '<div class="mb-2"><strong>' + data.message + '</strong></div>';
+                if (data.details && data.details.length > 0) {
+                    html += '<div style="max-height:300px;overflow-y:auto;font-size:0.8rem;">';
+                    html += '<table class="table table-sm table-borderless mb-0"><thead><tr><th>#</th><th>模板</th><th>订单号</th><th>结果</th><th></th></tr></thead><tbody>';
+                    // 将 request_info 存到全局数组，避免在 onclick 中嵌入 JSON（特殊字符会破坏 HTML 属性）
+                    window._cancelDetailData = [];
+                    data.details.forEach((d, i) => {
+                        const icon = d.success ? '✅' : '❌';
+                        const color = d.success ? 'text-success' : 'text-danger';
+                        html += '<tr><td>' + (i + 1) + '</td><td><code>' + escapeHtml(d.template) + '</code></td>';
+                        html += '<td><small><code>' + escapeHtml(d.order_id || '') + '</code></small></td>';
+                        html += '<td class="' + color + '">' + icon + ' ' + escapeHtml(d.message) + '</td>';
+                        if (d.request_info) {
+                            window._cancelDetailData.push(d.request_info);
+                            const idx = window._cancelDetailData.length - 1;
+                            html += '<td><button class="btn btn-sm btn-outline-secondary cancel-detail-btn" data-ri-idx="' + idx + '" title="查看请求/响应详情"><i class="bi bi-info-circle"></i></button></td>';
+                        } else {
+                            html += '<td></td>';
+                        }
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                }
+                document.getElementById('dmTitle').textContent = '取消空车任务 - ' + regionKey;
+                document.getElementById('dmBody').innerHTML = html;
+                new bootstrap.Modal(document.getElementById('deviceModal')).show();
+                refreshData();
+            } else {
+                showToast(data.error || '取消失败', 'danger');
+            }
+        })
+        .catch(err => showToast('请求失败: ' + err.message, 'danger'));
+}
+
+function showCancelDetail(idx) {
+    const ri = (window._cancelDetailData && window._cancelDetailData[idx]) || {};
+    // 暗黑模式适配：使用 Bootstrap 的 bg-body-tertiary / dark 变量
+    const preStyle = 'max-height:150px;overflow-y:auto;padding:8px;border-radius:4px;'
+        + 'background:var(--bs-tertiary-bg, #f8f9fa);color:var(--bs-body-color, #212529);';
+    let html = '<div style="font-size:0.8rem;">';
+    html += '<div class="mb-2"><strong>请求 URL:</strong><br><code>' + escapeHtml(ri.url || '-') + '</code></div>';
+    html += '<div class="mb-2"><strong>请求报文:</strong><br><pre style="' + preStyle + '">' + escapeHtml(JSON.stringify(ri.request_body, null, 2)) + '</pre></div>';
+    if (ri.http_status) {
+        html += '<div class="mb-2"><strong>HTTP 状态:</strong> ' + ri.http_status + ' (' + (ri.elapsed_ms || '?') + 'ms)</div>';
+    }
+    if (ri.response_body) {
+        html += '<div class="mb-2"><strong>响应报文:</strong><br><pre style="max-height:200px;overflow-y:auto;padding:8px;border-radius:4px;'
+            + 'background:var(--bs-tertiary-bg, #f8f9fa);color:var(--bs-body-color, #212529);">'
+            + escapeHtml(typeof ri.response_body === 'string' ? ri.response_body : JSON.stringify(ri.response_body, null, 2)) + '</pre></div>';
+    }
+    if (ri.error) {
+        html += '<div class="text-danger"><strong>错误:</strong> ' + escapeHtml(ri.error) + '</div>';
+    }
+    html += '</div>';
+    document.getElementById('dmTitle').textContent = '取消请求详情';
+    document.getElementById('dmBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('deviceModal')).show();
+}
+
+// 事件委托：取消详情按钮点击
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.cancel-detail-btn');
+    if (btn) {
+        const idx = parseInt(btn.getAttribute('data-ri-idx'));
+        if (!isNaN(idx)) showCancelDetail(idx);
+    }
+});
+
+function getDeviceClass(taskType) {
+    // 根据 task_type 返回对应的 CSS class
+    const map = {
+        'load_in': 'load-in',
+        'load_out': 'load-out',
+        'empty_in': 'empty-in',
+        'empty_out': 'empty-out'
+    };
+    return map[taskType] || 'busy';
+}
+
+function getTaskTypeLabel(taskType) {
+    const map = {
+        'load_in': '来负载',
+        'load_out': '回负载',
+        'empty_in': '来空车',
+        'empty_out': '回空车'
+    };
+    return map[taskType] || taskType || '';
+}
+
+function getSpriteClass(taskType) {
+    // 负载任务用带货架图标（青蓝+黄色），空车/空闲用蓝色图标
+    if (taskType === 'load_in' || taskType === 'load_out') return 'loaded';
+    return 'blue';
+}
+
+function filterCurrentDevices(currentDevices, pendingDevices) {
+    if (!pendingDevices || pendingDevices.length === 0) return currentDevices;
+    const pendingNums = new Set(pendingDevices.map(d => d.deviceNum).filter(Boolean));
+    const pendingCodes = new Set(pendingDevices.map(d => d.deviceCode).filter(Boolean));
+    return currentDevices.filter(d => !pendingNums.has(d.deviceNum) && !pendingCodes.has(d.deviceCode));
+}
+
+function getBatteryClass(battery, threshold) {
+    // 三段式：<T 红, T~mid 黄, >=mid 绿, 未知不显示
+    if (!battery && battery !== 0) return '';
+    const b = parseInt(battery);
+    if (isNaN(b)) return '';
+    const T = parseInt(threshold) || 30;
+    const mid = T + (100 - T) / 2;
+    if (b < T) return 'battery-low';
+    if (b < mid) return 'battery-mid';
+    return 'battery-high';
+}
+
+function renderDeviceIcon(d, isPending, lowBatteryThreshold) {
+    const dn = d.deviceNum || '?';
+    const dc = d.deviceCode || '';
+    const tpl = d.template || '';
+    const taskType = d.task_type || '';
+    const createTime = d.create_time ? d.create_time.slice(11, 19) : '';
+    const hasDeviceNum = d.deviceNum && d.deviceNum.trim();
+    const battery = d.battery || '';
+    const threshold = lowBatteryThreshold || 30;
+    let cls, spriteCls, label;
+    if (isPending) {
+        cls = 'agv-icon ' + getDeviceClass(taskType);
+        spriteCls = 'agv-sprite ' + getSpriteClass(taskType);
+        label = getTaskTypeLabel(taskType);
+    } else {
+        // 空闲设备：根据 state 区分 idle/busy/charging/error/pending
+        const devState = d.state || 'pending';
+        const stateClassMap = {
+            'idle': 'idle', 'busy': 'busy', 'charging': 'charging',
+            'error': 'error', 'pending': 'pending'
+        };
+        const stateLabelMap = {
+            'idle': '空闲', 'busy': '任务中', 'charging': '充电中',
+            'error': '异常', 'pending': '可用'
+        };
+        cls = 'agv-icon ' + (stateClassMap[devState] || 'pending');
+        spriteCls = 'agv-sprite blue';
+        label = stateLabelMap[devState] || '可用';
+    }
+    // 电池图标（仅空闲设备且有电量数据时显示）
+    let batteryHtml = '';
+    if (!isPending && battery) {
+        const batCls = getBatteryClass(battery, threshold);
+        if (batCls) {
+            batteryHtml = `<span class="battery-indicator ${batCls}" title="电量: ${battery}%"></span>`;
+        }
+    }
+    const clickAttr = hasDeviceNum ? `onclick="showDeviceModal('${dn}')" style="cursor:pointer;"` : '';
+    return `<span class="${cls}" ${clickAttr}
+        onmouseenter="showAgvTooltip(event,'${escapeHtml(dc)}','${escapeHtml(label)}','${createTime}','${escapeHtml(tpl)}','${battery}')"
+        onmouseleave="hideAgvTooltip()"><span class="${spriteCls}"></span><span class="dev-num">${dn}</span>${batteryHtml}</span>`;
+}
+
+function renderDeviceIcons(devices, isPending, lowBatteryThreshold) {
+    if (!devices || devices.length === 0) return '';
+    const sorted = [...devices].sort((a, b) => (a.create_time || '').localeCompare(b.create_time || ''));
+    return sorted.map(d => renderDeviceIcon(d, isPending, lowBatteryThreshold)).join('');
+}
+
+let agvTooltipEl = null;
+function showAgvTooltip(e, code, label, time, tpl, battery) {
+    if (!agvTooltipEl) {
+        agvTooltipEl = document.createElement('div');
+        agvTooltipEl.className = 'agv-tooltip';
+        document.body.appendChild(agvTooltipEl);
+    }
+    let html = '';
+    if (code) html += `<div class="tt-code">${code}</div>`;
+    if (tpl) html += `<div class="tt-label">${tpl} · ${label}</div>`;
+    else html += `<div class="tt-label">${label}</div>`;
+    if (time) html += `<div class="tt-time">🕐 ${time}</div>`;
+    if (battery) html += `<div class="tt-battery">🔋 电量: ${battery}%</div>`;
+    agvTooltipEl.innerHTML = html;
+    agvTooltipEl.style.display = 'block';
+    const rect = e.target.closest('.agv-icon')?.getBoundingClientRect() || e.target.getBoundingClientRect();
+    agvTooltipEl.style.left = (rect.left + rect.width / 2) + 'px';
+    agvTooltipEl.style.top = (rect.top - 8) + 'px';
+    agvTooltipEl.style.transform = 'translate(-50%, -100%)';
+}
+function hideAgvTooltip() {
+    if (agvTooltipEl) agvTooltipEl.style.display = 'none';
 }
 
 function getFormulaText(area) {
@@ -839,6 +1903,332 @@ function getFormulaText(area) {
     }
     
     return formula;
+}
+
+function getCalcInfoText(area) {
+    let parts = [];
+    
+    // 分时配置信息
+    if (area.time_slot_active && area.time_slot_matched) {
+        const slot = area.time_slot_matched;
+        const slotName = slot.name || (slot.start + '~' + slot.end);
+        const remaining = area.time_slot_remaining || 0;
+        let remainText = '';
+        if (remaining > 0) {
+            const h = Math.floor(remaining / 60);
+            const m = remaining % 60;
+            remainText = h > 0 ? `剩余 ${h}h${m}m` : `剩余 ${m}m`;
+        }
+        parts.push(`<span title="分时配置生效中">⏰ ${escapeHtml(slotName)}(${slot.start}-${slot.end}) · ${remainText}</span>`);
+        
+        // 如果有多个匹配，显示优先于
+        if (area.time_slot_matched_count > 1 && area.time_slot_all_matched) {
+            const others = area.time_slot_all_matched.filter(n => n !== slotName);
+            if (others.length > 0) {
+                parts.push(`<span class="text-warning" title="同一时间有多个时段匹配，按优先级选择了当前时段">📌 优先于: ${others.join(', ')}</span>`);
+            }
+        }
+    }
+    
+    // 上次计算事件
+    const calc = area.last_calc_info;
+    if (calc && calc.time) {
+        const icon = calc.level === 'error' || calc.level === 'warning' ? '⚠️' : '⚡';
+        const initText = formatTimeDiff(new Date(calc.time).getTime(), false);
+        parts.push(`<span title="${escapeHtml(calc.detail || '')}">${icon} 上次: <span data-timestamp="${calc.time}">${initText}</span> ${escapeHtml(calc.trigger_source || '')}</span>`);
+    } else {
+        parts.push(`<span class="text-muted">⚡ 上次计算: - · 暂无记录</span>`);
+    }
+    
+    // 定时轮询倒计时
+    const pollInterval = area.poll_dispatch_interval || 60;
+    const pollLast = area.poll_dispatch_last || 0;
+    // 首次时用当前时间作为基准，显示完整间隔倒计时
+    const baseTime = pollLast > 0 ? pollLast : (Date.now() / 1000);
+    const nextPoll = baseTime * 1000 + pollInterval * 1000;
+    const initText = formatTimeDiff(nextPoll);
+    parts.push(`<span title="定时轮询调度（每${pollInterval}s）">🔄 轮询: <span data-timestamp="${new Date(nextPoll).toISOString()}">${initText}</span></span>`);
+    
+    return parts.join(' <span class="text-muted">|</span> ');
+}
+
+function getDailyStatsText(area) {
+    // 汇总当天所有小时数据
+    const today = new Date().toISOString().slice(0, 10);
+    const history = area.daily_stats_history || {};
+    let ei = 0, eo = 0, li = 0, lo = 0, di = 0, dout = 0, cancel = 0;
+    Object.keys(history).forEach(k => {
+        if (k.startsWith(today)) {
+            const r = history[k][area.region_key];
+            if (r) {
+                ei += r.empty_in || 0;
+                eo += r.empty_out || 0;
+                li += r.load_in || 0;
+                lo += r.load_out || 0;
+                di += r.dispatch_in || 0;
+                dout += r.dispatch_out || 0;
+                cancel += r.cancel_empty || 0;
+            }
+        }
+    });
+    if (!ei && !eo && !li && !lo && !di && !dout && !cancel) return '<span class="text-muted">📊 今日暂无统计</span>';
+    let text = `📊 今日: <span style="color:#6ea8fe;">🚛来${ei}</span> <span style="color:#feb272;">回${eo}</span> <span style="color:#0d6efd;">📦来${li}</span> <span style="color:#fd7e14;">回${lo}</span> | 下发 <span style="color:#6ea8fe;">来${di}</span> <span style="color:#feb272;">回${dout}</span>`;
+    if (cancel) text += ` | <span style="color:#dc3545;">取消${cancel}</span>`;
+    return text;
+}
+
+function renderSparkline(area) {
+    const canvas = document.getElementById('spark-' + area.region_key);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const history = area.daily_stats_history || {};
+    let dates = Object.keys(history).sort();
+    if (dates.length < 1) { canvas.style.display = 'none'; return; }
+    canvas.style.display = 'block';
+    
+    const w = canvas.width, h = canvas.height;
+    
+    // 调车次数线（左Y轴）
+    const fields = [
+        {key: 'empty_in', color: '#6ea8fe', label: '🚛空车来'},
+        {key: 'empty_out', color: '#feb272', label: '🚛空车回'},
+        {key: 'load_in', color: '#0d6efd', label: '📦负载来'},
+        {key: 'load_out', color: '#fd7e14', label: '📦负载回'}
+    ];
+    
+    // 设备数量线（右Y轴，绿色虚线）
+    const ccField = {key: 'current_count', color: '#22c55e', label: '🚗设备数'};
+    
+    // 计算左轴最大值（调车次数）
+    let maxVal = 1;
+    dates.forEach(d => {
+        const r = history[d][area.region_key];
+        if (r) fields.forEach(f => { maxVal = Math.max(maxVal, r[f.key] || 0); });
+    });
+    
+    // 计算右轴最大值（设备数量）
+    let maxCC = 1;
+    dates.forEach(d => {
+        const r = history[d][area.region_key];
+        if (r) maxCC = Math.max(maxCC, r[ccField.key] || 0);
+    });
+    // 右轴向上取整到5的倍数
+    maxCC = Math.ceil(maxCC / 5) * 5;
+    if (maxCC < 5) maxCC = 5;
+    
+    // 边距（右侧留更多空间给双Y轴标签）
+    const padLeft = 5, padRight = 36, padTop = 3, padBottom = 14;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+    
+    // 左Y轴刻度（调车次数）
+    const ySteps = 4;
+    const yStepVal = Math.ceil(maxVal / ySteps);
+    const yMax = yStepVal * ySteps;
+    
+    // 右Y轴刻度（设备数量）
+    const ccSteps = 4;
+    const ccStepVal = Math.ceil(maxCC / ccSteps);
+    const ccYMax = ccStepVal * ccSteps;
+    
+    // 预计算所有数据点坐标
+    const points = dates.map((d, i) => {
+        const x = padLeft + (i / Math.max(dates.length - 1, 1)) * plotW;
+        const r = history[d][area.region_key] || {};
+        const vals = {};
+        fields.forEach(f => { vals[f.key] = r[f.key] || 0; });
+        vals[ccField.key] = r[ccField.key] || 0;
+        return { date: d, x: x, vals: vals };
+    });
+    
+    // 绘制平滑折线的辅助函数
+    function drawSmoothLine(points, fieldKey, yMaxRef, color, lineWidth, dashPattern) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        if (dashPattern) ctx.setLineDash(dashPattern);
+        if (points.length === 1) {
+            const y = padTop + plotH - (points[0].vals[fieldKey] / yMaxRef) * plotH;
+            ctx.moveTo(points[0].x, y);
+            ctx.lineTo(points[0].x, y);
+        } else if (points.length === 2) {
+            const y0 = padTop + plotH - (points[0].vals[fieldKey] / yMaxRef) * plotH;
+            const y1 = padTop + plotH - (points[1].vals[fieldKey] / yMaxRef) * plotH;
+            ctx.moveTo(points[0].x, y0);
+            ctx.lineTo(points[1].x, y1);
+        } else {
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[Math.max(i - 1, 0)];
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p3 = points[Math.min(i + 2, points.length - 1)];
+                const y0 = padTop + plotH - (p0.vals[fieldKey] / yMaxRef) * plotH;
+                const y1 = padTop + plotH - (p1.vals[fieldKey] / yMaxRef) * plotH;
+                const y2 = padTop + plotH - (p2.vals[fieldKey] / yMaxRef) * plotH;
+                const y3 = padTop + plotH - (p3.vals[fieldKey] / yMaxRef) * plotH;
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = y1 + (y2 - y0) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = y2 - (y3 - y1) / 6;
+                if (i === 0) ctx.moveTo(p1.x, y1);
+                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, y2);
+            }
+        }
+        ctx.stroke();
+        if (dashPattern) ctx.setLineDash([]);
+    }
+    
+    // 绘制函数
+    function draw(highlightIdx) {
+        ctx.clearRect(0, 0, w, h);
+        
+        // 左Y轴网格线和标签（调车次数，灰色）
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.strokeStyle = '#374151';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= ySteps; i++) {
+            const val = yStepVal * i;
+            const y = padTop + plotH - (val / yMax) * plotH;
+            ctx.fillText(val, w - padRight + 3, y + 3);
+            if (i > 0) {
+                ctx.beginPath();
+                ctx.moveTo(padLeft, y);
+                ctx.lineTo(w - padRight, y);
+                ctx.stroke();
+            }
+        }
+        
+        // 右Y轴标签（设备数量，绿色）
+        ctx.fillStyle = '#22c55e';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= ccSteps; i++) {
+            const val = ccStepVal * i;
+            const y = padTop + plotH - (val / ccYMax) * plotH;
+            ctx.fillText(val, w - 2, y + 3);
+        }
+        
+        // 绘制调车次数折线（左轴）
+        fields.forEach(field => {
+            drawSmoothLine(points, field.key, yMax, field.color, 1.2, null);
+        });
+        
+        // 绘制设备数量折线（右轴，绿色虚线）
+        drawSmoothLine(points, ccField.key, ccYMax, ccField.color, 1.8, [4, 3]);
+        
+        // 高亮十字线
+        if (highlightIdx !== undefined && highlightIdx >= 0 && highlightIdx < points.length) {
+            const hp = points[highlightIdx];
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(hp.x, padTop);
+            ctx.lineTo(hp.x, padTop + plotH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 高亮调车数据点（左轴）
+            fields.forEach(field => {
+                const y = padTop + plotH - (hp.vals[field.key] / yMax) * plotH;
+                ctx.fillStyle = field.color;
+                ctx.beginPath();
+                ctx.arc(hp.x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 高亮设备数量数据点（右轴，绿色菱形）
+            const ccY = padTop + plotH - (hp.vals[ccField.key] / ccYMax) * plotH;
+            ctx.fillStyle = ccField.color;
+            ctx.beginPath();
+            ctx.moveTo(hp.x, ccY - 4);
+            ctx.lineTo(hp.x + 3, ccY);
+            ctx.lineTo(hp.x, ccY + 4);
+            ctx.lineTo(hp.x - 3, ccY);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // X轴标签
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        let lastHour = -1;
+        points.forEach((p, i) => {
+            const d = p.date;
+            const hour = parseInt(d.slice(11, 13)) || parseInt(d.slice(8, 10)) || 0;
+            const minute = d.slice(14, 16) || '00';
+            if (minute === '00' && hour !== lastHour) {
+                lastHour = hour;
+                ctx.fillText(hour + ':00', p.x, h - 2);
+            }
+        });
+    }
+    
+    // 初始绘制
+    draw(undefined);
+    
+    // 创建/获取 tooltip 元素（使用 fixed 定位，相对于视口）
+    let tip = document.getElementById('spark-tip-' + area.region_key);
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'spark-tip-' + area.region_key;
+        tip.style.cssText = 'position:fixed;display:none;background:rgba(0,0,0,0.85);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;line-height:1.5;pointer-events:none;z-index:9999;white-space:nowrap;';
+        document.body.appendChild(tip);
+    }
+    
+    // hover 事件
+    canvas.onmousemove = function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = w / rect.width;
+        const mx = (e.clientX - rect.left) * scaleX;
+        
+        // 找最近的数据点
+        let minDist = Infinity, idx = -1;
+        points.forEach((p, i) => {
+            const dist = Math.abs(p.x - mx);
+            if (dist < minDist) { minDist = dist; idx = i; }
+        });
+        
+        if (idx >= 0 && minDist < 30) {
+            draw(idx);
+            const hp = points[idx];
+            const timeStr = hp.date.slice(11, 16);
+            let html = '<div style="font-weight:600;margin-bottom:2px;">' + timeStr + '</div>';
+            fields.forEach(f => {
+                html += '<div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + f.color + ';margin-right:4px;"></span>' + f.label + ': ' + hp.vals[f.key] + '</div>';
+            });
+            // 设备数量（绿色）
+            html += '<div style="border-top:1px solid rgba(255,255,255,0.15);margin-top:2px;padding-top:2px;">';
+            html += '<span style="display:inline-block;width:8px;height:8px;background:' + ccField.color + ';margin-right:4px;transform:rotate(45deg);"></span>' + ccField.label + ': ' + hp.vals[ccField.key];
+            html += '</div>';
+            tip.innerHTML = html;
+            tip.style.display = 'block';
+            // 使用 fixed 定位，相对于视口
+            let tipX = e.clientX + 12;
+            let tipY = e.clientY - 10;
+            // 边界检测：防止溢出右边界
+            const tipW = tip.offsetWidth || 150;
+            if (tipX + tipW > window.innerWidth - 10) {
+                tipX = e.clientX - tipW - 12;
+            }
+            // 边界检测：防止溢出上边界
+            if (tipY < 10) {
+                tipY = e.clientY + 20;
+            }
+            tip.style.left = tipX + 'px';
+            tip.style.top = tipY + 'px';
+        } else {
+            draw(undefined);
+            tip.style.display = 'none';
+        }
+    };
+    
+    canvas.onmouseleave = function() {
+        draw(undefined);
+        tip.style.display = 'none';
+    };
 }
 
 function toggleRegion(regionKey, enabled) {
@@ -1304,13 +2694,24 @@ function loadTimeSlotConfig(regionKey) {
             html += '</div>';
             
             if (slots.length > 0) {
-                html += '<div class="mb-2"><strong>时段列表：</strong></div>';
+                html += '<div class="mb-2"><strong>时段列表：</strong><small class="text-muted ms-2">拖动排序调整优先级（从上到下递减）</small></div>';
+                html += '<div id="ts-list-' + regionKey + '" style="min-height:20px;">';
                 slots.forEach((s, idx) => {
                     const xminLabel = s.xmin === -1 ? '禁用' : s.xmin;
                     const xmaxLabel = s.xmax === -1 ? '禁用' : s.xmax;
-                    html += '<div class="json-file-item">';
-                    html += '<div class="file-info">';
-                    html += '<span class="badge bg-info">' + s.start + ' ~ ' + s.end + '</span>';
+                    const name = s.name || '';
+                    const priority = s.priority || (idx + 1);
+                    // 判断是否跨天
+                    const isOvernight = s.start > s.end;
+                    const timeLabel = isOvernight
+                        ? s.start + ' ~ ' + s.end + ' <small class="text-warning">🌙次日</small>'
+                        : s.start + ' ~ ' + s.end;
+                    html += '<div class="json-file-item ts-item" draggable="true" data-slot-idx="' + idx + '" data-slot-priority="' + priority + '">';
+                    html += '<div class="file-info" style="flex:1;min-width:0;">';
+                    html += '<span class="drag-handle me-2" style="cursor:grab;opacity:0.5;">☰</span>';
+                    html += '<span class="badge bg-secondary me-1">P' + priority + '</span>';
+                    if (name) html += '<span class="me-2 fw-bold">' + escapeHtml(name) + '</span>';
+                    html += '<span class="badge ' + (isOvernight ? 'bg-indigo' : 'bg-info') + '">' + timeLabel + '</span>';
                     html += '<span>xmin: <strong>' + xminLabel + '</strong></span>';
                     html += '<span>xmax: <strong>' + xmaxLabel + '</strong></span>';
                     html += '</div>';
@@ -1320,6 +2721,7 @@ function loadTimeSlotConfig(regionKey) {
                     html += '</div>';
                     html += '</div>';
                 });
+                html += '</div>';
             } else {
                 html += '<div class="text-muted py-2">暂无时段配置</div>';
             }
@@ -1331,16 +2733,31 @@ function loadTimeSlotConfig(regionKey) {
             html += '<button class="btn btn-sm btn-outline-secondary" id="ts-cancel-' + regionKey + '" onclick="resetTimeSlotForm(\'' + regionKey + '\')" style="display:none;"><i class="bi bi-x"></i> 取消编辑</button>';
             html += '</div>';
             html += '<div class="row g-2 align-items-end">';
+            html += '<div class="col-md-2"><label class="form-label small">名称</label><input type="text" class="form-control form-control-sm" id="ts-name-' + regionKey + '" placeholder="如:白班" maxlength="20"></div>';
             html += '<div class="col-md-2"><label class="form-label small">开始</label><input type="time" class="form-control form-control-sm" id="ts-start-' + regionKey + '" value="08:00"></div>';
             html += '<div class="col-md-2"><label class="form-label small">结束</label><input type="time" class="form-control form-control-sm" id="ts-end-' + regionKey + '" value="17:00"></div>';
-            html += '<div class="col-md-2"><label class="form-label small">xmin</label><input type="number" class="form-control form-control-sm" id="ts-xmin-' + regionKey + '" value="2"></div>';
-            html += '<div class="col-md-2"><label class="form-label small">xmax</label><input type="number" class="form-control form-control-sm" id="ts-xmax-' + regionKey + '" value="4"></div>';
+            html += '<div class="col-md-1"><label class="form-label small">xmin</label><input type="number" class="form-control form-control-sm" id="ts-xmin-' + regionKey + '" value="2"></div>';
+            html += '<div class="col-md-1"><label class="form-label small">xmax</label><input type="number" class="form-control form-control-sm" id="ts-xmax-' + regionKey + '" value="4"></div>';
             html += '<div class="col-md-2"><button class="btn btn-sm btn-primary" id="ts-btn-' + regionKey + '" onclick="addTimeSlot(\'' + regionKey + '\')"><i class="bi bi-plus"></i> 添加</button></div>';
             html += '</div>';
             html += '<small class="text-muted mt-1 d-block">xmin=-1, xmax=-1 = 禁用真实任务；xmin=0, xmax=0 = 清空到0</small>';
             html += '</div>';
             
+            // 使用说明
+            html += '<div class="mt-2 p-2 small text-muted" style="background:var(--detail-card-bg);border-radius:6px;">';
+            html += '<strong>💡 使用说明：</strong><br>';
+            html += '• 拖动时段可调整优先级（从上到下优先级递减，P1最高）<br>';
+            html += '• 同一时间多个时段匹配时，优先级高的生效<br>';
+            html += '• 结束时间 ≤ 开始时间 = 跨天时段 🌙，自动覆盖到次日<br>';
+            html += '&nbsp;&nbsp;例：22:00~08:00 覆盖当天22点至次日8点<br>';
+            html += '• 示例：白班(08-20, xmin=2) + 高峰(18-22, xmin=3)，18:00-20:00 高峰优先级高则取 xmin=3';
+            html += '</div>';
+            
             el.innerHTML = html;
+            // 初始化拖拽排序
+            if (slots.length > 0) {
+                setTimeout(() => initTimeSlotDrag(regionKey), 100);
+            }
         })
         .catch(err => { el.innerHTML = '<div class="text-danger py-2">加载失败: ' + err.message + '</div>'; });
 }
@@ -1370,6 +2787,7 @@ function toggleTimeSlotEnabled(regionKey, enabled) {
 }
 
 function addTimeSlot(regionKey) {
+    const name = document.getElementById('ts-name-' + regionKey).value.trim();
     const start = document.getElementById('ts-start-' + regionKey).value;
     const end = document.getElementById('ts-end-' + regionKey).value;
     const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value);
@@ -1388,7 +2806,9 @@ function addTimeSlot(regionKey) {
         .then(config => {
             if (!config[regionKey]) return;
             if (!config[regionKey].time_slots) config[regionKey].time_slots = { enabled: false, slots: [] };
-            config[regionKey].time_slots.slots.push({ start, end, xmin, xmax });
+            const slots = config[regionKey].time_slots.slots;
+            const newPriority = slots.length > 0 ? Math.max(...slots.map(s => s.priority || 0)) + 1 : 1;
+            slots.push({ name, start, end, xmin, xmax, priority: newPriority });
             return fetch('/api/dispatch/config', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1415,6 +2835,7 @@ function editTimeSlot(regionKey, idx) {
             const s = slots[idx];
             
             // 填充表单
+            document.getElementById('ts-name-' + regionKey).value = s.name || '';
             document.getElementById('ts-start-' + regionKey).value = s.start;
             document.getElementById('ts-end-' + regionKey).value = s.end;
             document.getElementById('ts-xmin-' + regionKey).value = s.xmin;
@@ -1436,6 +2857,7 @@ function editTimeSlot(regionKey, idx) {
 
 function resetTimeSlotForm(regionKey) {
     // 重置为新增模式
+    document.getElementById('ts-name-' + regionKey).value = '';
     document.getElementById('ts-start-' + regionKey).value = '08:00';
     document.getElementById('ts-end-' + regionKey).value = '17:00';
     document.getElementById('ts-xmin-' + regionKey).value = '2';
@@ -1454,6 +2876,7 @@ function resetTimeSlotForm(regionKey) {
 }
 
 function updateTimeSlot(regionKey, idx) {
+    const name = document.getElementById('ts-name-' + regionKey).value.trim();
     const start = document.getElementById('ts-start-' + regionKey).value;
     const end = document.getElementById('ts-end-' + regionKey).value;
     const xmin = parseInt(document.getElementById('ts-xmin-' + regionKey).value);
@@ -1483,9 +2906,10 @@ function updateTimeSlot(regionKey, idx) {
             }
             // 确保 slots 数组长度足够
             while (config[regionKey].time_slots.slots.length <= idx) {
-                config[regionKey].time_slots.slots.push({ start: '00:00', end: '23:59', xmin: 2, xmax: 4 });
+                config[regionKey].time_slots.slots.push({ name: '', start: '00:00', end: '23:59', xmin: 2, xmax: 4, priority: config[regionKey].time_slots.slots.length + 1 });
             }
-            config[regionKey].time_slots.slots[idx] = { start, end, xmin, xmax };
+            const existing = config[regionKey].time_slots.slots[idx];
+            config[regionKey].time_slots.slots[idx] = { name, start, end, xmin, xmax, priority: existing.priority || (idx + 1) };
             return fetch('/api/dispatch/config', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1535,6 +2959,361 @@ function removeTimeSlot(regionKey, idx) {
         .catch(err => showToast('删除失败: ' + err.message, 'danger'));
 }
 
+// ========== 分时配置拖拽排序 ==========
+
+function initTimeSlotDrag(regionKey) {
+    const container = document.getElementById('ts-list-' + regionKey);
+    if (!container) return;
+    
+    let dragItem = null;
+    
+    container.addEventListener('dragstart', (e) => {
+        dragItem = e.target.closest('.ts-item');
+        if (!dragItem) return;
+        dragItem.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    
+    container.addEventListener('dragend', (e) => {
+        const item = e.target.closest('.ts-item');
+        if (item) item.classList.remove('dragging');
+        dragItem = null;
+    });
+    
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        const dragging = container.querySelector('.dragging');
+        if (!dragging) return;
+        if (afterElement) {
+            container.insertBefore(dragging, afterElement);
+        } else {
+            container.appendChild(dragging);
+        }
+    });
+    
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        updateTimeSlotPriorities(regionKey);
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const items = [...container.querySelectorAll('.ts-item:not(.dragging)')];
+    return items.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset, element: child };
+        }
+        return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateTimeSlotPriorities(regionKey) {
+    const items = document.querySelectorAll('#ts-list-' + regionKey + ' .ts-item');
+    const newOrder = [];
+    items.forEach((item, idx) => {
+        const slotIdx = parseInt(item.dataset.slotIdx);
+        newOrder.push({ idx: slotIdx, priority: idx + 1 });
+    });
+    
+    fetch('/api/dispatch/config')
+        .then(r => r.json())
+        .then(config => {
+            if (!config[regionKey] || !config[regionKey].time_slots) return;
+            const slots = config[regionKey].time_slots.slots;
+            // 按新顺序重排 slots 数组并更新 priority
+            const reordered = newOrder.map(n => {
+                const s = slots[n.idx];
+                if (s) s.priority = n.priority;
+                return s;
+            }).filter(Boolean);
+            config[regionKey].time_slots.slots = reordered;
+            return fetch('/api/dispatch/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            });
+        })
+        .then(r => r && r.json())
+        .then(result => {
+            if (result && result.success) {
+                showToast('优先级已更新', 'success');
+                loadTimeSlotConfig(regionKey);
+                refreshData();
+            }
+        })
+        .catch(err => showToast('排序失败: ' + err.message, 'danger'));
+}
+
+// ========== 工具函数 ==========
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========== 设备详情 Modal ==========
+
+let _deviceModalData = null;  // 缓存设备数据供 Tab 切换
+
+function switchDeviceTab(tab) {
+    document.getElementById('dmBody').style.display = tab === 'info' ? 'block' : 'none';
+    document.getElementById('dmTrace').style.display = tab === 'trace' ? 'block' : 'none';
+    // 更新按钮状态
+    const btns = document.querySelectorAll('#dmTabs .btn');
+    btns.forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'info') || (i === 1 && tab === 'trace')));
+}
+
+function showDeviceModal(deviceNum) {
+    const modal = new bootstrap.Modal(document.getElementById('deviceModal'));
+    document.getElementById('dmTitle').textContent = '设备详情 - ' + deviceNum;
+    document.getElementById('dmBody').innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>加载中...</div>';
+    document.getElementById('dmBody').style.display = 'block';
+    document.getElementById('dmTrace').style.display = 'none';
+    document.getElementById('dmTabs').style.display = 'none';
+    _deviceModalData = null;
+    modal.show();
+    
+    fetch('/api/dispatch/device_info?deviceNum=' + encodeURIComponent(deviceNum))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('dmBody').innerHTML = '<div class="text-danger text-center py-3">' + data.error + '</div>';
+                return;
+            }
+            _deviceModalData = data;
+            
+            const statusLabel = data.status === 'running' ? '🟡 执行中' : '🟢 空闲';
+            const statusColor = data.status === 'running' ? '#fd7e14' : '#28a745';
+            const taskTypeLabel = data.task_type ? getTaskTypeLabel(data.task_type) : '';
+            
+            let html = '<div class="mb-3"><strong style="color:var(--primary-color);">基本信息</strong></div>';
+            html += '<table class="table table-sm table-borderless mb-3"><tbody>';
+            html += '<tr><td class="text-muted" style="width:80px;">设备编号</td><td><strong>' + escapeHtml(data.deviceNum || '-') + '</strong></td></tr>';
+            html += '<tr><td class="text-muted">序列号</td><td><code>' + escapeHtml(data.deviceCode || '-') + '</code></td></tr>';
+            html += '<tr><td class="text-muted">状态</td><td id="dmStatus" style="color:' + statusColor + ';font-weight:600;">' + statusLabel + ' <span class="spinner-border spinner-border-sm ms-1" style="width:0.7rem;height:0.7rem;"></span></td></tr>';
+            html += '<tr><td class="text-muted">区域</td><td>' + escapeHtml(data.region_key || '-') + '</td></tr>';
+            if (data.shelfNumber) html += '<tr><td class="text-muted">货架</td><td>' + escapeHtml(data.shelfNumber) + '</td></tr>';
+            html += '</tbody></table>';
+            
+            if (data.status === 'running' && data.template) {
+                html += '<div class="mb-2"><strong style="color:var(--primary-color);">当前任务</strong></div>';
+                html += '<table class="table table-sm table-borderless mb-3"><tbody>';
+                html += '<tr><td class="text-muted" style="width:80px;">模板</td><td><code>' + escapeHtml(data.template) + '</code> <span class="badge bg-secondary">' + taskTypeLabel + '</span></td></tr>';
+                html += '<tr><td class="text-muted">订单</td><td><small><code>' + escapeHtml((data.order_id || '').slice(0, 40)) + '</code></small></td></tr>';
+                if (data.create_time) {
+                    const elapsed = Math.floor((Date.now() - new Date(data.create_time).getTime()) / 1000);
+                    html += '<tr><td class="text-muted">已执行</td><td>' + elapsed + 's</td></tr>';
+                }
+                html += '</tbody></table>';
+            }
+            
+            if (data.history && data.history.length > 0) {
+                html += '<div class="mb-2"><strong style="color:var(--primary-color);">最近操作记录</strong></div>';
+                html += '<div style="max-height:200px;overflow-y:auto;font-size:0.75rem;">';
+                data.history.forEach(h => {
+                    const icon = h.level === 'warning' ? '⚠️' : h.level === 'error' ? '❌' : '📌';
+                    const time = h.time ? h.time.slice(11, 19) : '';
+                    html += '<div class="py-1 border-bottom border-secondary">' + icon + ' <span class="text-muted">' + time + '</span> ' + escapeHtml(h.detail) + '</div>';
+                });
+                html += '</div>';
+            }
+            
+            // 所有设备显示强制检查按钮
+            if (data.region_key && data.deviceCode) {
+                html += '<hr class="my-2">';
+                html += '<button class="btn btn-sm btn-outline-warning w-100" onclick="forceCheckDevice(\'' + escapeHtml(data.region_key) + '\',\'' + escapeHtml(data.deviceCode) + '\',\'' + escapeHtml(data.deviceNum || deviceNum) + '\')"><i class="bi bi-search me-1"></i>强制检查</button>';
+                html += '<div id="deviceCheckResult" class="mt-2 small"></div>';
+            }
+            
+            document.getElementById('dmBody').innerHTML = html;
+            document.getElementById('dmTabs').style.display = '';
+            
+            // 加载任务追踪数据
+            loadDeviceTrace(data.deviceCode);
+            
+            // 仅空闲设备自动触发检查（pending/执行中设备不自动查询，避免误清理）
+            if (data.status === 'idle' && data.region_key && data.deviceCode) {
+                autoCheckDevice(data.region_key, data.deviceCode, data.deviceNum || deviceNum);
+            }
+        })
+        .catch(err => {
+            document.getElementById('dmBody').innerHTML = '<div class="text-danger text-center py-3">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function loadDeviceTrace(deviceCode) {
+    if (!deviceCode) return;
+    const traceEl = document.getElementById('dmTrace');
+    traceEl.innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>加载追踪数据...</div>';
+    
+    fetch('/api/dispatch/device_trace?deviceCode=' + encodeURIComponent(deviceCode))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                traceEl.innerHTML = '<div class="text-danger text-center py-3">' + data.error + '</div>';
+                return;
+            }
+            const traces = data.traces || [];
+            if (traces.length === 0) {
+                traceEl.innerHTML = '<div class="text-muted text-center py-3">暂无任务追踪记录</div>';
+                return;
+            }
+            
+            // 时间线 UI
+            let html = '<div style="position:relative;padding-left:24px;">';
+            // 竖线
+            html += '<div style="position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--border-color);"></div>';
+            
+            traces.forEach((t, i) => {
+                const timeStr = (t.time || '').slice(11, 19) || t.time || '';
+                const isTask = t.type === 'task';
+                const dotColor = isTask ? 'var(--primary-color)' : '#6b7280';
+                const bgColor = isTask ? 'rgba(13,110,253,0.08)' : 'transparent';
+                
+                html += '<div style="position:relative;margin-bottom:6px;padding:4px 8px;border-radius:6px;background:' + bgColor + ';font-size:0.78rem;">';
+                // 圆点
+                html += '<div style="position:absolute;left:-20px;top:8px;width:8px;height:8px;border-radius:50%;background:' + dotColor + ';border:2px solid var(--card-bg);"></div>';
+                // 时间
+                html += '<span class="text-muted" style="font-size:0.7rem;">' + timeStr + '</span> ';
+                // 图标 + 摘要
+                html += '<span>' + escapeHtml(t.icon + ' ' + t.summary) + '</span>';
+                // order_id 高亮
+                if (t.order_id) {
+                    html += ' <code style="font-size:0.7rem;background:var(--detail-card-bg);padding:1px 4px;border-radius:3px;">' + escapeHtml(t.order_id.slice(0, 50)) + '</code>';
+                }
+                // 详情（小字）
+                if (t.detail && t.detail !== t.summary) {
+                    html += '<div class="text-muted" style="font-size:0.68rem;padding-left:4px;">' + escapeHtml(t.detail.slice(0, 120)) + '</div>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            
+            traceEl.innerHTML = html;
+        })
+        .catch(err => {
+            traceEl.innerHTML = '<div class="text-danger text-center py-3">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function autoCheckDevice(regionKey, deviceCode, deviceNum) {
+    fetch('/api/dispatch/device_check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({region_key: regionKey, deviceCode: deviceCode, deviceNum: deviceNum})
+    })
+    .then(r => r.json())
+    .then(data => {
+        const statusEl = document.getElementById('dmStatus');
+        if (!statusEl) return;
+        if (data.error) return;
+        const stateLabel = data.state === 'InTask' ? '🟡 任务中' : data.state === 'Idle' ? '🟢 空闲' : '🟢 ' + data.state;
+        const stateColor = data.state === 'InTask' ? '#fd7e14' : '#28a745';
+        statusEl.style.color = stateColor;
+        statusEl.textContent = stateLabel;
+    })
+    .catch(() => {});
+}
+
+function forceCheckDevice(regionKey, deviceCode, deviceNum) {
+    if (!confirm('强制检查设备 ' + deviceNum + '？\n\n将查询设备实时状态，离线/下线设备将被自动清理。')) return;
+    checkDevice(regionKey, deviceCode, deviceNum);
+}
+
+function checkDevice(regionKey, deviceCode, deviceNum) {
+    const resultEl = document.getElementById('deviceCheckResult');
+    if (resultEl) resultEl.innerHTML = '<div class="text-info"><div class="spinner-border spinner-border-sm me-1"></div>检查中...</div>';
+    fetch('/api/dispatch/device_check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({region_key: regionKey, deviceCode: deviceCode, deviceNum: deviceNum})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            if (resultEl) resultEl.innerHTML = '<div class="text-danger">' + data.error + '</div>';
+            return;
+        }
+        const color = data.cleaned ? 'warning' : 'success';
+        let html = '<div class="text-' + color + ' mb-2"><i class="bi ' + (data.cleaned ? 'bi-check-circle' : 'bi-info-circle') + ' me-1"></i>' + data.message + '</div>';
+        // 更新弹窗中的状态显示
+        const statusEl = document.querySelector('#dmBody td[style*="color"]');
+        if (statusEl && !data.cleaned) {
+            const stateLabel = data.state === 'InTask' ? '🟡 任务中' : data.state === 'Idle' ? '🟢 空闲' : '🟢 ' + data.state;
+            const stateColor = data.state === 'InTask' ? '#fd7e14' : '#28a745';
+            statusEl.style.color = stateColor;
+            statusEl.textContent = stateLabel;
+        }
+        // 显示请求/响应报文
+        html += '<div class="small" style="max-height:200px;overflow-y:auto;background:var(--detail-card-bg);padding:0.5rem;border-radius:4px;font-family:monospace;white-space:pre-wrap;word-break:break-all;">';
+        html += '<strong>请求 URL:</strong> ' + escapeHtml(data.request_url || '') + '\n\n';
+        html += '<strong>请求报文:</strong>\n' + JSON.stringify(data.request_body, null, 2);
+        html += '\n\n<strong>响应报文:</strong>\n' + (data.response_body ? JSON.stringify(data.response_body, null, 2) : '(无响应)');
+        html += '</div>';
+        if (resultEl) resultEl.innerHTML = html;
+        if (data.cleaned) refreshData();
+    })
+    .catch(err => {
+        if (resultEl) resultEl.innerHTML = '<div class="text-danger">请求失败: ' + err.message + '</div>';
+    });
+}
+
+function showTemplateDetail(regionKey, templateCode) {
+    const modal = new bootstrap.Modal(document.getElementById('deviceModal'));
+    document.getElementById('dmTitle').textContent = '模板详情 - ' + templateCode;
+    document.getElementById('dmBody').innerHTML = '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm me-2"></div>加载中...</div>';
+    modal.show();
+    
+    fetch('/api/dispatch/template_detail?region_key=' + encodeURIComponent(regionKey) + '&template_code=' + encodeURIComponent(templateCode))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('dmBody').innerHTML = '<div class="text-danger text-center py-3">' + data.error + '</div>';
+                return;
+            }
+            const taskTypeLabel = getTaskTypeLabel(data.task_type);
+            let html = '<div class="mb-3"><strong style="color:var(--primary-color);">基本信息</strong></div>';
+            html += '<table class="table table-sm table-borderless mb-3"><tbody>';
+            html += '<tr><td class="text-muted" style="width:80px;">模板代码</td><td><code>' + escapeHtml(data.template_code) + '</code></td></tr>';
+            html += '<tr><td class="text-muted">显示名称</td><td>' + escapeHtml(data.display_name || '-') + '</td></tr>';
+            html += '<tr><td class="text-muted">任务类型</td><td>' + taskTypeLabel + '</td></tr>';
+            html += '<tr><td class="text-muted">总任务数</td><td>' + data.total_tasks + '</td></tr>';
+            html += '<tr><td class="text-muted">执行中</td><td><strong>' + data.running_count + '</strong></td></tr>';
+            html += '</tbody></table>';
+            
+            if (data.running_tasks && data.running_tasks.length > 0) {
+                html += '<div class="mb-2"><strong style="color:var(--primary-color);">执行中任务 (' + data.running_tasks.length + ')</strong></div>';
+                html += '<div style="max-height:300px;overflow-y:auto;font-size:0.75rem;">';
+                html += '<table class="table table-sm table-bordered mb-0"><thead><tr><th>设备</th><th>序列号</th><th>订单号</th><th>开始时间</th></tr></thead><tbody>';
+                data.running_tasks.forEach(t => {
+                    const time = t.create_time ? t.create_time.slice(11, 19) : '';
+                    html += '<tr><td>' + escapeHtml(t.deviceNum || '-') + '</td><td><code style="font-size:0.7rem;">' + escapeHtml(t.deviceCode || '-') + '</code></td><td><code style="font-size:0.7rem;word-break:break-all;">' + escapeHtml(t.order_id || '-') + '</code></td><td>' + time + '</td></tr>';
+                });
+                html += '</tbody></table></div>';
+            }
+            
+            if (data.logs && data.logs.length > 0) {
+                html += '<div class="mb-2 mt-3"><strong style="color:var(--primary-color);">最近日志</strong></div>';
+                html += '<div style="max-height:200px;overflow-y:auto;font-size:0.75rem;">';
+                data.logs.forEach(h => {
+                    const icon = h.level === 'warning' ? '⚠️' : h.level === 'error' ? '❌' : '📌';
+                    const time = h.time ? h.time.slice(11, 19) : '';
+                    html += '<div class="py-1 border-bottom border-secondary">' + icon + ' <span class="text-muted">' + time + '</span> ' + escapeHtml(h.detail) + '</div>';
+                });
+                html += '</div>';
+            }
+            
+            document.getElementById('dmBody').innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('dmBody').innerHTML = '<div class="text-danger text-center py-3">加载失败: ' + err.message + '</div>';
+        });
+}
+
 function showToast(message, type) {
     const container = document.getElementById('toastContainer');
     if (!container) {
@@ -1563,23 +3342,83 @@ function toggleSelfHealPanel(regionKey, btn) {
 function loadSelfHealStatus(regionKey) {
     const el = document.getElementById('self-heal-content-' + regionKey);
     el.innerHTML = '<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm me-2"></div>加载自恢复状态...</div>';
-    fetch('/api/dispatch/self_heal/status')
+    
+    // 同时获取自恢复状态和区域配置
+    Promise.all([
+        fetch('/api/dispatch/self_heal/status').then(r => r.json()),
+        fetch('/api/dispatch/config').then(r => r.json())
+    ]).then(([statusData, configData]) => {
+        const st = statusData.status[regionKey];
+        const regionConfig = configData[regionKey] || {};
+        const selfHealConfig = regionConfig.self_heal || {};
+        // 默认启用：enabled 字段不存在或为 true/'true' 时视为启用，仅明确 false/'false' 时关闭
+        const healEnabled = selfHealConfig.enabled !== false && selfHealConfig.enabled !== 'false';
+        
+        let html = '<div class="small">';
+        
+        if (!healEnabled) {
+            html += '<div class="text-warning mb-2"><i class="bi bi-exclamation-triangle me-1"></i>自恢复未在配置中启用</div>';
+        }
+        
+        if (st) {
+            const lastCheck = st.last_check ? new Date(st.last_check).toLocaleString('zh-CN') : '从未';
+            html += '<div><strong>上次检查：</strong>' + lastCheck + '</div>';
+            html += '<div><strong>清理数量：</strong>' + (st.cleaned_count || 0) + '</div>';
+            if (st.errors && st.errors.length > 0) {
+                html += '<div class="text-danger"><strong>错误：</strong>' + st.errors.join(', ') + '</div>';
+            }
+        } else {
+            html += '<div class="text-muted">暂无检查记录</div>';
+        }
+        
+        // 模板列表（用于强制检查下拉菜单）
+        const templates = (regionConfig.templates || []).map(t => t.code || t.name || '');
+        const tplItems = templates.map(t => '<li><a class="dropdown-item small" href="javascript:void(0)" onclick="triggerForceCheck(\'' + regionKey + '\',\'' + t + '\')">📋 ' + t + '</a></li>').join('');
+        
+        html += '<div class="mt-2 d-flex gap-1">';
+        html += '<button class="btn btn-sm btn-outline-success" onclick="triggerSelfHeal(\'' + regionKey + '\')"><i class="bi bi-heart-pulse"></i> 手动检查</button>';
+        html += '<div class="dropdown">';
+        html += '<button class="btn btn-sm btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-search"></i> 强制检查</button>';
+        html += '<ul class="dropdown-menu dropdown-menu-end small">';
+        html += '<li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerForceCheck(\'' + regionKey + '\',\'__current_devices__\')">🖥️ 当前设备</a></li>';
+        html += '<li><hr class="dropdown-divider"></li>';
+        html += tplItems;
+        html += '</ul>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div id="forceCheckResult-' + regionKey + '" class="mt-2 small" style="max-height:200px;overflow-y:auto;"></div>';
+        html += '</div>';
+        el.innerHTML = html;
+    }).catch(err => { el.innerHTML = '<div class="text-danger py-2">加载失败: ' + err.message + '</div>'; });
+}
+
+function triggerForceCheck(regionKey, templateCode) {
+    if (!templateCode) { showToast('请选择模板', 'warning'); return; }
+    
+    const resultEl = document.getElementById('forceCheckResult-' + regionKey);
+    resultEl.innerHTML = '<div class="text-muted"><div class="spinner-border spinner-border-sm me-1"></div>强制检查 ' + templateCode + ' ...</div>';
+    
+    fetch('/api/dispatch/self_heal/force_check/' + encodeURIComponent(regionKey) + '?template_code=' + encodeURIComponent(templateCode), { method: 'POST' })
         .then(r => r.json())
         .then(data => {
-            const st = data.status[regionKey];
-            if (!st) {
-                el.innerHTML = '<div class="text-muted py-2">暂无自恢复记录（需在配置中启用）</div>';
+            if (!data.success) {
+                resultEl.innerHTML = '<div class="text-danger">' + (data.error || '检查失败') + '</div>';
                 return;
             }
-            const lastCheck = st.last_check ? new Date(st.last_check).toLocaleString('zh-CN') : '从未';
-            el.innerHTML = '<div class="small">' +
-                '<div><strong>上次检查：</strong>' + lastCheck + '</div>' +
-                '<div><strong>清理数量：</strong>' + (st.cleaned_count || 0) + '</div>' +
-                (st.errors && st.errors.length > 0 ? '<div class="text-danger"><strong>错误：</strong>' + st.errors.join(', ') + '</div>' : '') +
-                '<button class="btn btn-sm btn-outline-success mt-2" onclick="triggerSelfHeal(\'' + regionKey + '\')"><i class="bi bi-heart-pulse"></i> 手动触发检查</button>' +
-                '</div>';
+            let html = '<div class="border-top pt-2 mt-1">';
+            html += '<div class="fw-bold mb-1">强制检查 ' + templateCode + ' (共' + data.total_checked + '个, 耗时' + data.elapsed + 's)</div>';
+            (data.steps || []).forEach(s => {
+                const icon = s.action === '清理' ? '✅' : '⏭️';
+                const color = s.action === '清理' ? 'text-success' : 'text-muted';
+                html += '<div class="' + color + '">' + icon + ' ' + s.device_num + ' (' + s.device_code + ') → ' + s.state + ' → ' + s.action + '</div>';
+            });
+            html += '<div class="fw-bold mt-1">结果: 清理 ' + data.cleaned + ' 个, 保留 ' + (data.total_checked - data.cleaned) + ' 个</div>';
+            html += '</div>';
+            resultEl.innerHTML = html;
+            if (data.cleaned > 0) refreshData();
+            loadSelfHealStatus(regionKey);
         })
-        .catch(err => { el.innerHTML = '<div class="text-danger py-2">加载失败: ' + err.message + '</div>'; });
+        .catch(err => { resultEl.innerHTML = '<div class="text-danger">检查失败: ' + err.message + '</div>'; });
 }
 
 function triggerSelfHeal(regionKey) {
@@ -1598,6 +3437,322 @@ function triggerSelfHeal(regionKey) {
             }
         })
         .catch(err => { el.innerHTML = '<div class="text-danger py-2">检查失败: ' + err.message + '</div>'; });
+}
+
+// ========== 设备历史记录 ==========
+
+function toggleDeviceHistory(regionKey) {
+    const section = document.getElementById('history-' + regionKey);
+    const toggle = document.getElementById('toggle-' + regionKey);
+    const isExpanded = section.classList.contains('expanded');
+    
+    if (isExpanded) {
+        section.classList.remove('expanded');
+        toggle.innerHTML = '📋 详细 ▾';
+    } else {
+        section.classList.add('expanded');
+        toggle.innerHTML = '📋 收起 ▴';
+        // 首次展开时加载历史设备
+        loadDeviceHistory(regionKey);
+    }
+}
+
+// 历史设备数据缓存 {regionKey: {devices: [], labelEl: null}}
+let _historyDeviceCache = {};
+
+function loadDeviceHistory(regionKey) {
+    const grid = document.getElementById('history-devices-' + regionKey);
+    const label = document.querySelector('#history-' + regionKey + ' .history-label');
+    if (label) label.textContent = '历史设备（加载中...）';
+    
+    fetch('/api/dispatch/device_history/' + encodeURIComponent(regionKey))
+        .then(r => r.json())
+        .then(data => {
+            const devices = data.devices || [];
+            // 缓存数据
+            _historyDeviceCache[regionKey] = { devices: devices, labelEl: label };
+            if (devices.length === 0) {
+                grid.innerHTML = '';
+                if (label) label.textContent = '历史设备（暂无记录）';
+                return;
+            }
+            if (label) label.textContent = '历史设备（共' + data.total + '台）';
+            grid.innerHTML = renderHistoryDeviceIcons(devices);
+        })
+        .catch(err => {
+            grid.innerHTML = '<span class="text-danger small">加载失败</span>';
+            if (label) label.textContent = '历史设备（加载失败）';
+        });
+}
+
+// 增量更新历史设备网格（与上方设备网格动画一致）
+function updateHistoryDeviceGrid(regionKey) {
+    const section = document.getElementById('history-' + regionKey);
+    if (!section || !section.classList.contains('expanded')) return;  // 未展开则跳过
+    
+    const grid = document.getElementById('history-devices-' + regionKey);
+    if (!grid) return;
+    
+    const cache = _historyDeviceCache[regionKey];
+    if (!cache || !cache.devices) return;
+    
+    // 只取离线设备
+    const offlineDevices = cache.devices.filter(d => {
+        const state = d.state || '';
+        return state === 'Offline' || state === 'Downlined';
+    });
+    
+    const label = cache.labelEl;
+    if (label) label.textContent = '历史设备（共' + offlineDevices.length + '台离线）';
+    
+    if (offlineDevices.length === 0) {
+        grid.innerHTML = '<span class="text-muted small">无离线设备</span>';
+        return;
+    }
+    
+    // 按 update_time 排序
+    offlineDevices.sort((a, b) => (b.update_time || '').localeCompare(a.update_time || ''));
+    
+    // 构建新数据映射：deviceNum -> 新数据
+    const newDataMap = {};
+    offlineDevices.forEach(d => { newDataMap[d.deviceNum || d.deviceName] = d; });
+    const newNums = new Set(offlineDevices.map(d => d.deviceNum || d.deviceName));
+    
+    const existingIcons = grid.querySelectorAll('.agv-icon');
+    
+    // 移除离开的设备
+    existingIcons.forEach(icon => {
+        const dn = icon.querySelector('.dev-num')?.textContent;
+        if (!dn) return;
+        if (!newNums.has(dn)) {
+            icon.classList.add('leaving');
+            setTimeout(() => icon.remove(), 400);
+        }
+    });
+    
+    // 添加新设备
+    const existingNums = new Set(Array.from(grid.querySelectorAll('.agv-icon')).map(el => el.querySelector('.dev-num')?.textContent));
+    offlineDevices.forEach(d => {
+        const dn = d.deviceNum || d.deviceName;
+        if (!existingNums.has(dn)) {
+            const html = renderHistoryDeviceIcon(d);
+            const temp = document.createElement('span');
+            temp.innerHTML = html;
+            const newIcon = temp.firstChild;
+            newIcon.classList.add('entering');
+            grid.appendChild(newIcon);
+        }
+    });
+}
+
+// 渲染单个历史设备图标（供增量更新使用）
+function renderHistoryDeviceIcon(d) {
+    const dn = d.deviceNum || d.deviceName || '?';
+    const dc = d.deviceCode || '';
+    const state = d.state || '';
+    const updateTime = d.update_time ? d.update_time.slice(11, 19) : '';
+    const cls = 'agv-icon offline-device';
+    const spriteCls = 'agv-sprite offline';
+    const clickAttr = dn !== '?' ? `onclick="showDeviceModal('${dn}')" style="cursor:pointer;"` : '';
+    return `<span class="${cls}" ${clickAttr}
+        onmouseenter="showAgvTooltip(event,'${escapeHtml(dc)}','${escapeHtml(state)}','${escapeHtml(updateTime)}','','')"
+        onmouseleave="hideAgvTooltip()"><span class="${spriteCls}"></span><span class="dev-num">${dn}</span></span>`;
+}
+
+function renderHistoryDeviceIcons(devices) {
+    if (!devices || devices.length === 0) return '';
+    // 只显示离线设备（Offline/Downlined），在线设备已在上方设备网格中显示
+    const offlineDevices = devices.filter(d => {
+        const state = d.state || '';
+        return state === 'Offline' || state === 'Downlined';
+    });
+    if (offlineDevices.length === 0) return '<span class="text-muted small">无离线设备</span>';
+    // 按 update_time 倒序排列
+    const sorted = [...offlineDevices].sort((a, b) => (b.update_time || '').localeCompare(a.update_time || ''));
+    return sorted.map(d => {
+        const dn = d.deviceNum || d.deviceName || '?';
+        const dc = d.deviceCode || '';
+        const state = d.state || '';
+        const updateTime = d.update_time ? d.update_time.slice(11, 19) : '';  // xx:xx:xx 格式
+        const cls = 'agv-icon offline-device';
+        const spriteCls = 'agv-sprite offline';
+        const label = state;
+        const clickAttr = dn !== '?' ? `onclick="showDeviceModal('${dn}')" style="cursor:pointer;"` : '';
+        return `<span class="${cls}" ${clickAttr}
+            onmouseenter="showAgvTooltip(event,'${escapeHtml(dc)}','${escapeHtml(label)}','${escapeHtml(updateTime)}','','')"
+            onmouseleave="hideAgvTooltip()"><span class="${spriteCls}"></span><span class="dev-num">${dn}</span></span>`;
+    }).join('');
+}
+
+// 全量获取防抖
+let _fetchAllTimers = {};
+
+function fetchAllDevices(regionKey) {
+    const btn = document.getElementById('btn-fetch-all-' + regionKey);
+    if (!btn) return;
+    
+    // 检查是否在防抖中
+    if (_fetchAllTimers[regionKey]) {
+        showToast('请稍后再试（5秒防抖）', 'warning');
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>获取中...';
+    
+    fetch('/api/dispatch/device_history/' + encodeURIComponent(regionKey) + '/fetch_all', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.debounce) {
+                showToast(data.error || '请稍后再试', 'warning');
+                btn.disabled = false;
+                btn.innerHTML = '🔄 全量获取设备状态';
+                return;
+            }
+            if (data.success) {
+                showToast('获取完成: ' + data.device_count + '台设备, 历史共' + data.history_total + '条', 'success');
+                loadDeviceHistory(regionKey);
+                // 只刷新当前区域，不刷新全部
+                refreshSingleRegion(regionKey);
+            } else {
+                showToast(data.error || '获取失败', 'danger');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '🔄 全量获取设备状态';
+            
+            // 5秒防抖
+            _fetchAllTimers[regionKey] = setTimeout(() => {
+                delete _fetchAllTimers[regionKey];
+            }, 5000);
+        })
+        .catch(err => {
+            showToast('请求失败: ' + err.message, 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '🔄 全量获取设备状态';
+        });
+}
+
+function checkDeviceHistory(regionKey) {
+    const btn = document.getElementById('btn-check-history-' + regionKey);
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>检查中...';
+    
+    fetch('/api/dispatch/device_history/' + encodeURIComponent(regionKey) + '/check', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '🕐 48h检查';
+            if (data.stale > 0) {
+                showToast('48h检查: 共' + data.total + '条, ' + data.stale + '条超过48h未活动', 'warning');
+            } else {
+                showToast('48h检查: 共' + data.total + '条, 全部在48h内活动', 'success');
+            }
+        })
+        .catch(err => {
+            showToast('检查失败: ' + err.message, 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '🕐 48h检查';
+        });
+}
+
+function cleanDeviceHistory(regionKey) {
+    if (!confirm('确认清理 ' + regionKey + ' 中超过48小时未活动的设备记录？')) return;
+    
+    const btn = document.getElementById('btn-clean-history-' + regionKey);
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>清理中...';
+    
+    fetch('/api/dispatch/device_history/' + encodeURIComponent(regionKey) + '/clean', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '🗑️ 清理48h+';
+            if (data.success) {
+                showToast('清理完成: ' + data.cleaned + '条, 剩余' + data.remaining + '条', 'success');
+                loadDeviceHistory(regionKey);
+            } else {
+                showToast(data.error || '清理失败', 'danger');
+            }
+        })
+        .catch(err => {
+            showToast('清理失败: ' + err.message, 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '🗑️ 清理48h+';
+        });
+}
+
+function viewDeviceHistoryFile(regionKey) {
+    const filename = 'device_history.json';
+    fetch('/api/dispatch/region_file/' + encodeURIComponent(regionKey) + '/' + encodeURIComponent(filename))
+        .then(r => r.json())
+        .then(data => {
+            let content = data.content || '[]';
+            try { content = JSON.stringify(JSON.parse(content), null, 2); } catch(e) {}
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = '<div style="background:var(--card-bg);border-radius:12px;padding:1.5rem;max-width:800px;width:90%;max-height:80vh;display:flex;flex-direction:column;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">' +
+                '<h6 style="margin:0;">📝 ' + regionKey + ' / ' + filename + '</h6>' +
+                '<div><button class="btn btn-sm btn-primary me-1" id="btn-save-history">💾 保存</button>' +
+                '<button class="btn btn-sm btn-outline-danger me-1" id="btn-clear-history">🗑️ 清空</button>' +
+                '<button class="btn btn-sm btn-outline-secondary" id="btn-close-history">✕ 关闭</button></div></div>' +
+                '<textarea id="history-editor" style="flex:1;min-height:300px;font-family:monospace;font-size:0.8rem;padding:0.75rem;border:1px solid var(--border-color);border-radius:8px;background:var(--detail-card-bg);color:var(--text-color);resize:vertical;">' + escapeHtml(content) + '</textarea>' +
+                '<div id="history-save-msg" style="margin-top:0.5rem;font-size:0.8rem;"></div></div>';
+            document.body.appendChild(modal);
+            
+            modal.querySelector('#btn-close-history').onclick = () => modal.remove();
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            
+            modal.querySelector('#btn-clear-history').onclick = () => {
+                if (!confirm('确认清空 ' + regionKey + ' 的设备历史记录？此操作不可恢复。')) return;
+                const msgEl = modal.querySelector('#history-save-msg');
+                fetch('/api/dispatch/region_file/' + encodeURIComponent(regionKey) + '/' + encodeURIComponent(filename), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: '[]'})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        modal.querySelector('#history-editor').value = '[]';
+                        msgEl.innerHTML = '<span class="text-success">✅ 已清空</span>';
+                        loadDeviceHistory(regionKey);
+                    } else {
+                        msgEl.innerHTML = '<span class="text-danger">❌ ' + (result.error || '清空失败') + '</span>';
+                    }
+                })
+                .catch(err => { msgEl.innerHTML = '<span class="text-danger">请求失败: ' + err.message + '</span>'; });
+            };
+            
+            modal.querySelector('#btn-save-history').onclick = () => {
+                const editor = modal.querySelector('#history-editor');
+                const msgEl = modal.querySelector('#history-save-msg');
+                let newContent = editor.value;
+                try { JSON.parse(newContent); } catch(e) {
+                    msgEl.innerHTML = '<span class="text-danger">JSON 格式错误: ' + e.message + '</span>'; return;
+                }
+                fetch('/api/dispatch/region_file/' + encodeURIComponent(regionKey) + '/' + encodeURIComponent(filename), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: newContent})
+                })
+                .then(r => r.json())
+                .then(result => {
+                    if (result.success) {
+                        msgEl.innerHTML = '<span class="text-success">✅ 保存成功</span>';
+                        loadDeviceHistory(regionKey);
+                        setTimeout(() => modal.remove(), 1000);
+                    } else {
+                        msgEl.innerHTML = '<span class="text-danger">❌ ' + (result.error || '保存失败') + '</span>';
+                    }
+                })
+                .catch(err => { msgEl.innerHTML = '<span class="text-danger">请求失败: ' + err.message + '</span>'; });
+            };
+        })
+        .catch(err => showToast('加载失败: ' + err.message, 'danger'));
 }
 </script>
 {% endblock %}

@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block favicon %}
+    <link rel="icon" type="image/png" href="/static/img/agv/favicon.png?v=1">
+    {% endblock %}
     <title>{% block title %}跨环境任务模板管理系统{% endblock %}</title>
     <link href="/static/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css">
@@ -395,8 +398,8 @@
                 <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
                     <i class="bi bi-diagram-3 fs-2 me-2"></i>
                     <div>
-                        <div class="fw-bold fs-4">跨环境任务模板管理系统</div>
-                        <div class="small opacity-75">现代化界面 · 暗黑模式支持 · 智能管理AGV跨环境任务模板</div>
+                        <div class="fw-bold fs-4">跨环境任务管理系统</div>
+                        <div class="small opacity-75">CEM v{{ app_version }}</div>
                     </div>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -411,12 +414,12 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('addtask') }}">
-                                <i class="bi bi-send me-1"></i> 任务下发
+                                <i class="bi bi-send me-1"></i> 下发
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('query_index') }}">
-                                <i class="bi bi-search me-1"></i> 查询功能
+                                <i class="bi bi-search me-1"></i> 查询
                             </a>
                         </li>
                         <li class="nav-item">
@@ -431,7 +434,12 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('dispatch.dashboard') }}">
-                                <i class="bi bi-truck me-1"></i> 调车管理
+                                <i class="bi bi-truck me-1"></i> 调车
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('monitor.monitor_page') }}">
+                                <i class="bi bi-activity me-1"></i> 监控
                             </a>
                         </li>
                     </ul>
@@ -457,7 +465,7 @@
         <!-- 页脚 -->
         <footer class="mt-5 pt-4 text-center animate__animated animate__fadeInUp">
             <div class="glass-effect rounded-3 p-4">
-                <p class="mb-2">跨环境任务模板管理系统 &copy; 2026 | 版本 2.0</p>
+                <p class="mb-2">跨环境任务模板管理系统 <span style="cursor:pointer;opacity:0.3;transition:opacity 0.3s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.3'" onclick="window.location.href='/dispatch/test'" title="🎮 自动驾驶测试">&copy;</span> 2026 | 版本 2.0</p>
                 <p class="small opacity-75 mb-0">基于《跨环境配置及实施说明书》开发 · 现代化UI · 暗黑模式支持</p>
                 <div class="mt-3">
                     <span class="badge bg-primary me-2">Bootstrap 5.3</span>

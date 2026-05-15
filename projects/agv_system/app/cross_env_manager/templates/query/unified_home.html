@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block title %}跨环境任务分析 · 深度查询{% endblock %}
+{% block favicon %}
+<link rel="icon" type="image/png" href="/static/img/agv/favicon-home.png?v=1">
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -112,6 +115,235 @@
         align-items: center;
         z-index: 9999;
     }
+    
+    /* 设备图标样式（复用调车网格） */
+    .device-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+    .device-grid:empty::after {
+        content: '暂无设备';
+        color: var(--text-muted, #6c757d);
+        font-size: 0.85rem;
+    }
+    .agv-icon {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 64px;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #fff;
+        position: relative;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: default;
+    }
+    .agv-icon:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .agv-icon .dev-num {
+        margin-top: 2px;
+        font-size: 0.65rem;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .agv-icon.idle { background: #28a745; }
+    .agv-icon.busy { background: #0d6efd; }
+    .agv-icon.charging { background: #ffc107; color: #333; }
+    .agv-icon.error { background: #dc3545; }
+    .agv-icon.pending { background: #1a8e71; }
+    .agv-icon.load_in { background: #0d6efd; }
+    .agv-icon.load_out { background: #fd7e14; }
+    .agv-icon.empty_in { background: #6ea8fe; }
+    .agv-icon.empty_out { background: #feb272; }
+    
+    /* AGV Sprite — 举升AGV图标（rcsagv_lift.png 640×64，每格64×64，按 rcsagvpng.md 第8节顺序） */
+    .agv-sprite {
+        display: block;
+        width: 64px;
+        height: 64px;
+        background: url('/static/img/agv/rcsagv_lift.png') no-repeat;
+        background-size: 640px 64px;
+        image-rendering: auto;
+    }
+    /* col 0:蓝(空闲/任务中) 1:绿(充电) 2:红(异常) 3:橙(故障) 4:灰(离线) 5:紫(低电量) 6:棕 7:深蓝 8:青蓝+黄 9:红粉+黄 */
+    .agv-sprite.blue        { background-position: 0      0; }  /* col 0 */
+    .agv-sprite.green       { background-position: -64px  0; }  /* col 1 */
+    .agv-sprite.red         { background-position: -128px 0; }  /* col 2 */
+    .agv-sprite.orange      { background-position: -192px 0; }  /* col 3 */
+    .agv-sprite.gray        { background-position: -256px 0; }  /* col 4: 离线 */
+    .agv-sprite.purple      { background-position: -320px 0; }  /* col 5: 低电量 */
+    .agv-sprite.brown       { background-position: -384px 0; }  /* col 6 */
+    .agv-sprite.dark-blue   { background-position: -448px 0; }  /* col 7 */
+    .agv-sprite.teal        { background-position: -512px 0; }  /* col 8 */
+    .agv-sprite.pink        { background-position: -576px 0; }  /* col 9 */
+    
+    /* 子任务卡片内嵌设备状态小图标 */
+    .agv-sprite-sm {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        background: url('/static/img/agv/rcsagv_lift.png') no-repeat;
+        background-size: 240px 24px;
+        image-rendering: auto;
+        vertical-align: middle;
+    }
+    .agv-sprite-sm.blue        { background-position: 0      0; }
+    .agv-sprite-sm.green       { background-position: -24px  0; }
+    .agv-sprite-sm.red         { background-position: -48px  0; }
+    .agv-sprite-sm.orange      { background-position: -72px  0; }
+    .agv-sprite-sm.gray        { background-position: -96px  0; }
+    .agv-sprite-sm.purple      { background-position: -120px 0; }
+    .agv-sprite-sm.brown       { background-position: -144px 0; }
+    .agv-sprite-sm.dark-blue   { background-position: -168px 0; }
+    .agv-sprite-sm.teal        { background-position: -192px 0; }
+    .agv-sprite-sm.pink        { background-position: -216px 0; }
+    
+    /* 电池指示器 */
+    .battery-indicator {
+        display: block;
+        width: 20px;
+        height: 6px;
+        border-radius: 3px;
+        margin-top: 2px;
+    }
+    .battery-indicator.low { background: #dc3545; }
+    .battery-indicator.mid { background: #ffc107; }
+    .battery-indicator.high { background: #28a745; }
+    
+    /* AGV Tooltip */
+    .agv-tooltip {
+        display: none;
+        position: fixed;
+        z-index: 99999;
+        background: rgba(0,0,0,0.85);
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        pointer-events: none;
+        white-space: nowrap;
+        text-align: center;
+    }
+    .agv-tooltip .tt-code { font-size: 0.7rem; opacity: 0.8; }
+    .agv-tooltip .tt-label { font-weight: 600; }
+    .agv-tooltip .tt-time { font-size: 0.7rem; opacity: 0.7; }
+    .agv-tooltip .tt-battery { font-size: 0.7rem; opacity: 0.8; }
+    
+    /* 操作日志样式 */
+    .log-item {
+        display: flex; align-items: flex-start; gap: 0.6rem;
+        padding: 0.4rem 0; border-bottom: 1px solid var(--border-color, #dee2e6);
+        font-size: 0.85rem;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-item .log-time { min-width: 50px; font-weight: 600; opacity: 0.7; font-size: 0.75rem; }
+    .log-item .log-icon { font-size: 0.9rem; opacity: 0.6; }
+    .log-tab { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+    .log-tab.active { background: var(--primary-color, #0d6efd); color: #fff; }
+    
+    /* 暗黑模式下覆盖 Bootstrap bg-light 白色背景，适配项目主题 */
+    [data-bs-theme="dark"] .bg-light {
+        background-color: var(--detail-card-bg) !important;
+        color: var(--text-color) !important;
+    }
+    [data-bs-theme="dark"] .bg-light.text-dark {
+        color: var(--text-color) !important;
+    }
+    
+    /* ===== 设备实时状态卡片 - 方案A：卡片式服务器面板 ===== */
+    .device-summary-row {
+        display: flex; align-items: center; gap: 1.5rem;
+        padding: 0.5rem 0;
+    }
+    .device-icon-wrap {
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        width: 80px; height: 80px;
+        background: var(--detail-card-bg);
+        border-radius: 16px;
+        border: 2px solid var(--border-color);
+    }
+    .device-icon-wrap .agv-icon { transform: scale(1.1); }
+    .device-meta-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.3rem 1rem;
+        font-size: 0.85rem;
+    }
+    .device-meta-grid .meta-label {
+        color: var(--text-color); opacity: 0.6;
+        white-space: nowrap;
+    }
+    .device-meta-grid .meta-value {
+        font-weight: 500;
+    }
+    .device-meta-grid .meta-value code {
+        font-size: 0.8rem;
+    }
+    .battery-bar-wrap {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .battery-bar {
+        display: inline-block; width: 60px; height: 8px;
+        background: var(--border-color); border-radius: 4px; overflow: hidden;
+        vertical-align: middle;
+    }
+    .battery-bar-fill {
+        display: block; height: 100%; border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    .battery-bar-fill.high { background: #28a745; }
+    .battery-bar-fill.mid  { background: #ffc107; }
+    .battery-bar-fill.low  { background: #dc3545; }
+    
+    /* 服务器卡片网格 */
+    .server-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+    }
+    .server-card {
+        background: var(--detail-card-bg);
+        border-radius: 10px;
+        border-left: 4px solid #6c757d;
+        padding: 0.75rem 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .server-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--card-shadow);
+    }
+    .server-card.border-success { border-left-color: #28a745; }
+    .server-card.border-primary { border-left-color: #0d6efd; }
+    .server-card.border-warning { border-left-color: #ffc107; }
+    .server-card.border-danger  { border-left-color: #dc3545; }
+    .server-card.border-info    { border-left-color: #0dcaf0; }
+    .server-card.border-secondary { border-left-color: #6c757d; }
+    .server-card .sc-ip {
+        font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem;
+        display: flex; align-items: center; gap: 0.4rem;
+    }
+    .server-card .sc-ip code { font-size: 0.78rem; }
+    .server-card .sc-row {
+        display: flex; align-items: center; gap: 0.5rem;
+        font-size: 0.8rem; margin-top: 0.25rem;
+    }
+    .server-card .sc-row .sc-label { opacity: 0.6; min-width: 2rem; }
+    
+    /* 状态不一致警告 */
+    .status-mismatch-alert {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 0.75rem; margin-top: 0.75rem;
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 8px; font-size: 0.8rem;
+    }
 </style>
 {% endblock %}
 
@@ -143,6 +375,11 @@
                                         <i class="bi bi-box-seam me-1"></i> 货架号查询
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="navDeviceLink" data-bs-toggle="pill" href="#tabDeviceContent">
+                                        <i class="bi bi-truck me-1"></i> 设备号查询
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -166,11 +403,24 @@
                                 查询逻辑：优先查找执行中 → 失败/异常 → 已完成。若无进行中任务，则返回最近一条已完成。
                             </div>
                         </div>
+                        <!-- 设备号查询面板 -->
+                        <div class="tab-pane fade" id="tabDeviceContent">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">设备号 (DeviceNum)</label>
+                                <input type="text" class="form-control" id="deviceNumInput" placeholder="例如: DJC2">
+                                <div class="form-text">对应数据库中的 device_num 字段，查询该设备最近执行的任务</div>
+                            </div>
+                            <div class="alert alert-info small">
+                                <i class="bi bi-info-circle"></i> 
+                                查询逻辑：通过设备号查找最近任务单号 → 深度查询子任务 → 查询设备实时状态
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- 隐藏的单选按钮，用于JavaScript逻辑 -->
                     <input type="radio" class="d-none" name="queryType" id="typeTask" value="task" checked>
                     <input type="radio" class="d-none" name="queryType" id="typeShelf" value="shelf">
+                    <input type="radio" class="d-none" name="queryType" id="typeDevice" value="device">
 
                     <!-- 服务器IP配置（共用） -->
                     <div class="mb-3">
@@ -207,19 +457,19 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="fetchLocalDb" checked>
                                         <label class="form-check-label" for="fetchLocalDb">
-                                            查询本地数据库 (task_group / task_group_detail)
+                                            查看本地任务组原始数据
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="fetchTemplateInfo" checked>
                                         <label class="form-check-label" for="fetchTemplateInfo">
-                                            获取模板关联信息
+                                            查看模板配置详情
                                         </label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="fetchOtherTasks" checked>
                                         <label class="form-check-label" for="fetchOtherTasks">
-                                            查询同模板其他执行中任务
+                                            查看同模板其他任务
                                         </label>
                                     </div>
                                 </div>
@@ -307,6 +557,49 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- 操作日志面板 -->
+            <div class="query-card mt-3 animate__animated animate__fadeIn" id="queryLogCard" style="display:none;">
+                <div class="query-card-header bg-secondary bg-opacity-10 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-clock-history me-2"></i>操作日志</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="queryLogAutoScroll" checked onchange="toggleQueryLogAutoScroll()">
+                            <label class="form-check-label small" for="queryLogAutoScroll">自动</label>
+                        </div>
+                        <span class="badge bg-secondary" id="queryLogCount">0</span>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="toggleQueryLogPanel()">
+                            <i class="bi bi-chevron-up" id="queryLogChevron"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="collapse show" id="queryLogBody">
+                    <div class="d-flex border-bottom align-items-center" style="padding:0.4rem 1rem;gap:0.25rem;">
+                        <button class="btn btn-sm log-tab active" data-filter="all" onclick="switchQueryLogTab('all')">全部</button>
+                        <button class="btn btn-sm log-tab" data-filter="device_query" onclick="switchQueryLogTab('device_query')">设备查询</button>
+                        <button class="btn btn-sm log-tab" data-filter="task_query" onclick="switchQueryLogTab('task_query')">任务查询</button>
+                        <input type="text" id="queryLogSearch" class="form-control form-control-sm ms-auto" placeholder="搜索..." style="width:140px;" oninput="renderQueryLogs()">
+                    </div>
+                    <div id="queryLogContainer" style="max-height:250px;overflow-y:auto;padding:0.4rem 1rem;" onscroll="onQueryLogScroll()">
+                        <div class="text-center text-muted py-3 small">暂无操作日志</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 设备详情模态框 -->
+<div class="modal fade" id="deviceDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title"><i class="bi bi-truck me-2"></i><span id="ddmTitle">设备详情</span></h6>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-2" id="ddmBody">
+                <div class="text-center text-muted py-3">加载中...</div>
+            </div>
         </div>
     </div>
 </div>
@@ -356,11 +649,14 @@
         // ---------- DOM 元素 ----------
         const typeTaskRadio = document.getElementById('typeTask');
         const typeShelfRadio = document.getElementById('typeShelf');
+        const typeDeviceRadio = document.getElementById('typeDevice');
         // 选项卡面板，保留变量但不使用
         const taskPanel = document.getElementById('tabTaskContent');
         const shelfPanel = document.getElementById('tabShelfContent');
+        const devicePanel = document.getElementById('tabDeviceContent');
         const orderIdInput = document.getElementById('orderIdInput');
         const shelfInput = document.getElementById('shelfInput');
+        const deviceNumInput = document.getElementById('deviceNumInput');
         const serverIpInput = document.getElementById('serverIpInput');
         const ipHint = document.getElementById('ipHint');
         const queryBtn = document.getElementById('queryBtn');
@@ -386,6 +682,7 @@
             // 绑定事件
             typeTaskRadio.addEventListener('change', toggleQueryPanel);
             typeShelfRadio.addEventListener('change', toggleQueryPanel);
+            typeDeviceRadio.addEventListener('change', toggleQueryPanel);
             serverIpInput.addEventListener('input', updateIpHint);
             queryBtn.addEventListener('click', executeQuery);
             document.getElementById('helpToggle').addEventListener('click', async () => {
@@ -406,17 +703,19 @@
             // 回车快捷查询
             orderIdInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') executeQuery(); });
             shelfInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') executeQuery(); });
+            deviceNumInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') executeQuery(); });
             
             // 初始化IP提示
             updateIpHint();
             renderHistoryTags();
             
             // 选项卡切换同步单选按钮
-            document.querySelectorAll('#navTaskLink, #navShelfLink').forEach(tab => {
+            document.querySelectorAll('#navTaskLink, #navShelfLink, #navDeviceLink').forEach(tab => {
                 tab.addEventListener('shown.bs.tab', (event) => {
-                    const isTask = event.target.id === 'navTaskLink';
-                    typeTaskRadio.checked = isTask;
-                    typeShelfRadio.checked = !isTask;
+                    const tabId = event.target.id;
+                    typeTaskRadio.checked = (tabId === 'navTaskLink');
+                    typeShelfRadio.checked = (tabId === 'navShelfLink');
+                    typeDeviceRadio.checked = (tabId === 'navDeviceLink');
                     // 触发change事件以确保相关逻辑更新
                     typeTaskRadio.dispatchEvent(new Event('change'));
                 });
@@ -438,6 +737,19 @@
                 toggleQueryPanel();
                 shelfInput.value = urlParams.get('shelf');
                 setTimeout(executeQuery, 200);
+            } else {
+                // 无URL参数时，自动查询最近一条任务
+                fetch('/api/query/latest_order')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.order_id) {
+                            typeTaskRadio.checked = true;
+                            toggleQueryPanel();
+                            orderIdInput.value = data.order_id;
+                            setTimeout(executeQuery, 300);
+                        }
+                    })
+                    .catch(() => {});
             }
             
             // 初始化图表
@@ -617,24 +929,32 @@
         // ---------- 查询主流程 ----------
         async function executeQuery() {
             const isTaskQuery = typeTaskRadio.checked;
+            const isDeviceQuery = typeDeviceRadio.checked;
             let orderId = orderIdInput.value.trim();
             const shelf = shelfInput.value.trim();
+            const deviceNum = deviceNumInput.value.trim();
 
             if (isTaskQuery && !orderId) {
                 alert('请输入任务单号');
                 return;
             }
-            if (!isTaskQuery && !shelf) {
+            if (typeShelfRadio.checked && !shelf) {
                 alert('请输入货架号');
+                return;
+            }
+            if (isDeviceQuery && !deviceNum) {
+                alert('请输入设备号');
                 return;
             }
 
             // 禁用输入框防止重复提交
             orderIdInput.disabled = true;
             shelfInput.disabled = true;
+            deviceNumInput.disabled = true;
             serverIpInput.disabled = true;
             typeTaskRadio.disabled = true;
             typeShelfRadio.disabled = true;
+            typeDeviceRadio.disabled = true;
             
             loadingIndicator.classList.remove('d-none');
             resultContainer.innerHTML = '';
@@ -642,19 +962,68 @@
             queryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>查询中...';
 
             try {
-                if (!isTaskQuery) {
-                    orderId = await findOrderIdByShelf(shelf);
-                    if (!orderId) {
-                        throw new Error(`未找到货架 ${shelf} 的相关任务`);
+                if (isDeviceQuery) {
+                    // 设备号查询：调用后端 API（后端已包含完整深度查询结果 + 设备状态）
+                    const serverIp = getFinalIp();
+                    const res = await fetch('/api/query/device_tasks', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ device_num: deviceNum, server_ip: serverIp })
+                    });
+                    const data = await res.json();
+                    // 存储 query_debug 供调试面板使用（即使查询部分失败也展示）
+                    if (data.query_debug) {
+                        window._queryDebug = data.query_debug;
                     }
-                    orderIdInput.value = orderId;
-                }
+                    if (!res.ok || data.error) {
+                        // 部分失败：展示错误信息 + 调试面板
+                        let errHtml = `<div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> ${data.error || '查询失败'}
+                            ${data.order_id ? `<br><small>任务单号: <code>${data.order_id}</code></small>` : ''}
+                            ${data.device_code ? `<br><small>设备序列号: <code>${data.device_code}</code></small>` : ''}
+                        </div>`;
+                        if (data.query_debug) {
+                            errHtml += `<div class="query-card mb-3"><div class="query-card-header bg-warning bg-opacity-10">
+                                <i class="bi bi-bug me-2"></i>查询调试信息（部分失败）
+                                <button class="btn btn-sm btn-outline-warning ms-2" onclick="renderQueryDebugPanel()">展开</button>
+                            </div><div id="queryDebugPanel" class="card-body" style="display:block;"></div></div>`;
+                            // 延迟渲染调试面板
+                            setTimeout(() => { if (window._queryDebug) renderQueryDebugPanel(); }, 100);
+                        }
+                        resultContainer.innerHTML = errHtml;
+                        return;
+                    }
+                    addToHistory(`${deviceNum} (设备)`);
+                    // 后端已返回完整数据，直接构造 result 对象
+                    const deepResult = {
+                        orderId: data.order_id,
+                        baseUrl: data.baseUrl || '',
+                        mainTask: data.mainTask,
+                        subTasks: data.subTasks || [],
+                        deviceStatuses: data.device_statuses || [],
+                        device_code: data.device_code,
+                        device_num: data.device_num,
+                        query_debug: data.query_debug || {}
+                    };
+                    if (!deepResult.mainTask) {
+                        throw new Error('未找到该设备对应的主任务（远程API查询失败）');
+                    }
+                    renderResult(deepResult);
+                    loadTaskStatusChart();
+                } else {
+                    if (!isTaskQuery) {
+                        orderId = await findOrderIdByShelf(shelf);
+                        if (!orderId) {
+                            throw new Error(`未找到货架 ${shelf} 的相关任务`);
+                        }
+                        orderIdInput.value = orderId;
+                    }
 
-                addToHistory(isTaskQuery ? orderId : `${shelf} (货架)`);
-                const result = await performDeepQuery(orderId);
-                renderResult(result);
-                // 查询完成后刷新图表
-                loadTaskStatusChart();
+                    addToHistory(isTaskQuery ? orderId : `${shelf} (货架)`);
+                    const result = await performDeepQuery(orderId);
+                    renderResult(result);
+                    loadTaskStatusChart();
+                }
             } catch (error) {
                 console.error('查询失败:', error);
                 resultContainer.innerHTML = `
@@ -667,9 +1036,11 @@
                 // 恢复输入框
                 orderIdInput.disabled = false;
                 shelfInput.disabled = false;
+                deviceNumInput.disabled = false;
                 serverIpInput.disabled = false;
                 typeTaskRadio.disabled = false;
                 typeShelfRadio.disabled = false;
+                typeDeviceRadio.disabled = false;
                 queryBtn.disabled = false;
                 queryBtn.innerHTML = '<i class="bi bi-search"></i> 开始查询';
             }
@@ -710,6 +1081,8 @@
                 subTasks: [],
                 localTaskGroup: null,
                 localTaskGroupDetail: null,
+                localCrossTask: null,
+                localCrossTaskDetails: null,
                 templateInfo: null,
                 otherTasksSameTemplate: []
             };
@@ -738,6 +1111,24 @@
                 result.subTasks = detailData.data.sort((a, b) => (a.taskSeq || 0) - (b.taskSeq || 0));
             }
 
+            // 用本地数据库补充缺失字段（区域ID、设备IP、设备类型、货架型号等）
+            try {
+                const enrichRes = await fetch('/api/query/enrich_tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mainTask: result.mainTask, subTasks: result.subTasks })
+                });
+                if (enrichRes.ok) {
+                    const enrichData = await enrichRes.json();
+                    if (enrichData.success) {
+                        result.mainTask = enrichData.mainTask;
+                        result.subTasks = enrichData.subTasks;
+                    }
+                }
+            } catch (e) {
+                console.warn('enrich 补充字段失败:', e);
+            }
+
             if (fetchLocalDbCheck.checked) {
                 try {
                     const localRes = await fetch(`/api/task_group/${orderId}`);
@@ -749,6 +1140,20 @@
                 } catch (e) {
                     console.warn('本地数据库查询失败:', e);
                 }
+            }
+
+            // 始终查询本地 fy_cross_task + fy_cross_task_detail（用于 Tab 面板展示完整字段）
+            try {
+                const localCrossRes = await fetch(`/api/task/local_detail/${orderId}`);
+                if (localCrossRes.ok) {
+                    const localCrossData = await localCrossRes.json();
+                    if (localCrossData.success) {
+                        result.localCrossTask = localCrossData.main_task;
+                        result.localCrossTaskDetails = localCrossData.sub_tasks;
+                    }
+                }
+            } catch (e) {
+                console.warn('本地跨任务详情查询失败:', e);
             }
 
             if (fetchTemplateInfoCheck.checked && mainTask.modelProcessCode) {
@@ -846,19 +1251,570 @@
                 .replace(/\r/g, '\\r');
         }
 
+        // ---------- 设备状态渲染（复用调车网格图标逻辑） ----------
+        function getDeviceStateClass(state) {
+            const map = {
+                'Idle': 'idle', 'InTask': 'busy', 'Charging': 'charging',
+                'Offline': 'pending', 'Downlined': 'pending', 'Error': 'error',
+                '查询失败': 'pending', '未查询': 'pending'
+            };
+            return map[state] || 'pending';
+        }
+        
+        function getDeviceStateLabel(state) {
+            const map = {
+                'Idle': '空闲', 'InTask': '任务中', 'Charging': '充电中',
+                'Offline': '离线', 'Downlined': '下线', 'Error': '异常',
+                '查询失败': '查询失败', '未查询': '未查询'
+            };
+            return map[state] || state || '未知';
+        }
+        
+        // 根据设备状态返回举升AGV sprite 颜色（参照 rcsagvpng.md 第8节）
+        function getDeviceSpriteClass(state, battery) {
+            const b = parseInt(battery) || 100;
+            // 低电量优先（紫色）
+            if (b <= 30 && state !== 'Offline' && state !== 'Downlined' && state !== 'Error') {
+                return 'purple';
+            }
+            const map = {
+                'Idle': 'blue',
+                'InTask': 'blue',
+                'Charging': 'green',
+                'Offline': 'gray',
+                'Downlined': 'gray',
+                'Error': 'red',
+                '查询失败': 'gray',
+                '未查询': 'gray'
+            };
+            return map[state] || 'blue';
+        }
+        
+        function getBatteryClass(battery, threshold) {
+            const b = parseInt(battery) || 0;
+            const t = threshold || 30;
+            if (b <= t) return 'low';
+            if (b <= (t + 100) / 2) return 'mid';
+            return 'high';
+        }
+        
+        function renderDeviceIconForQuery(d, lowBatteryThreshold, clickHandler) {
+            const dn = d.device_num || d.deviceNum || '?';
+            const dc = d.device_code || d.deviceCode || '';
+            const state = d.state || '未知';
+            const battery = d.battery || '';
+            const threshold = lowBatteryThreshold || 30;
+            const cls = 'agv-icon ' + getDeviceStateClass(state);
+            const spriteCls = 'agv-sprite ' + getDeviceSpriteClass(state, battery);
+            const label = getDeviceStateLabel(state);
+            
+            let batteryHtml = '';
+            if (battery) {
+                const batCls = getBatteryClass(battery, threshold);
+                if (batCls) {
+                    batteryHtml = `<span class="battery-indicator ${batCls}" title="电量: ${battery}%"></span>`;
+                }
+            }
+            const clickAttr = clickHandler ? `onclick="${clickHandler}" style="cursor:pointer;"` : '';
+            return `<span class="${cls}" ${clickAttr} title="${label} · ${dc} (点击查看详情)"
+                onmouseenter="showAgvTooltipForQuery(event,'${escapeHtml(dc)}','${escapeHtml(label)}','','','${battery}')"
+                onmouseleave="hideAgvTooltipForQuery()"><span class="${spriteCls}"></span>${batteryHtml}</span>`;
+        }
+        
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
+        let queryTooltipEl = null;
+        function showAgvTooltipForQuery(e, code, label, time, tpl, battery) {
+            if (!queryTooltipEl) {
+                queryTooltipEl = document.createElement('div');
+                queryTooltipEl.className = 'agv-tooltip';
+                document.body.appendChild(queryTooltipEl);
+            }
+            let html = '';
+            if (code) html += `<div class="tt-code">${code}</div>`;
+            if (tpl) html += `<div class="tt-label">${tpl} · ${label}</div>`;
+            else html += `<div class="tt-label">${label}</div>`;
+            if (time) html += `<div class="tt-time">🕐 ${time}</div>`;
+            if (battery) html += `<div class="tt-battery">🔋 电量: ${battery}%</div>`;
+            queryTooltipEl.innerHTML = html;
+            queryTooltipEl.style.display = 'block';
+            const rect = e.target.closest('.agv-icon')?.getBoundingClientRect() || e.target.getBoundingClientRect();
+            queryTooltipEl.style.left = (rect.left + rect.width / 2) + 'px';
+            queryTooltipEl.style.top = (rect.top - 8) + 'px';
+            queryTooltipEl.style.transform = 'translate(-50%, -100%)';
+        }
+        function hideAgvTooltipForQuery() {
+            if (queryTooltipEl) queryTooltipEl.style.display = 'none';
+        }
+        
+        // 存储设备查询结果供模态框使用
+        let _deviceQueryResult = null;
+        
+        function getStateBadgeClass(state) {
+            if (state === 'Idle') return 'success';
+            if (state === 'InTask') return 'primary';
+            if (state === 'Charging') return 'warning';
+            if (state === 'Error') return 'danger';
+            if (state === 'Offline' || state === 'Downlined') return 'secondary';
+            if (state === '查询失败') return 'secondary';
+            return 'info';
+        }
+        
+        function renderDeviceStatusCard(result) {
+            const statuses = result.deviceStatuses || [];
+            const deviceCode = result.device_code || '';
+            const deviceNum = result.device_num || '';
+            
+            // 存储数据供模态框和调试面板使用
+            _deviceQueryResult = {
+                deviceNum, deviceCode, statuses,
+                orderId: result.orderId,
+                mainTask: result.mainTask,
+                subTasks: result.subTasks
+            };
+            // 存储全链路调试信息
+            window._queryDebug = result.query_debug || {};
+            
+            const hasStatus = statuses.length > 0;
+            // 优先取非下线/非离线/非查询失败的状态，排除完后没有则取第一个（即显示离线）
+            const firstOk = hasStatus
+                ? (statuses.find(s => s.state && s.state !== 'Offline' && s.state !== 'Downlined' && s.state !== '查询失败') || statuses[0])
+                : { state: '未查询', device_num: deviceNum, device_code: deviceCode };
+            
+            // 电量进度条 HTML
+            const batteryBar = (battery) => {
+                if (!battery && battery !== 0) return '';
+                const b = parseInt(battery) || 0;
+                const cls = b <= 30 ? 'low' : (b <= 60 ? 'mid' : 'high');
+                return `<span class="battery-bar-wrap"><span class="battery-bar"><span class="battery-bar-fill ${cls}" style="width:${b}%"></span></span>${b}%</span>`;
+            };
+            
+            let html = `
+                <div class="query-card mb-3 animate__animated animate__fadeIn">
+                    <div class="query-card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-truck me-2"></i>设备实时状态 · <code>${deviceNum || '-'}</code></h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="showDeviceDetailModal()" title="查看设备详情">
+                                <i class="bi bi-info-circle"></i> 详情
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#deviceStatusBody" aria-expanded="true">
+                                <i class="bi bi-chevron-up collapse-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="deviceStatusBody">
+                        <div class="card-body">
+                            <!-- 设备摘要行：大图标 + 核心指标 -->
+                            <div class="device-summary-row">
+                                <div class="device-icon-wrap" onclick="showDeviceDetailModal()" style="cursor:pointer;" title="点击查看详情">
+                                    ${renderDeviceIconForQuery(firstOk, 30, '')}
+                                </div>
+                                <div class="device-meta-grid">
+                                    <span class="meta-label">序列号</span>
+                                    <span class="meta-value"><code>${deviceCode || '-'}</code></span>`;
+            if (hasStatus) {
+                html += `
+                                    <span class="meta-label">状态</span>
+                                    <span class="meta-value"><span class="badge bg-${getStateBadgeClass(firstOk.state)}">${getDeviceStateLabel(firstOk.state)}</span></span>
+                                    <span class="meta-label">电量</span>
+                                    <span class="meta-value">${batteryBar(firstOk.battery)}</span>
+                                    <span class="meta-label">区域</span>
+                                    <span class="meta-value">📍 ${firstOk.area_id || '-'}</span>`;
+            } else {
+                html += `
+                                    <span class="meta-label">状态</span>
+                                    <span class="meta-value"><span class="badge bg-secondary">未查询到设备信息</span></span>`;
+            }
+            html += `
+                                </div>
+                            </div>`;
+            
+            // 各服务器卡片面板
+            if (statuses.length > 0) {
+                html += `
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="fw-bold" style="opacity:0.7;">各服务器查询结果 (${statuses.length}台)</small>
+                            </div>
+                            <div class="server-cards-grid">`;
+                statuses.forEach(s => {
+                    const stateCls = getStateBadgeClass(s.state);
+                    const stateLabel = getDeviceStateLabel(s.state);
+                    const ip = s.server_ip || s.service_url || '-';
+                    html += `
+                                <div class="server-card border-${stateCls}">
+                                    <div class="sc-ip">
+                                        <span class="badge bg-${stateCls}" style="width:8px;height:8px;border-radius:50%;padding:0;display:inline-block;"></span>
+                                        <code>${ip}</code>
+                                    </div>
+                                    <div class="sc-row">
+                                        <span class="sc-label">状态</span>
+                                        <span class="badge bg-${stateCls}">${stateLabel}</span>
+                                    </div>
+                                    <div class="sc-row">
+                                        <span class="sc-label">电量</span>
+                                        <span>${batteryBar(s.battery) || '-'}</span>
+                                    </div>
+                                    <div class="sc-row">
+                                        <span class="sc-label">区域</span>
+                                        <span>📍 ${s.area_id || '-'}</span>
+                                    </div>
+                                </div>`;
+                });
+                html += `</div>`;
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                    <!-- 调试面板入口 -->
+                    <div class="card-footer bg-transparent border-top-0 pt-0">
+                        <button class="btn btn-sm btn-outline-warning w-100" type="button"
+                                onclick="renderQueryDebugPanel()" id="debugPanelToggle">
+                            <i class="bi bi-bug me-1"></i> 查询调试信息
+                            <span class="badge bg-secondary ms-1" id="debugStepCount">4步</span>
+                        </button>
+                        <div id="queryDebugPanel" class="mt-2" style="display:none;"></div>
+                    </div>
+                </div>`;
+            return html;
+        }
+        
+        // ========== 全链路调试面板 ==========
+        window.renderQueryDebugPanel = function() {
+            const debug = window._queryDebug;
+            const panel = document.getElementById('queryDebugPanel');
+            const toggle = document.getElementById('debugPanelToggle');
+            
+            if (!panel || !debug || Object.keys(debug).length === 0) {
+                if (panel) panel.innerHTML = '<div class="alert alert-warning small mb-0">暂无调试信息</div>';
+                if (panel) panel.style.display = 'block';
+                return;
+            }
+            
+            // 切换显示/隐藏
+            if (panel.style.display !== 'none') {
+                panel.style.display = 'none';
+                if (toggle) toggle.innerHTML = '<i class="bi bi-bug me-1"></i> 查询调试信息 <span class="badge bg-secondary ms-1">4步</span>';
+                return;
+            }
+            panel.style.display = 'block';
+            if (toggle) toggle.innerHTML = '<i class="bi bi-bug me-1"></i> 隐藏调试信息 <span class="badge bg-secondary ms-1">▲</span>';
+            
+            let html = '';
+            const totalMs = debug.total_elapsed_ms || 0;
+            
+            // 总览
+            html += `<div class="alert alert-secondary small py-1 px-2 mb-2">
+                <i class="bi bi-stopwatch me-1"></i> 全链路总耗时: <strong>${totalMs}ms</strong>
+            </div>`;
+            
+            // 步骤1
+            html += renderDebugStep(1, '按设备号查任务', debug.step1_find_order);
+            // 步骤2
+            html += renderDebugStep(2, '查主任务', debug.step2_main_task);
+            // 步骤3
+            html += renderDebugStep(3, '查子任务', debug.step3_sub_tasks);
+            // 步骤4
+            html += renderDebugStep(4, '查设备实时状态', debug.step4_device_status);
+            
+            panel.innerHTML = html;
+        }
+        
+        function renderDebugStep(stepNum, title, stepData) {
+            if (!stepData) return '';
+            
+            let success = true;
+            let elapsedMs = 0;
+            let httpStatus = null;
+            let requestUrl = '';
+            let requestBody = null;
+            let responseBody = null;
+            let errorMsg = '';
+            let extraInfo = '';
+            
+            if (stepNum === 1) {
+                // 步骤1 特殊处理：多次尝试
+                const attempts = stepData.attempts || [];
+                const lastAttempt = attempts[attempts.length - 1] || {};
+                success = stepData.result_order_id ? true : false;
+                elapsedMs = attempts.reduce((sum, a) => sum + (a.elapsed_ms || 0), 0);
+                httpStatus = lastAttempt.http_status;
+                requestUrl = lastAttempt.request_url || '';
+                requestBody = lastAttempt.request_body;
+                responseBody = lastAttempt.response_body;
+                errorMsg = lastAttempt.error || '';
+                if (attempts.length > 1) {
+                    extraInfo = `<div class="text-muted small mb-1">尝试了 ${attempts.length} 个状态: ${attempts.map(a => a.query_status).join(' → ')}</div>`;
+                }
+            } else if (stepNum === 4) {
+                // 步骤4 特殊处理：多个服务器
+                const servers = stepData.servers || [];
+                success = servers.some(s => s.state && s.state !== '查询失败');
+                elapsedMs = servers.reduce((sum, s) => sum + (s.elapsed_ms || 0), 0);
+                httpStatus = servers.length > 0 ? servers[0].http_status : null;
+                requestUrl = servers.length > 0 ? servers[0].request_url : '';
+                requestBody = servers.length > 0 ? servers[0].request_body : null;
+                responseBody = servers.length > 0 ? servers[0].response_body : null;
+                errorMsg = servers.filter(s => s.error).map(s => s.error).join('; ');
+                extraInfo = `<div class="text-muted small mb-1">查询了 ${servers.length} 个服务器</div>`;
+            } else {
+                success = stepData.success || false;
+                elapsedMs = stepData.elapsed_ms || 0;
+                httpStatus = stepData.http_status;
+                requestUrl = stepData.request_url || '';
+                requestBody = stepData.request_body;
+                responseBody = stepData.response_body;
+                errorMsg = stepData.error || '';
+            }
+            
+            const statusIcon = success ? '✅' : '❌';
+            const statusColor = success ? 'success' : 'danger';
+            const httpBadge = httpStatus
+                ? `<span class="badge bg-${httpStatus < 400 ? 'success' : 'danger'} ms-1">${httpStatus}</span>`
+                : '<span class="badge bg-secondary ms-1">N/A</span>';
+            
+            let html = `
+            <div class="card mb-2 border-${statusColor}">
+                <div class="card-header py-1 px-2 small bg-${statusColor} bg-opacity-10 d-flex justify-content-between align-items-center">
+                    <span>${statusIcon} <strong>步骤${stepNum}: ${escapeHtml(title)}</strong></span>
+                    <span>${httpBadge} <span class="text-muted">${elapsedMs}ms</span></span>
+                </div>
+                <div class="card-body py-1 px-2 small">
+                    ${extraInfo}`;
+            
+            if (requestUrl) {
+                html += `<div class="mb-1"><span class="text-muted">请求:</span> <code class="text-break" style="font-size:0.7rem;">POST ${escapeHtml(requestUrl)}</code></div>`;
+            }
+            if (requestBody) {
+                html += `<div class="mb-1"><span class="text-muted">请求体:</span>
+                    <pre class="bg-light p-1 rounded mb-0" style="font-size:0.7rem;max-height:80px;overflow:auto;">${escapeHtml(JSON.stringify(requestBody, null, 2))}</pre></div>`;
+            }
+            if (responseBody) {
+                html += `<div class="mb-1"><span class="text-muted">响应体:</span>
+                    <pre class="bg-light p-1 rounded mb-0" style="font-size:0.7rem;max-height:120px;overflow:auto;">${escapeHtml(JSON.stringify(responseBody, null, 2))}</pre></div>`;
+            }
+            if (errorMsg) {
+                html += `<div class="text-danger small"><i class="bi bi-exclamation-triangle"></i> ${escapeHtml(errorMsg)}</div>`;
+            }
+            
+            // 步骤4 展开每个服务器的详情
+            if (stepNum === 4 && stepData.servers && stepData.servers.length > 1) {
+                html += `<div class="mt-2"><span class="text-muted fw-bold">各服务器详情:</span></div>`;
+                stepData.servers.forEach((s, i) => {
+                    const sIcon = s.state && s.state !== '查询失败' ? '✅' : '❌';
+                    const sColor = s.state && s.state !== '查询失败' ? 'success' : 'danger';
+                    html += `<div class="card mb-1 border-${sColor}">
+                        <div class="card-header py-0 px-1 small bg-${sColor} bg-opacity-10">
+                            ${sIcon} ${escapeHtml(s.server_ip || s.service_url || '?')}
+                            <span class="badge bg-${sColor}">${escapeHtml(s.state || '?')}</span>
+                            ${s.http_status ? `<span class="badge bg-${s.http_status < 400 ? 'success' : 'danger'} ms-1">${s.http_status}</span>` : ''}
+                            <span class="text-muted ms-1">${s.elapsed_ms || 0}ms</span>
+                        </div>
+                        <div class="card-body py-0 px-1" style="font-size:0.65rem;">
+                            <div>请求: <code>POST ${escapeHtml(s.request_url || '')}</code></div>
+                            ${s.request_body ? `<pre class="bg-light p-1 rounded mb-0" style="max-height:50px;overflow:auto;">${escapeHtml(JSON.stringify(s.request_body, null, 2))}</pre>` : ''}
+                            ${s.response_body ? `<pre class="bg-light p-1 rounded mb-0" style="max-height:80px;overflow:auto;">${escapeHtml(JSON.stringify(s.response_body, null, 2))}</pre>` : ''}
+                            ${s.error ? `<div class="text-danger">${escapeHtml(s.error)}</div>` : ''}
+                        </div>
+                    </div>`;
+                });
+            }
+            
+            html += `</div></div>`;
+            return html;
+        }
+        
+        window.showDeviceDetailModal = function() {
+            const data = _deviceQueryResult;
+            if (!data) return;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deviceDetailModal'));
+            document.getElementById('ddmTitle').textContent = '设备详情 - ' + (data.deviceNum || '?');
+            
+            const statuses = data.statuses || [];
+            const hasStatus = statuses.length > 0;
+            const firstOk = hasStatus
+                ? (statuses.find(s => s.state && s.state !== 'Offline' && s.state !== 'Downlined' && s.state !== '查询失败') || statuses[0])
+                : { state: '未查询', device_num: data.deviceNum, device_code: data.deviceCode };
+            
+            // 电量进度条
+            const batteryBar = (battery) => {
+                if (!battery && battery !== 0) return '';
+                const b = parseInt(battery) || 0;
+                const cls = b <= 30 ? 'low' : (b <= 60 ? 'mid' : 'high');
+                return '<span class="battery-bar-wrap"><span class="battery-bar"><span class="battery-bar-fill ' + cls + '" style="width:' + b + '%"></span></span>' + b + '%</span>';
+            };
+            
+            // 基本信息 + 设备图标
+            let html = '<div class="device-summary-row mb-3">';
+            html += '<div class="device-icon-wrap">' + renderDeviceIconForQuery(firstOk, 30, '') + '</div>';
+            html += '<div class="device-meta-grid">';
+            html += '<span class="meta-label">设备编号</span><span class="meta-value"><strong>' + escapeHtml(data.deviceNum || '-') + '</strong></span>';
+            html += '<span class="meta-label">序列号</span><span class="meta-value"><code>' + escapeHtml(data.deviceCode || '-') + '</code></span>';
+            html += '<span class="meta-label">状态</span><span class="meta-value"><span class="badge bg-' + getStateBadgeClass(firstOk.state) + '">' + getDeviceStateLabel(firstOk.state) + '</span></span>';
+            html += '<span class="meta-label">电量</span><span class="meta-value">' + (firstOk.battery ? batteryBar(firstOk.battery) : '-') + '</span>';
+            html += '<span class="meta-label">区域</span><span class="meta-value">📍 ' + (firstOk.area_id || '-') + '</span>';
+            html += '</div></div>';
+            
+            // 各服务器查询详情（卡片式）
+            if (statuses.length > 0) {
+                html += '<div class="mb-2"><strong style="color:var(--primary-color);">各服务器查询详情 (' + statuses.length + '台)</strong></div>';
+                html += '<div class="server-cards-grid">';
+                statuses.forEach((s, i) => {
+                    const stateColor = getStateBadgeClass(s.state);
+                    html += '<div class="server-card border-' + stateColor + '">';
+                    html += '<div class="sc-ip"><span class="badge bg-' + stateColor + '" style="width:8px;height:8px;border-radius:50%;padding:0;display:inline-block;"></span> <code>' + escapeHtml(s.server_ip || s.service_url || '-') + '</code></div>';
+                    html += '<div class="sc-row"><span class="sc-label">状态</span><span class="badge bg-' + stateColor + '">' + getDeviceStateLabel(s.state) + '</span></div>';
+                    html += '<div class="sc-row"><span class="sc-label">电量</span><span>' + (s.battery ? batteryBar(s.battery) : '-') + '</span></div>';
+                    html += '<div class="sc-row"><span class="sc-label">区域</span><span>📍 ' + (s.area_id || '-') + '</span></div>';
+                    
+                    // 请求/响应详情（折叠）
+                    if (s.request_url || s.request_body || s.response_body || s.error) {
+                        const detailId = 'ddm_detail_' + i;
+                        html += '<button class="btn btn-sm btn-outline-secondary mt-2 w-100 small" type="button" data-bs-toggle="collapse" data-bs-target="#' + detailId + '">📋 请求/响应详情</button>';
+                        html += '<div class="collapse mt-1" id="' + detailId + '">';
+                        if (s.request_url) {
+                            html += '<div class="mb-1"><span class="text-muted">请求地址:</span><br><code class="text-break" style="font-size:0.7rem;">' + escapeHtml(s.request_url) + '</code></div>';
+                        }
+                        if (s.request_body) {
+                            html += '<div class="mb-1"><span class="text-muted">请求体:</span><br><pre style="font-size:0.7rem;max-height:80px;overflow:auto;background:var(--detail-card-bg);padding:0.4rem;border-radius:4px;">' + escapeHtml(JSON.stringify(s.request_body, null, 2)) + '</pre></div>';
+                        }
+                        if (s.response_body) {
+                            html += '<div class="mb-1"><span class="text-muted">返回内容:</span><br><pre style="font-size:0.7rem;max-height:150px;overflow:auto;background:var(--detail-card-bg);padding:0.4rem;border-radius:4px;">' + escapeHtml(JSON.stringify(s.response_body, null, 2)) + '</pre></div>';
+                        } else if (s.error) {
+                            html += '<div class="text-danger"><span class="text-muted">错误:</span> ' + escapeHtml(s.error) + '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            } else {
+                html += '<div class="alert alert-warning small mb-0"><i class="bi bi-exclamation-triangle"></i> 未查询到设备状态信息。可能原因：子任务中没有 service_url，或所有服务器均不可达。</div>';
+            }
+            
+            // 关联任务信息
+            if (data.orderId) {
+                html += '<div class="mt-3"><strong style="color:var(--primary-color);">关联任务</strong></div>';
+                html += '<table class="table table-sm table-borderless small mb-0"><tbody>';
+                html += '<tr><td class="text-muted" style="width:80px;">任务单号</td><td><code>' + escapeHtml(data.orderId || '-') + '</code></td></tr>';
+                if (data.mainTask) {
+                    html += '<tr><td class="text-muted">模板</td><td>' + escapeHtml(data.mainTask.modelProcessName || data.mainTask.templateName || '-') + '</td></tr>';
+                }
+                html += '<tr><td class="text-muted">子任务数</td><td>' + (data.subTasks ? data.subTasks.length : 0) + '</td></tr>';
+                html += '</tbody></table>';
+            }
+            
+            // 全链路调试信息入口提示
+            if (window._queryDebug && Object.keys(window._queryDebug).length > 0) {
+                html += '<div class="mt-3"><strong style="color:var(--primary-color);"><i class="bi bi-bug me-1"></i>查询调试</strong></div>';
+                html += '<div class="alert alert-info small py-1 px-2 mb-0">请关闭此窗口，在设备状态卡片底部点击 <strong>"查询调试信息"</strong> 查看完整4步链路（请求/响应/耗时）。</div>';
+            }
+            
+            document.getElementById('ddmBody').innerHTML = html;
+            modal.show();
+        }
+
         // ---------- 渲染结果（每个子任务卡片化，默认展开详细信息） ----------
+        function renderMainTaskLocalDbTab(localTask, cardIdPrefix) {
+            if (!localTask) return '';
+            const tabId = `${cardIdPrefix}_localDb`;
+            const remark = localTask.remark || '';
+            let remarkDisplay = '-';
+            if (remark) {
+                try {
+                    const parsed = JSON.parse(remark);
+                    remarkDisplay = `<pre class="bg-light p-2 rounded mb-0" style="font-size:0.7rem;max-height:200px;overflow:auto;">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+                } catch (e) {
+                    remarkDisplay = `<code class="text-break" style="font-size:0.7rem;">${escapeHtml(remark)}</code>`;
+                }
+            }
+            return `
+            <div class="mt-3 border-top pt-2">
+                <ul class="nav nav-tabs small" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#${tabId}_basic" type="button">📋 基本信息</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${tabId}_db" type="button">🗄️ 本地DB完整字段</button>
+                    </li>
+                </ul>
+                <div class="tab-content border border-top-0 rounded-bottom p-2 bg-light bg-opacity-10">
+                    <div class="tab-pane fade show active" id="${tabId}_basic">
+                        <table class="table table-sm table-borderless small mb-0">
+                            <tr><th class="w-30">数据库ID</th><td><code>${localTask.id || '-'}</code></td></tr>
+                            <tr><th>来源系统</th><td>${localTask.from_system || '-'}</td></tr>
+                            <tr><th>启用状态</th><td>${localTask.enable ?? '-'}</td></tr>
+                            <tr><th>是否创建任务</th><td>${localTask.is_create_task ?? '-'}</td></tr>
+                            <tr><th>创建任务ID</th><td>${localTask.create_task_id || '-'}</td></tr>
+                            <tr><th>忽略标记</th><td>${localTask.ignore ?? '-'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="tab-pane fade" id="${tabId}_db">
+                        <div class="mb-2"><strong>📋 remark（完整请求体）:</strong></div>
+                        ${remarkDisplay}
+                        <hr class="my-2">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-fy_cross_task", ${escapeJsonForInline(localTask)})'>
+                                <i class="bi bi-info-circle"></i> 查看完整 JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+        
         function renderResult(result) {
             const main = result.mainTask;
             const subTasks = result.subTasks;
             const cardIdPrefix = `card_${result.orderId.replace(/[^a-zA-Z0-9]/g, '_')}`;
             
-            let html = `
+            // 存储本地子任务数据供 renderSubTaskCard 使用
+            window._localCrossTaskDetails = result.localCrossTaskDetails || [];
+            // 存储主任务数据供 JSON 查看按钮使用
+            window._lastMainTask = main;
+            
+            // 主任务开始/结束时间：取第一个子任务的开始时间和最后一个有记录的子任务的结束时间
+            if (subTasks.length > 0) {
+                const firstStart = subTasks.find(t => t.start_time || t.startTime);
+                if (firstStart && !main.start_time && !main.startTime) {
+                    main.start_time = firstStart.start_time || firstStart.startTime;
+                }
+                const lastEnd = [...subTasks].reverse().find(t => t.end_time || t.endTime);
+                if (lastEnd && !main.end_time && !main.endTime) {
+                    main.end_time = lastEnd.end_time || lastEnd.endTime;
+                }
+            }
+            
+            let html = '';
+            
+            // 设备状态卡片（设备号查询时始终显示）
+            if (result.deviceStatuses !== undefined) {
+                html += renderDeviceStatusCard(result);
+            }
+            
+            html += `
                 <!-- 任务总览卡片 -->
                 <div class="query-card mb-3 animate__animated animate__fadeIn" id="${cardIdPrefix}_overview">
                     <div class="query-card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-card-list me-2"></i>任务总览</h5>
                         <div>
-                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('总览', ${escapeJsonForInline(main)})" title="查看原始 JSON">
+                            ${(() => {
+                                const mainStatus = main.taskStatus ?? main.status ?? main.task_status;
+                                const allDone = mainStatus == 8 && subTasks.every(t => (t.taskStatus ?? t.status ?? t.task_status) == 8);
+                                if (allDone) {
+                                    return `<button class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); reportTaskStatus('${main.orderId || main.order_id || ''}', '${main.modelProcessCode || main.model_process_code || ''}', '${main.deviceCode || main.device_code || ''}', '${main.deviceNum || main.device_num || ''}', '${main.shelfNum || main.shelf_num || ''}')" title="任务已完成但下游系统可能未收到状态通知，手动上报异常恢复(status=8)">
+                                        <i class="bi bi-arrow-repeat"></i> 上报异常恢复
+                                    </button>`;
+                                }
+                                return '';
+                            })()}
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('总览', window._lastMainTask)" title="查看原始 JSON">
                                 <i class="bi bi-info-circle"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#${cardIdPrefix}_overview_body" aria-expanded="true">
@@ -907,17 +1863,19 @@
                             
                             ${result.localTaskGroup ? `
                             <div class="mt-3 p-3 bg-light bg-opacity-25 rounded">
-                                <h6><i class="bi bi-database"></i> 本地数据库记录</h6>
+                                <h6><i class="bi bi-database"></i> 本地数据库原始记录</h6>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-task_group", ${escapeJsonForInline(result.localTaskGroup)})'>
-                                        查看 task_group 数据
+                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-任务组(task_group)", ${escapeJsonForInline(result.localTaskGroup)})'>
+                                        <i class="bi bi-filetype-json"></i> 任务组 (task_group)
                                     </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-task_group_detail", ${escapeJsonForInline(result.localTaskGroupDetail)})'>
-                                        查看 task_group_detail 数据
+                                    <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-任务组详情(task_group_detail)", ${escapeJsonForInline(result.localTaskGroupDetail)})'>
+                                        <i class="bi bi-filetype-json"></i> 任务组详情 (task_group_detail)
                                     </button>
                                 </div>
                             </div>
                             ` : ''}
+                            
+                            ${result.localCrossTask ? renderMainTaskLocalDbTab(result.localCrossTask, cardIdPrefix) : ''}
                         </div>
                     </div>
                 </div>
@@ -940,7 +1898,7 @@
                     </div>
                     <div class="collapse show" id="${cardIdPrefix}_subtasks_container_body">
                         <div class="card-body">
-                            ${subTasks.map((task, index) => renderSubTaskCard(task, index, result.baseUrl)).join('')}
+                            ${subTasks.map((task, index) => renderSubTaskCard(task, index, result.baseUrl, result.deviceStatuses)).join('')}
                         </div>
                     </div>
                 </div>
@@ -1002,7 +1960,42 @@
         }
 
         // 渲染单个子任务卡片（完整字段显示，按照FindTheTask.php逻辑）
-        function renderSubTaskCard(task, index, baseUrl) {
+        function renderSubTaskLocalDbTab(subOrderId, cardId) {
+            const localDetails = window._localCrossTaskDetails || [];
+            const localSub = localDetails.find(d => d.sub_order_id === subOrderId);
+            if (!localSub) return '';
+            
+            const tabId = `${cardId}_localDb`;
+            return `
+            <div class="mt-2 border-top pt-2">
+                <ul class="nav nav-tabs small" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#${tabId}_basic" type="button">📋 基本信息</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#${tabId}_db" type="button">🗄️ 本地DB完整字段</button>
+                    </li>
+                </ul>
+                <div class="tab-content border border-top-0 rounded-bottom p-2 bg-light bg-opacity-10">
+                    <div class="tab-pane fade show active" id="${tabId}_basic">
+                        <table class="table table-sm table-borderless small mb-0">
+                            <tr><th class="w-30">数据库ID</th><td><code>${localSub.id || '-'}</code></td></tr>
+                            <tr><th>模板名称</th><td>${localSub.template_name || '-'}</td></tr>
+                            <tr><th>装载类型</th><td>${localSub.load_type || '-'}</td></tr>
+                            <tr><th>变更状态</th><td>${localSub.change_status ?? '-'}</td></tr>
+                            <tr><th>更新时间</th><td>${formatTime(localSub.update_time)}</td></tr>
+                        </table>
+                    </div>
+                    <div class="tab-pane fade" id="${tabId}_db">
+                        <button class="btn btn-sm btn-outline-info" onclick='showJsonForCard("本地-fy_cross_task_detail", ${escapeJsonForInline(localSub)})'>
+                            <i class="bi bi-info-circle"></i> 查看完整 JSON
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+        
+        function renderSubTaskCard(task, index, baseUrl, deviceStatuses) {
             const cardId = `subtask_${task.id || index}`;
             
             // 辅助函数：从多个候选字段名中获取第一个存在的值
@@ -1071,13 +2064,27 @@
             // 注意：内联事件中调用 showJsonForCard 时，需要对 JSON 字符串进行安全转义
             const taskJsonSafe = escapeJsonForInline(task);
             
+            // 每个子任务都匹配对应服务器的设备实时状态图标（标题栏小图标）
+            let deviceStatusIconHtml = '';
+            const devStatuses = deviceStatuses || (window._deviceQueryResult && window._deviceQueryResult.statuses) || [];
+            if (devStatuses.length > 0) {
+                const matched = devStatuses.find(s => s.server_ip === serverIp);
+                if (matched && matched.state) {
+                    const spriteCls = getDeviceSpriteClass(matched.state, matched.battery);
+                    const stateLabel = getDeviceStateLabel(matched.state);
+                    const bat = matched.battery;
+                    deviceStatusIconHtml = `<span class="agv-sprite-sm ${spriteCls}" title="设备状态: ${stateLabel}${bat ? ' · 🔋' + bat + '%' : ''}${matched.area_id ? ' · 📍区域' + matched.area_id : ''}" style="cursor:help;"></span>`;
+                }
+            }
+            
             return `
             <div class="subtask-card mb-2" id="${cardId}">
                 <div class="query-card-header py-2 d-flex justify-content-between align-items-center">
                     <div>
                         <span class="fw-bold">子任务 #${taskSeq}</span>
                         <span class="ms-2">${getStatusBadge(status)} ${taskStatusName !== '-' ? `<small class="text-muted">(${taskStatusName})</small>` : ''}</span>
-                        <code class="ms-3">${subOrderId}</code>
+                        ${deviceStatusIconHtml}
+                        <code class="ms-2">${subOrderId}</code>
                     </div>
                     <div>
                         <button class="btn btn-sm btn-outline-secondary me-1" onclick="event.stopPropagation(); showJsonForCard('子任务 ' + ${taskSeq}, ${taskJsonSafe})" title="查看原始 JSON">
@@ -1115,35 +2122,10 @@
                                     <tr><th>结束时间</th><td>${formattedEnd}</td></tr>
                                     <tr><th>任务状态值</th><td>${status}</td></tr>
                                     <tr><th>任务状态</th><td>${taskStatusName}</td></tr>
-                                    <tr><th>order_id</th><td>${orderId}</td></tr>
-                                    <tr><th>out_order_id</th><td>${outOrderId}</td></tr>
                                     <tr><th>tg_id</th><td>${tgId}</td></tr>
                                 </table>
                             </div>
                         </div>
-                        
-                        <!-- 子任务特定信息 -->
-                        ${startPoint !== '-' || endPoint !== '-' || action !== '-' || angel !== '-' || x !== '-' || y !== '-' || shelfNum !== '-' ? `
-                        <div class="mt-3 pt-3 border-top">
-                            <h6 class="mb-2"><i class="bi bi-list-task"></i> 子任务执行详情</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <table class="table table-sm table-borderless small table-modern">
-                                        <tr><th>起始点</th><td><code>${startPoint}</code></td></tr>
-                                        <tr><th>目标点</th><td><code>${endPoint}</code></td></tr>
-                                        <tr><th>动作</th><td>${action}</td></tr>
-                                    </table>
-                                </div>
-                                <div class="col-md-6">
-                                    <table class="table table-sm table-borderless small table-modern">
-                                        <tr><th>坐标 (X, Y)</th><td>${x}, ${y}</td></tr>
-                                        <tr><th>角度</th><td>${angel}</td></tr>
-                                        <tr><th>货架号</th><td>${shelfNum}</td></tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        ` : ''}
                         
                         <!-- 操作按钮区 -->
                         <div class="mt-3 pt-3 border-top d-flex flex-wrap gap-2">
@@ -1171,6 +2153,8 @@
                                     <i class="bi bi-check-circle"></i> 异常完成
                                 </button>` : ''}
                         </div>
+                        
+                        ${renderSubTaskLocalDbTab(subOrderId, cardId)}
                     </div>
                 </div>
             </div>
@@ -1338,6 +2322,71 @@
             }
         };
 
+        // 手动上报任务状态（status=8）
+        window.reportTaskStatus = async function(orderId, modelProcessCode, deviceCode, deviceNum, shelfNumber) {
+            if (!orderId) {
+                alert('❌ 缺少 orderId');
+                return;
+            }
+            if (!modelProcessCode) {
+                alert('❌ 缺少模板代码 (modelProcessCode)，无法查询上报地址');
+                return;
+            }
+            
+            const confirmMsg = `确定要手动上报任务状态吗？\n\n` +
+                `任务单号: ${orderId}\n` +
+                `模板代码: ${modelProcessCode}\n` +
+                `上报状态: 8（任务完成）\n` +
+                `设备序列号: ${deviceCode || '-'}\n` +
+                `设备编号: ${deviceNum || '-'}\n` +
+                `货架编号: ${shelfNumber || '-'}\n\n` +
+                `将向模板配置的所有上报地址发送 POST 请求。`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetch('/api/task/report_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        modelProcessCode: modelProcessCode,
+                        deviceCode: deviceCode,
+                        deviceNum: deviceNum,
+                        shelfNumber: shelfNumber
+                    })
+                });
+                const data = await res.json();
+                
+                // 构建完整提示信息
+                let msg = (data.success ? '✅ ' : '❌ ') + (data.message || (data.error || '未知结果')) + '\n\n';
+                
+                // 请求报文
+                if (data.report_body) {
+                    msg += '━━━ 请求报文 ━━━\n';
+                    msg += JSON.stringify(data.report_body, null, 2) + '\n\n';
+                }
+                
+                // 每个地址的结果
+                if (data.results) {
+                    data.results.forEach((r, i) => {
+                        msg += `━━━ [${i + 1}] ${r.url} ━━━\n`;
+                        if (r.success) {
+                            msg += `HTTP ${r.http_status} (${r.elapsed_ms}ms)\n`;
+                            msg += '响应报文:\n';
+                            msg += (typeof r.response === 'string' ? r.response : JSON.stringify(r.response, null, 2)) + '\n';
+                        } else {
+                            msg += `❌ 错误: ${r.error}\n`;
+                        }
+                        msg += '\n';
+                    });
+                }
+                alert(msg);
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
+            }
+        };
+
         // ---------- 查询历史 ----------
         function addToHistory(term) {
             queryHistory = [term, ...queryHistory.filter(t => t !== term)].slice(0, 5);
@@ -1357,7 +2406,12 @@
         }
 
         window.fillHistory = function(term) {
-            if (term.includes('(货架)')) {
+            if (term.includes('(设备)')) {
+                const deviceNum = term.replace(' (设备)', '');
+                typeDeviceRadio.checked = true;
+                toggleQueryPanel();
+                deviceNumInput.value = deviceNum;
+            } else if (term.includes('(货架)')) {
                 const shelf = term.replace(' (货架)', '');
                 typeShelfRadio.checked = true;
                 toggleQueryPanel();
@@ -1370,6 +2424,143 @@
             executeQuery();
         };
 
+        
+        // ========== 操作日志 ==========
+        let queryAllLogs = [];
+        let queryLogFilter = 'all';
+        let queryLogAutoScroll = true;
+        let queryLogTimer = null;
+        const QUERY_LOG_INTERVAL = 3000;
+        
+        window.toggleQueryLogPanel = function() {
+            const body = document.getElementById('queryLogBody');
+            const chevron = document.getElementById('queryLogChevron');
+            if (!body || !chevron) return;
+            const bsCollapse = bootstrap.Collapse.getInstance(body) || new bootstrap.Collapse(body, {toggle: false});
+            bsCollapse.toggle();
+            chevron.classList.toggle('bi-chevron-up');
+            chevron.classList.toggle('bi-chevron-down');
+        };
+        
+        window.toggleQueryLogAutoScroll = function() {
+            queryLogAutoScroll = document.getElementById('queryLogAutoScroll').checked;
+            if (queryLogAutoScroll) {
+                scrollQueryLogToTop();
+                if (!queryLogTimer) queryLogTimer = setInterval(loadQueryLog, QUERY_LOG_INTERVAL);
+            } else {
+                if (queryLogTimer) { clearInterval(queryLogTimer); queryLogTimer = null; }
+            }
+        };
+        
+        window.onQueryLogScroll = function() {
+            const container = document.getElementById('queryLogContainer');
+            const checkbox = document.getElementById('queryLogAutoScroll');
+            if (!container || !checkbox) return;
+            const atTop = container.scrollTop <= 10;
+            if (atTop !== queryLogAutoScroll) {
+                queryLogAutoScroll = atTop;
+                checkbox.checked = atTop;
+                if (atTop) {
+                    if (!queryLogTimer) queryLogTimer = setInterval(loadQueryLog, QUERY_LOG_INTERVAL);
+                } else {
+                    if (queryLogTimer) { clearInterval(queryLogTimer); queryLogTimer = null; }
+                }
+            }
+        };
+        
+        window.switchQueryLogTab = function(filter) {
+            queryLogFilter = filter;
+            document.querySelectorAll('#queryLogCard .log-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === filter);
+            });
+            renderQueryLogs();
+        };
+        
+        function filterQueryLogs(logs, filter) {
+            if (filter === 'all') return logs;
+            return logs.filter(l => l.action === filter);
+        }
+        
+        function renderQueryLogs() {
+            const container = document.getElementById('queryLogContainer');
+            const countBadge = document.getElementById('queryLogCount');
+            const card = document.getElementById('queryLogCard');
+            const searchTerm = (document.getElementById('queryLogSearch')?.value || '').toLowerCase();
+            
+            let filtered = filterQueryLogs(queryAllLogs, queryLogFilter);
+            if (searchTerm) {
+                filtered = filtered.filter(l => 
+                    (l.detail || '').toLowerCase().includes(searchTerm) ||
+                    (l.action || '').toLowerCase().includes(searchTerm) ||
+                    (l.user || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (countBadge) countBadge.textContent = filtered.length;
+            if (card) card.style.display = 'block';
+            
+            if (!filtered.length) {
+                container.innerHTML = '<div class="text-center text-muted py-3 small">暂无操作日志</div>';
+                return;
+            }
+            
+            try {
+                container.innerHTML = filtered.map(log => {
+                    const time = log.time || '';
+                    const timeStr = time.length > 16 ? time.slice(11, 19) : time;
+                    const action = log.action || '';
+                    const detail = log.detail || '';
+                    const level = log.level || 'info';
+                    const user = log.user || '?';
+                    const meta = getQueryLogActionMeta(action, level);
+                    
+                    return '<div class="log-item">' +
+                        '<div class="log-time">' + timeStr + '</div>' +
+                        '<div class="log-icon ' + (meta.color || '') + '"><i class="bi ' + (meta.icon || '') + '"></i></div>' +
+                        '<div style="flex:1;min-width:0;">' +
+                        '<span class="badge bg-secondary me-1" style="font-size:0.7rem;">' + escapeHtml(user) + '</span>' +
+                        '<span>' + escapeHtml(detail || action) + '</span>' +
+                        '</div></div>';
+                }).join('');
+            } catch(e) {
+                container.innerHTML = '<div class="text-danger small">渲染错误: ' + e.message + '</div>';
+            }
+            
+            if (queryLogAutoScroll) scrollQueryLogToTop();
+        }
+        
+        function scrollQueryLogToTop() {
+            const container = document.getElementById('queryLogContainer');
+            if (!container) return;
+            container.scrollTop = 0;
+        }
+        
+        function getQueryLogActionMeta(action, level) {
+            if (level === 'error') return { icon: 'bi-exclamation-triangle-fill', color: 'text-danger' };
+            if (level === 'warning') return { icon: 'bi-exclamation-circle-fill', color: 'text-warning' };
+            if (action === 'device_query') return { icon: 'bi-search', color: 'text-info' };
+            if (action === 'task_query') return { icon: 'bi-card-list', color: 'text-primary' };
+            return { icon: 'bi-info-circle-fill', color: 'text-secondary' };
+        }
+        
+        function loadQueryLog() {
+            fetch('/api/query/log?_=' + Date.now())
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    queryAllLogs = data.logs || [];
+                    renderQueryLogs();
+                })
+                .catch(err => {
+                    console.error('加载查询日志失败:', err);
+                });
+        }
+        
+        loadQueryLog();
+        queryLogTimer = setInterval(loadQueryLog, QUERY_LOG_INTERVAL);
+        
     })();
 </script>
 {% endblock %}

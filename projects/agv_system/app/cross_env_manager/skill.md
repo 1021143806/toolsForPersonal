@@ -245,3 +245,12 @@ venv/bin/python3 test/???.py
 - 2026-04-27: 跨环境任务重发功能已完成前后端实现。重发逻辑中前置任务检查放在最前面（不通过则不执行任何修改），逻辑1和逻辑2已合并为统一流程。sub_order_id递增规则为解析{orderId}_{taskSeq}_{subId}后subId+1。API文档已整理到doc/API.md。
 - 2026-04-27: 查询页面字段显示问题已修复，根因是前端getField()查找的字段名与远程API返回的驼峰命名不匹配。修复方案是添加候选字段名而非修改API，保持向后兼容。
 - 2026-04-27: fy_cross_model_process_detail 表新增 need_third_trigger 字段（默认0，1=存在第三方触发）。已在 app.py 的4处 SQL（edit_detail、copy_template、API新增子任务、批量更新子任务）和 edit_template.html、template_detail.html 的编辑/新增子任务模态框中添加该字段的编辑支持。前端使用复选框控件，勾选=1，不勾选=0。
+- 2026-05-09: **版本号规则**：每个模块有独立的内部版本号，修改哪个模块就递增哪个模块的版本号（末尾数字+1）。各模块版本号定义：
+  - `app.py`: `APP_VERSION` — 全局版本，页面底部展示 `CEM v{APP_VERSION}`
+  - `routes/dispatch_routes.py`: `DISPATCH_VERSION` — 调车模块版本，`[SelfHeal v{DISPATCH_VERSION}]` 日志
+  - `routes/task_routes.py`: `TASK_VERSION` — 任务查询模块版本，查询日志 `version` 字段
+  - 其他模块按需添加 `__version__` 或 `{MODULE}_VERSION`
+- 2026-05-13: **取消空车任务修复 (v2.1.7)**：根因是 `get_cross_task_info` 中 SQL 用错字段——`WHERE order_id LIKE CONCAT(%s, '_%%')` 试图在 `order_id`（主订单号）上做模糊匹配，但子任务 ID 存在 `sub_order_id` 字段中。修复为 `WHERE order_id = %s` 精确匹配（所有子任务共享同一主 order_id）。`api_cancel_empty_tasks` 恢复使用 `_get_task_server_info` 查询子任务 `sub_order_id` 和 `service_url` 后调用 ICS 取消接口。前端 `dashboard.html` 去掉 `.slice(0, 30)` 截断，完整显示订单号。
+- 2026-05-13: **取消空车任务修复 (v2.1.8)**：修复 server_ip 获取逻辑——`_get_task_server_info` 原来用大模板 `model_process_code` 查 `fy_cross_model_process_detail.template_code`，但该表存的是子模板 code，导致匹配不到而 fallback 到默认 `10.68.2.32`。改为用第一个子任务的 `template_code`（从 `fy_cross_task_detail` 获取）查询 `task_servicec`。同时修复详情按钮无反应问题——`onclick` 中嵌入 JSON 字符串因特殊字符破坏 HTML 属性，改为 `data-ri-idx` + 全局数组 `window._cancelDetailData` + 事件委托方式。
+- 2026-05-13: **解死锁机制 (v2.1.9)**：在 `calculate_area_balance` 互斥检查中增加自动解死锁——当来任务=0、回空车已下发导致 `can_dispatch=False` 时，自动调用 `_get_task_server_info` + `_cancel_empty_task` 取消阻塞的反方向空车任务，并清理本地 JSON。取消成功后重新检查是否还有阻塞，若已解除则允许下发。
+- 2026-05-14: **全局空车任务数量限制 (v2.1.10)**：新增 `GLOBAL_EMPTY_TASK_LIMIT`（默认4）和 `_get_empty_task_limit()` 函数。区域配置 `empty_task_limit`：-1=使用全局、0=不限制、>0=自定义。`calculate_area_balance` 中检查当前方向空车模板 JSON 中 status=6 任务数，超出上限则限制 `dispatch_count`。`_execute_dispatch` 中 dispatch_count=0 时跳过下发。前端 config.html 全局设置新增"全局空车任务上限"，区域配置新增"空车任务上限"。

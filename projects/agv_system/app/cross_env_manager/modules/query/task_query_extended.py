@@ -6,6 +6,7 @@
 """
 
 import pymysql
+from pymysql.cursors import DictCursor
 from datetime import datetime
 from modules.database.connection import get_db_connection
 
@@ -276,8 +277,9 @@ def get_cross_task_info(order_id, server_ip=None):
     
     try:
         with conn.cursor() as cursor:
-            # 查询跨环境任务详情
-            sql = "SELECT * FROM fy_cross_task_detail WHERE order_id = %s"
+            # 查询跨环境任务详情（用 order_id 精确匹配，所有子任务共享同一个主 order_id）
+            # 按 task_seq 排序确保第一个子任务（_1）排在前面
+            sql = "SELECT * FROM fy_cross_task_detail WHERE order_id = %s ORDER BY task_seq ASC"
             cursor.execute(sql, (order_id,))
             cross_task_details = cursor.fetchall()
             
@@ -368,7 +370,7 @@ def format_timestamp(timestamp):
     return ""
 
 def connect_to_production_db(server_ip, db_name="wms"):
-    """连接到生产环境数据库"""
+    """连接到生产环境数据库（5秒超时）"""
     try:
         conn = pymysql.connect(
             host=server_ip,
@@ -376,6 +378,7 @@ def connect_to_production_db(server_ip, db_name="wms"):
             password='CCshenda889',
             database=db_name,
             charset='utf8mb4',
+            connect_timeout=5,
             cursorclass=pymysql.cursors.DictCursor
         )
         return conn
@@ -703,3 +706,431 @@ def force_complete_cross_task(order_id, sub_order_id, task_seq, server_ip="10.68
         }
     finally:
         conn.close()
+
+
+def get_order_id_by_device_num(device_num, server_ip="10.68.2.32"):
+    """
+    根据设备号(device_num)查询最近的任务单号(order_id)和设备序列号(device_code)
+    查询 fy_cross_task_detail 表，按 update_time DESC 取最近一条
+    """
+    conn = connect_to_production_db(server_ip)
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT order_id, device_code, device_num, template_code, template_name,
+                       service_url, status, update_time
+                FROM fy_cross_task_detail
+                WHERE device_num = %s
+                ORDER BY update_time DESC
+                LIMIT 1
+            """
+            cursor.execute(sql, (device_num,))
+            row = cursor.fetchone()
+            if not row:
+                return {"error": f"未找到设备 {device_num} 的任务记录"}
+            return {
+                "order_id": row['order_id'],
+                "device_code": row['device_code'],
+                "device_num": row['device_num'],
+                "template_code": row['template_code'],
+                "template_name": row['template_name'],
+                "service_url": row['service_url'],
+                "status": row['status'],
+                "update_time": str(row['update_time']) if row['update_time'] else ''
+            }
+    except Exception as e:
+        return {"error": f"查询设备任务失败: {str(e)}"}
+    finally:
+        conn.close()
+
+
+def get_device_area_from_server(server_ip, device_code):
+    """
+    从指定服务器的 agv_robot_ext 表查询设备的 DEVICE_AREA
+    """
+    conn = connect_to_production_db(server_ip)
+    try:
+        with conn.cursor() as cursor:
+            sql = "SELECT DEVICE_AREA, DEVICE_NUMBER, DEVICE_STATUS FROM agv_robot_ext WHERE DEVICE_CODE = %s"
+            cursor.execute(sql, (device_code,))
+            row = cursor.fetchone()
+            if not row:
+                return {"error": f"未在服务器 {server_ip} 找到设备 {device_code}"}
+            return {
+                "area_id": row['DEVICE_AREA'],
+                "device_num": row['DEVICE_NUMBER'],
+                "device_status": row['DEVICE_STATUS']
+            }
+    except Exception as e:
+        return {"error": f"查询设备区域失败({server_ip}): {str(e)}"}
+    finally:
+        conn.close()
+
+
+def query_device_status_via_service(service_url, area_id, device_code):
+    """
+    通过 service_url 调用设备查询接口 /ics/out/device/list/deviceInfo
+    获取设备实时状态（state、battery 等），同时返回请求/响应详情
+    返回字段包含 http_status、elapsed_ms 用于全链路调试
+    """
+    import urllib.request as _urllib
+    import json as _json
+    import time as _time
+    # 从 service_url 提取 base URL（去掉路径部分，保留协议+主机+端口）
+    # service_url 如 http://10.68.2.27:7000
+    base_url = service_url.rstrip('/')
+    url = f"{base_url}/ics/out/device/list/deviceInfo"
+    body = {"areaId": str(area_id), "deviceType": "0", "deviceCode": device_code}
+    t0 = _time.time()
+    try:
+        req = _urllib.Request(url,
+            data=_json.dumps(body).encode('utf-8'),
+            headers={'Content-Type': 'application/json'})
+        resp = _urllib.urlopen(req, timeout=10)
+        elapsed_ms = round((_time.time() - t0) * 1000, 1)
+        http_status = resp.getcode()
+        raw_response = resp.read().decode('utf-8')
+        data = _json.loads(raw_response)
+        response_body = data  # 完整响应
+        if data.get('code') == 1000 and data.get('data'):
+            device_info = data['data'][0]
+            return {
+                "state": device_info.get('state', '未知'),
+                "battery": device_info.get('battery', ''),
+                "device_code": device_info.get('deviceCode', device_code),
+                "device_num": device_info.get('deviceNum', ''),
+                "area_id": device_info.get('areaId', area_id),
+                "raw": device_info,
+                "request_url": url,
+                "request_body": body,
+                "response_body": response_body,
+                "http_status": http_status,
+                "elapsed_ms": elapsed_ms
+            }
+        return {
+            "error": f"设备查询响应异常: code={data.get('code')}",
+            "state": "查询失败",
+            "request_url": url,
+            "request_body": body,
+            "response_body": response_body,
+            "http_status": http_status,
+            "elapsed_ms": elapsed_ms
+        }
+    except Exception as e:
+        elapsed_ms = round((_time.time() - t0) * 1000, 1)
+        return {
+            "error": f"设备查询请求失败: {str(e)}",
+            "state": "查询失败",
+            "request_url": url,
+            "request_body": body,
+            "response_body": None,
+            "http_status": None,
+            "elapsed_ms": elapsed_ms
+        }
+
+
+def get_local_cross_task_detail(order_id):
+    """
+    从本地数据库直接查询 fy_cross_task 和 fy_cross_task_detail 表
+    返回完整的数据库原始字段，用于前端 Tab 面板展示
+    连接超时 5 秒，失败时静默返回错误
+    """
+    try:
+        from modules.database.connection import get_db_config
+        config = get_db_config()
+        config['connect_timeout'] = 5
+        conn = pymysql.connect(**config, cursorclass=DictCursor)
+    except Exception as e:
+        return {"error": f"数据库连接失败: {str(e)}"}
+    
+    try:
+        with conn.cursor() as cursor:
+            # 查询主任务
+            cursor.execute(
+                "SELECT * FROM fy_cross_task WHERE orderId = %s LIMIT 1",
+                (order_id,)
+            )
+            main_task = cursor.fetchone()
+            
+            # 查询子任务
+            cursor.execute(
+                "SELECT * FROM fy_cross_task_detail WHERE order_id = %s ORDER BY id",
+                (order_id,)
+            )
+            sub_tasks = cursor.fetchall()
+            
+            return {
+                "success": True,
+                "main_task": main_task,
+                "sub_tasks": sub_tasks,
+                "sub_task_count": len(sub_tasks) if sub_tasks else 0
+            }
+    except Exception as e:
+        return {"error": f"查询失败: {str(e)}"}
+    finally:
+        conn.close()
+
+
+def _get_production_connection():
+    """获取生产环境数据库连接（只读）"""
+    import pymysql
+    from pymysql.cursors import DictCursor
+    return pymysql.connect(
+        host='10.68.2.32', port=3306, user='wms', password='CCshenda889',
+        database='wms', charset='utf8mb4', cursorclass=DictCursor,
+        connect_timeout=5
+    )
+
+
+def enrich_device_info(device_code):
+    """
+    根据设备序列号从生产数据库查询完整设备信息
+    返回 dict，包含：area_id, device_ip, device_type
+    查询失败返回空 dict
+    """
+    if not device_code:
+        return {}
+    
+    info = {}
+    try:
+        conn = _get_production_connection()
+        with conn.cursor() as cursor:
+            # agv_robot_ext：区域ID
+            cursor.execute("SELECT DEVICE_AREA FROM agv_robot_ext WHERE DEVICE_CODE = %s", (device_code,))
+            row = cursor.fetchone()
+            if row and row.get('DEVICE_AREA'):
+                info['area_id'] = row['DEVICE_AREA']
+            
+            # agv_robot：设备IP、设备类型
+            cursor.execute("SELECT DEVICE_IP, DEVICETYPE FROM agv_robot WHERE DEVICE_CODE = %s", (device_code,))
+            row2 = cursor.fetchone()
+            if row2:
+                if row2.get('DEVICE_IP'):
+                    info['device_ip'] = row2['DEVICE_IP']
+                if row2.get('DEVICETYPE'):
+                    info['device_type'] = row2['DEVICETYPE']
+        conn.close()
+    except Exception:
+        pass
+    
+    return info
+
+
+def enrich_shelf_info(shelf_model=None, shelf_num=None):
+    """
+    根据货架型号和编号从生产数据库查询货架信息
+    shelf_model: 货架型号ID（对应 load_config.model）
+    shelf_num: 货架编号（对应 shelf_config.shelf_num）
+    返回 dict，包含：shelf_model_name, shelf_num
+    """
+    info = {}
+    if not shelf_model and not shelf_num:
+        return info
+    
+    try:
+        conn = _get_production_connection()
+        with conn.cursor() as cursor:
+            # 如果没有 shelf_model 但有 shelf_num，通过 shelf_config.shelf_type → load_config 链式查询
+            if not shelf_model and shelf_num:
+                cursor.execute("SELECT shelf_type FROM shelf_config WHERE shelf_num = %s LIMIT 1", (shelf_num,))
+                row = cursor.fetchone()
+                if row and row.get('shelf_type'):
+                    shelf_model = row['shelf_type']
+            
+            # load_config：货架型号名称
+            if shelf_model:
+                try:
+                    cursor.execute("SELECT name FROM load_config WHERE model = %s", (int(shelf_model),))
+                    row = cursor.fetchone()
+                    if row and row.get('name'):
+                        info['shelf_model_name'] = row['name']
+                        info['shelf_model'] = int(shelf_model)
+                except (ValueError, TypeError):
+                    pass
+            
+            # shelf_config：货架编号
+            if shelf_num:
+                cursor.execute("SELECT shelf_num FROM shelf_config WHERE shelf_num = %s LIMIT 1", (shelf_num,))
+                row = cursor.fetchone()
+                if row and row.get('shelf_num'):
+                    info['shelf_num'] = row['shelf_num']
+        conn.close()
+    except Exception:
+        pass
+    
+    return info
+
+
+def enrich_task_dict(task_dict, device_code=None):
+    """
+    用本地数据库信息补充任务字典中的缺失字段
+    task_dict: 任务字典（main_task 或 sub_task）
+    device_code: 设备序列号，不传则从 task_dict 中取
+    """
+    if not device_code:
+        device_code = task_dict.get('deviceCode') or task_dict.get('device_code') or ''
+    
+    # 补充设备信息
+    if device_code:
+        info = enrich_device_info(device_code)
+        if info:
+            if info.get('area_id') and not task_dict.get('areaId') and not task_dict.get('area_id'):
+                task_dict['area_id'] = info['area_id']
+            if info.get('device_ip') and not task_dict.get('deviceIp') and not task_dict.get('device_ip'):
+                task_dict['device_ip'] = info['device_ip']
+            if info.get('device_type') and not task_dict.get('robotType') and not task_dict.get('robot_type'):
+                task_dict['robot_type'] = info['device_type']
+    
+    # 补充货架信息
+    shelf_model = task_dict.get('shelfModel') or task_dict.get('shelf_model') or ''
+    shelf_num = task_dict.get('shelfNum') or task_dict.get('shelf_num') or task_dict.get('carrierCode') or task_dict.get('carrier_code') or task_dict.get('shelfNumber') or task_dict.get('shelf_number') or ''
+    
+    # 从本地数据库补充缺失字段
+    sub_order_id = task_dict.get('subOrderId') or task_dict.get('sub_order_id') or ''
+    order_id = task_dict.get('orderId') or task_dict.get('order_id') or ''
+    
+    if sub_order_id or order_id:
+        try:
+            conn = _get_production_connection()
+            with conn.cursor() as cursor:
+                row = None
+                if sub_order_id:
+                    cursor.execute("SELECT * FROM fy_cross_task_detail WHERE sub_order_id = %s", (sub_order_id,))
+                    row = cursor.fetchone()
+                elif order_id:
+                    # 主任务：查 fy_cross_task
+                    cursor.execute("SELECT * FROM fy_cross_task WHERE orderId = %s", (order_id,))
+                    row = cursor.fetchone()
+                
+                if row:
+                    # 货架编号
+                    shelf_val = row.get('shelf_number') or row.get('shelf_num')
+                    if shelf_val:
+                        if not shelf_num:
+                            shelf_num = shelf_val
+                        if not task_dict.get('shelf_num') and not task_dict.get('shelfNum'):
+                            task_dict['shelf_num'] = shelf_val
+                        if not task_dict.get('carrier_code') and not task_dict.get('carrierCode'):
+                            task_dict['carrier_code'] = shelf_val
+                    # 时间字段
+                    for field in ['start_time', 'end_time', 'create_time', 'update_time']:
+                        val = row.get(field)
+                        if val and not task_dict.get(field):
+                            task_dict[field] = val.isoformat() if hasattr(val, 'isoformat') else str(val)
+                    # 变更状态
+                    if row.get('change_status') is not None and not task_dict.get('changeStatus') and not task_dict.get('change_status'):
+                        task_dict['change_status'] = row['change_status']
+            conn.close()
+        except Exception:
+            pass
+    
+    if shelf_model or shelf_num:
+        shelf_info = enrich_shelf_info(shelf_model, shelf_num)
+        if shelf_info:
+            if shelf_info.get('shelf_model_name') and not task_dict.get('shelfModelName') and not task_dict.get('shelf_model_name'):
+                task_dict['shelf_model_name'] = shelf_info['shelf_model_name']
+            if shelf_info.get('shelf_model') and not task_dict.get('shelfModel') and not task_dict.get('shelf_model'):
+                task_dict['shelf_model'] = shelf_info['shelf_model']
+            if shelf_info.get('shelf_num') and not task_dict.get('shelfNum') and not task_dict.get('shelf_num'):
+                task_dict['shelf_num'] = shelf_info['shelf_num']
+    
+    # 补充任务状态名称（task_status_config 表）
+    status_val = task_dict.get('status') or task_dict.get('taskStatus') or task_dict.get('task_status')
+    status_name = task_dict.get('taskStatusName') or task_dict.get('task_status_name')
+    if status_val is not None and not status_name:
+        try:
+            conn = _get_production_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT task_status_name FROM task_status_config WHERE task_status = %s", (int(status_val),))
+                row = cursor.fetchone()
+                if row and row.get('task_status_name'):
+                    task_dict['task_status_name'] = row['task_status_name']
+            conn.close()
+        except Exception:
+            pass
+    
+    # 从远端 task_group 获取真实的开始/结束时间
+    svc_url = task_dict.get('serviceUrl') or task_dict.get('service_url') or ''
+    dc = task_dict.get('deviceCode') or task_dict.get('device_code') or ''
+    dn = task_dict.get('deviceNum') or task_dict.get('device_num') or ''
+    if svc_url and (dc or dn):
+        remote_times = fetch_remote_task_group_times(svc_url, dc, dn)
+        if remote_times:
+            if remote_times.get('start_time'):
+                task_dict['startTime'] = remote_times['start_time']
+            if remote_times.get('end_time'):
+                task_dict['endTime'] = remote_times['end_time']
+
+
+def fetch_remote_task_group_times(service_url, device_code=None, device_num=None):
+    """
+    通过远端数据库查询 task_group 的真实开始/结束时间。
+    
+    查询链路：
+      fy_cross_task_detail.sub_order_id 下发后 → task_group.out_order_id
+      但 sub_order_id 格式与 out_order_id 不直接匹配，
+      因此通过 device_code + device_num 在远端 task_group 中匹配。
+    
+    参数：
+      service_url: 远端服务地址（如 http://10.68.2.36:7000），用于提取数据库 IP
+      device_code: 设备序列号（robot_id）
+      device_num: 设备编号（robot_num）
+    
+    返回：
+      {"start_time": datetime_str, "end_time": datetime_str} 或 None
+    """
+    if not service_url:
+        return None
+    if not device_code and not device_num:
+        return None
+    
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(service_url)
+        host = parsed.hostname
+        if not host:
+            return None
+        
+        import pymysql
+        from pymysql.cursors import DictCursor
+        from datetime import datetime
+        
+        conn = pymysql.connect(
+            host=host, port=3306, user='wms', password='CCshenda889',
+            database='wms', charset='utf8mb4', cursorclass=DictCursor,
+            connect_timeout=5
+        )
+        
+        with conn.cursor() as cursor:
+            conditions = []
+            params = []
+            if device_code:
+                conditions.append("robot_id = %s")
+                params.append(device_code)
+            if device_num:
+                conditions.append("robot_num = %s")
+                params.append(device_num)
+            
+            where = " OR ".join(conditions)
+            sql = f"SELECT start_time, end_time FROM task_group WHERE ({where}) AND start_time > 0 ORDER BY id DESC LIMIT 1"
+            cursor.execute(sql, params)
+            row = cursor.fetchone()
+            
+            if row and row.get('start_time'):
+                result = {}
+                # task_group 的 start_time/end_time 是 Unix 时间戳（int）
+                start_ts = row['start_time']
+                end_ts = row.get('end_time')
+                if start_ts:
+                    result['start_time'] = datetime.fromtimestamp(int(start_ts)).isoformat()
+                if end_ts:
+                    result['end_time'] = datetime.fromtimestamp(int(end_ts)).isoformat()
+                return result if result else None
+        
+        conn.close()
+    except Exception as e:
+        import traceback
+        print(f'[fetch_remote_task_group_times] 查询失败: host={host}, device_code={device_code}, device_num={device_num}, error={e}')
+        traceback.print_exc()
+    
+    return None
